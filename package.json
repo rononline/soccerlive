@@ -1,0 +1,34 @@
+{
+  "name": "calcio.live",
+  "version": "1.0.4",
+  "description": "Informazioni sul calcio",
+  "keywords": [
+    "home-assistant",
+    "homeassistant",
+    "hass",
+    "automation",
+    "lovelace",
+    "sensor",
+    "calcio",
+    "football",
+    "custom-cards"
+  ],
+  "main": "src/main.js",
+  "repository": "git@github.com:bobsilvio/calcio-live.git",
+  "author": "Silvio Vaira <silvio.vaira@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.3.4",
+    "@babel/plugin-transform-template-literals": "^7.2.0",
+    "@babel/preset-env": "^7.3.4",
+    "babel-loader": "^8.0.5",
+    "url-loader": "^1.1.2",
+    "webpack": "^4.29.5",
+    "webpack-cli": "^3.2.3"
+  },
+  "scripts": {
+    "build": "webpack",
+    "watch": "webpack --watch"
+  },
+  "dependencies": {}
+}

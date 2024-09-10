@@ -1,0 +1,5 @@
+{
+    "name": "Calcio Live",
+    "homeassistant": "0.95.4",
+    "render_readme": true
+}
