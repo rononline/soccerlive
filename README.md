@@ -32,17 +32,17 @@ Note: Puoi usare la stessa api key per piu campionati, ricordati di dare un nome
 ## Utilizzo dei sensori
 Vengono creati 4 sensori:
 
+ Questo sensore viene creato per ogni campionato, ma è uguale a tutti, è la lista dei campionati e delle giornate in corso
 - sensor.calciolive_nomescelto_competizioni
-  Questo sensore viene creato per ogni campionato, ma è uguale a tutti, è la lista dei campionati e delle giornate in corso
 
+ Questo sensore ci da la classifica dei capocannonieri del campionato
 - sensor.calciolive_nomescelto_cannonieri
-  ci da la classifica dei capocannonieri del campionato
 
+ Questo sensore ci da la classifica del campionato
 - sensor.sensor.calciolive_nomescelto_classifica
-  ci da la classifica del campionato
 
+ Questo sensore ci da le sfide della giornata in corso o future (nel caso siano finite tutte le partite)
 - sensor.calciolive_nomescelto_match_day
-  ci da le sfide della giornata in corso o future (nel caso siano finite tutte le partite)
 
 ## Informazioni
 Questa è la mia prima card e sicuramente c'è tanto lavoro da fare, se vi piace, potete ricambiare seguendomi nei social:
