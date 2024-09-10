@@ -5,7 +5,7 @@ L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazion
 
 ## Installazione manuale tramite HACS
 
-1. Aggiungi il repository `https://github.com/tuo_username/calcio-live` in HACS.
+1. Aggiungi il repository `https://github.com/tuo_username/calcio-live` in HACS come INTEGRAZIONE.
     ![INSTALLAZIONE](images/installazione-git.png)
     
 2. Cerca "Calcio Live" in HACS e installa l'integrazione.
