@@ -3,7 +3,8 @@
 ## Descrizione
 L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazioni in tempo reale sulle competizioni di calcio, come classifiche, cannonieri e giornate di campionato.
 
-## Installazione tramite HACS
+## Installazione manuale tramite HACS
+
 1. Aggiungi il repository `https://github.com/tuo_username/calcio-live` in HACS.
     ![INSTALLAZIONE](images/installazione-git.png)
     
@@ -20,9 +21,9 @@ L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazion
 5. Inserisci API Key nella prima riga
    Scegli il campionato da seguire
    Scegli nome che avra il sensore (se scrivi serie a, il sensore sarà sensor.calciolive_seriea_xxx)
-   
-    ![HACS](images/integrazione1.png)
-    ![HACS](images/integrazione2.png)
+
+    <img src="images/integrazione1.png" alt="HACS" width="300"/>
+    <img src="images/integrazione2.png" alt="HACS" width="300"/>
    
 6. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
 
