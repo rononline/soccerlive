@@ -12,7 +12,7 @@ L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazion
     ![HACS](images/hacs.png)
 
 3. Devi avere un codice API e per ottenerlo vai su: https://www.football-data.org/client/register
-   registrati e ottieni la tua chiave API che arriva sull'e-mail-
+   registrati (email - passoword - scegli 'i wanna remain unarmed') e ottieni la tua chiave API che arriva sull'e-mail
 
 3. Vai su Impostazioni > Integrazione > Aggiungi Integrazione e cerca 'Calcio-Live' 
 
