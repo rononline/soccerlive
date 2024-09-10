@@ -1,6 +1,7 @@
 import logging
 import aiohttp
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity import DeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +36,22 @@ class CalcioLiveSensor(Entity):
         self._sensor_type = sensor_type
         self._state = None
         self._attributes = {}
+        self._unique_id = f"{competition_code}_{sensor_type}"
+
+    @property
+    def unique_id(self):
+        """Return a unique ID for this sensor."""
+        return self._unique_id
+    
+    @property
+        def device_info(self):
+            """Return device info for this entity."""
+            return DeviceInfo(
+                identifiers={(DOMAIN, self._competition_code)},
+                name=f"{self._competition_code} Sensor",
+                manufacturer="CalcioLive",
+                model="Football Data API",
+            )
 
     @property
     def name(self):
@@ -49,11 +66,12 @@ class CalcioLiveSensor(Entity):
         return self._attributes
 
     async def async_update(self):
-        url = await self._build_url()  # Usa 'await' per chiamare la funzione asincrona _build_url
+        url = await self._build_url()
         headers = {"X-Auth-Token": self._api_key}
 
         if url is None:
             _LOGGER.error(f"URL is None for {self._name}")
+            self._state = "Errore URL"
             return
 
         try:
@@ -61,12 +79,24 @@ class CalcioLiveSensor(Entity):
                 async with session.get(url, headers=headers) as response:
                     if response.status != 200:
                         _LOGGER.error(f"Errore HTTP {response.status} per {self._name}")
+                        self._state = f"Errore HTTP {response.status}"
                         return
+
                     data = await response.json()
+
+                    # Controllo se i dati sono validi
+                    if data is None:
+                        _LOGGER.error(f"Nessun dato ricevuto per {self._name}")
+                        self._state = "Dati non disponibili"
+                        return
+
+                    # Elabora i dati solo se sono validi
                     self._process_data(data)
+
         except aiohttp.ClientError as error:
-            _LOGGER.error(f"Error fetching data for {self._name}: {error}")
-            self._state = None
+            _LOGGER.error(f"Errore nel recupero dei dati per {self._name}: {error}")
+            self._state = "Errore di connessione"
+    
 
     async def _build_url(self):
         base_url = "https://api.football-data.org/v4/competitions"
