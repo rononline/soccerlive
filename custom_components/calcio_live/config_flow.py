@@ -18,9 +18,11 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             competition_code = user_input.get("competition_code")
             team_id = user_input.get("team_id")
 
-            # Assicuriamoci che venga fornito uno tra competition_code o team_id
+            # Assicuriamoci che venga fornito uno tra competition_code o team_id, ma non entrambi
             if not competition_code and not team_id:
                 errors["base"] = "missing_required_field"
+            elif competition_code and team_id:
+                errors["base"] = "both_fields_filled"
             else:
                 if competition_code:
                     name_prefix = user_input.get("name", COMPETITIONS[competition_code])
@@ -57,9 +59,9 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required("api_key", description={"suggested_value": "Chiave API obbligatoria per football-data.org"}, default=""): str,
-                vol.Optional("competition_code", description={"suggested_value": "Codice della competizione (opzionale)"}): vol.In(competition_options),
+                vol.Optional("competition_code", description={"suggested_value": "Codice della competizione"}): vol.In(competition_options),
                 vol.Optional("team_id", description={"suggested_value": "ID della squadra (opzionale)"}): str,
-                vol.Optional("name", description={"suggested_value": "Nome del sensore"}, default="CalcioLive"): str,
+                vol.Optional("name", description={"suggested_value": "Nome del sensore"}, default="SerieA"): str,
             }),
             errors=errors,
         )
