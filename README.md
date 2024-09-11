@@ -24,13 +24,17 @@ L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazion
 
     <img src="images/integrazione1.png" alt="HACS" width="300"/>
     <img src="images/integrazione2.png" alt="HACS" width="300"/>
-   
-6. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
+
+6. Puoi anche seguire la tua squadra del cuore con tutte le partite passate e future
+   Andate sul sito https://www.football-data.org/coverage
+   Selezionate il campionato e poi click sulla vostra squadra, in alto compare un numero, è il vostro team_id
+
+8. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
 
 Note: Puoi usare la stessa api key per piu campionati, ricordati di dare un nome al campionato
 
 ## Utilizzo dei sensori
-Vengono creati 4 sensori:
+Vengono creati 5 sensori:
 
  Questo sensore viene creato per ogni campionato, ma è uguale a tutti, è la lista dei campionati e delle giornate in corso
 - sensor.calciolive_nomescelto_competizioni
@@ -43,6 +47,9 @@ Vengono creati 4 sensori:
 
  Questo sensore ci da le sfide della giornata in corso o future (nel caso siano finite tutte le partite)
 - sensor.calciolive_nomescelto_match_day
+
+ Questo sensore viene creato solo se inserisci il team_id 
+- sensor.calciolive_nomescelto
 
 ## Informazioni
 Questa è la mia prima card e sicuramente c'è tanto lavoro da fare, se vi piace, potete ricambiare seguendomi nei social:
