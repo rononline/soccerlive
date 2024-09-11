@@ -40,8 +40,8 @@ Puoi usare la stessa api key per piu campionati, ricordati di dare un nome al ca
 ## Utilizzo dei sensori
 Vengono creati 5 sensori:
 
- Questo sensore viene creato per ogni campionato, ma è uguale a tutti, è la lista dei campionati e delle giornate in corso
-- sensor.calciolive_nomescelto_competizioni
+ Questo sensore viene è la lista dei campionati e delle giornate in corso
+- sensor.calciolive_competizioni
 
  Questo sensore ci da la classifica dei capocannonieri del campionato
 - sensor.calciolive_nomescelto_cannonieri
