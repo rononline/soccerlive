@@ -2,6 +2,9 @@
 
 ## Descrizione
 L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazioni in tempo reale sulle competizioni di calcio, come classifiche, cannonieri e giornate di campionato.
+Questi sono i campionati supportati GRATUITAMENTE da football-data.org, ma a pagamento c'è ne sono altre.
+    
+<img src="images/campionati.png" alt="HACS" width="800"/>
 
 ## Installazione manuale tramite HACS
 
