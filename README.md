@@ -25,13 +25,17 @@ L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazion
     <img src="images/integrazione1.png" alt="HACS" width="300"/>
     <img src="images/integrazione2.png" alt="HACS" width="300"/>
 
-6. Puoi anche seguire la tua squadra del cuore con tutte le partite passate e future
+6. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
+
+## Squadra del cuore
+Puoi anche seguire la tua squadra del cuore con tutte le partite passate e future
    Andate sul sito https://www.football-data.org/coverage
    Selezionate il campionato e poi click sulla vostra squadra, in alto compare un numero, è il vostro team_id
 
-8. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
-
-Note: Puoi usare la stessa api key per piu campionati, ricordati di dare un nome al campionato
+   Ricordatevi se scegliete il Team ID di crearlo come nuovo sensore e di NON selezionare il campionato.
+   
+## Note
+Puoi usare la stessa api key per piu campionati, ricordati di dare un nome al campionato
 
 ## Utilizzo dei sensori
 Vengono creati 5 sensori:
