@@ -191,6 +191,7 @@ class CalcioLiveSensor(Entity):
                 "count": result_set.get("count", 0),
                 "first_match_date": result_set.get("first", "N/A"),
                 "last_match_date": result_set.get("last", "N/A"),
+                "played": result_set.get("wins", 0),
                 "wins": result_set.get("wins", 0),
                 "draws": result_set.get("draws", 0),
                 "losses": result_set.get("losses", 0),

@@ -50,7 +50,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     **self._data,
                     "competition_code": user_input["competition_code"],
                     "team_id": None,
-                    "name": user_input.get("name", "Nome Campionato"),
+                    "name": user_input.get("name", "Nome Campionato (a piacere)"),
                 },
             )
 
@@ -58,7 +58,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="campionato",
             data_schema=vol.Schema({
                 vol.Required("competition_code"): vol.In(COMPETITIONS),
-                vol.Optional("name", default="Nome Campionato"): str,
+                vol.Optional("name", default="Nome Campionato (a piacere)"): str,
             }),
             errors=self._errors,
         )
@@ -67,7 +67,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data.update(user_input)
             team_id = user_input["team_id"]
-            team_name = user_input.get("name", "Nome Squadra")
+            team_name = user_input.get("name", "Nome Squadra (a piacere)")
 
             # Creiamo il titolo combinando ID del team e nome
             return self.async_create_entry(
@@ -84,7 +84,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="team",
             data_schema=vol.Schema({
                 vol.Required("team_id", description={"suggested_value": "Inserisci il Team ID"}): str,
-                vol.Optional("name", default="Nome Squadra"): str,
+                vol.Optional("name", default="Nome Squadra (a piacere)"): str,
             }),
             errors=self._errors,
         )
@@ -120,7 +120,7 @@ class CalcioLiveOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional("api_key", default=defaults.get("api_key")): str,
-                vol.Optional("name", default=defaults.get("name", "Nome Campionato")): str,
+                vol.Optional("name", default=defaults.get("name", "Nome Campionato (a piacere)")): str,
             }),
             errors=self._errors,
         )
