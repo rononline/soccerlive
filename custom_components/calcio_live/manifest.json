@@ -8,5 +8,6 @@
   "config_flow": true,
   "iot_class": "cloud_polling",
   "config_flow": true,
-  "requirements": ["arrow", "aiofiles"]
+  "requirements": ["arrow", "aiofiles"],
+  "issue_tracker": "https://github.com/Bobsilvio/calcio_live/issues"
 }
