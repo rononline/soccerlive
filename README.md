@@ -27,8 +27,10 @@ Questi sono i campionati supportati GRATUITAMENTE da football-data.org, ma a pag
 
     <img src="images/integrazione1.png" alt="HACS" width="300"/>
     <img src="images/integrazione2.png" alt="HACS" width="300"/>
-
-6. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
+    <img src="images/integrazione3.png" alt="HACS" width="300"/>
+    <img src="images/integrazione4.png" alt="HACS" width="300"/>
+   
+7. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
 
 ## Squadra del cuore
 Puoi anche seguire la tua squadra del cuore con tutte le partite passate e future
