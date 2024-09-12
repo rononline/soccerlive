@@ -1,103 +1,126 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+import logging
+from .const import DOMAIN, COMPETITIONS
 
-from .const import DOMAIN, CONF_API_KEY, COMPETITIONS
+_LOGGER = logging.getLogger(__name__)
 
+OPTION_SELECT_CAMPIONATO = "Campionato"
+OPTION_SELECT_TEAM = "Team"
+
+@config_entries.HANDLERS.register(DOMAIN)
 class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Gestisce il flusso di configurazione per CalcioLive."""
 
     VERSION = 1
 
+    def __init__(self):
+        self._errors = {}
+        self._data = {}
+
     async def async_step_user(self, user_input=None):
-        """Gestisce il primo step di configurazione dell'utente."""
-        errors = {}
+        self._errors = {}
 
         if user_input is not None:
-            api_key = user_input["api_key"]
-            competition_code = user_input.get("competition_code")
-            team_id = user_input.get("team_id")
+            selection = user_input.get("selection")
 
-            # Assicuriamoci che venga fornito uno tra competition_code o team_id, ma non entrambi
-            if not competition_code and not team_id:
-                errors["base"] = "missing_required_field"
-            elif competition_code and team_id:
-                errors["base"] = "both_fields_filled"
-            else:
-                if competition_code:
-                    name_prefix = user_input.get("name", COMPETITIONS[competition_code])
-                    # Creiamo i sensori relativi alla competizione
-                    return self.async_create_entry(
-                        title=f"{name_prefix} - {COMPETITIONS[competition_code]}",
-                        data={
-                            "api_key": api_key,
-                            "competition_code": competition_code,
-                            "team_id": None,
-                            "name": name_prefix,
-                        }
-                    )
+            if selection == OPTION_SELECT_CAMPIONATO:
+                self._data.update(user_input)
+                return await self.async_step_campionato()
 
-                if team_id:
-                    name_prefix = user_input.get("name", f"Team {team_id}")
-                    # Creiamo il sensore per la squadra
-                    return self.async_create_entry(
-                        title=f"{name_prefix} - Team {team_id}",
-                        data={
-                            "api_key": api_key,
-                            "competition_code": None,
-                            "team_id": team_id,
-                            "name": name_prefix,
-                        }
-                    )
-
-        # Opzioni per la selezione della competizione
-        competition_options = {
-            **{key: value for key, value in COMPETITIONS.items()},
-        }
+            elif selection == OPTION_SELECT_TEAM:
+                self._data.update(user_input)
+                return await self.async_step_team()
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("api_key", description={"suggested_value": "Chiave API obbligatoria per football-data.org"}, default=""): str,
-                vol.Optional("competition_code", description={"suggested_value": "Codice della competizione"}): vol.In(competition_options),
-                vol.Optional("team_id", description={"suggested_value": "ID della squadra (opzionale)"}): str,
-                vol.Optional("name", description={"suggested_value": "Nome del sensore"}, default="SerieA"): str,
+                vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM]),
+                vol.Required("api_key", description={"suggested_value": "Inserisci la tua chiave API"}): str,
             }),
-            errors=errors,
+            errors=self._errors,
+        )
+
+    async def async_step_campionato(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            return self.async_create_entry(
+                title=f"{COMPETITIONS[user_input['competition_code']]}",
+                data={
+                    **self._data,
+                    "competition_code": user_input["competition_code"],
+                    "team_id": None,
+                    "name": user_input.get("name", "Nome Campionato"),
+                },
+            )
+
+        return self.async_show_form(
+            step_id="campionato",
+            data_schema=vol.Schema({
+                vol.Required("competition_code"): vol.In(COMPETITIONS),
+                vol.Optional("name", default="Nome Campionato"): str,
+            }),
+            errors=self._errors,
+        )
+
+    async def async_step_team(self, user_input=None):
+        if user_input is not None:
+            self._data.update(user_input)
+            team_id = user_input["team_id"]
+            team_name = user_input.get("name", "Nome Squadra")
+
+            # Creiamo il titolo combinando ID del team e nome
+            return self.async_create_entry(
+                title=f"Team {team_id} {team_name}",
+                data={
+                    **self._data,
+                    "competition_code": None,
+                    "team_id": team_id,
+                    "name": f"Team {team_id} {team_name}",
+                },
+            )
+
+        return self.async_show_form(
+            step_id="team",
+            data_schema=vol.Schema({
+                vol.Required("team_id", description={"suggested_value": "Inserisci il Team ID"}): str,
+                vol.Optional("name", default="Nome Squadra"): str,
+            }),
+            errors=self._errors,
         )
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        """Ritorna il gestore del flusso di opzioni."""
         return CalcioLiveOptionsFlowHandler(config_entry)
 
 
 class CalcioLiveOptionsFlowHandler(config_entries.OptionsFlow):
-    """Gestisce il flusso delle opzioni per CalcioLive."""
 
     def __init__(self, config_entry):
         self.config_entry = config_entry
+        self._errors = {}
 
     async def async_step_init(self, user_input=None):
-        """Gestisce l'inizio del flusso di opzioni."""
-        return await self.async_step_user()
-
-    async def async_step_user(self, user_input=None):
-        """Mostra il form per modificare le opzioni dell'integrazione."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        competition_options = {
-            **{key: value for key, value in COMPETITIONS.items()},
+        return await self._show_options_form(user_input)
+
+    async def _show_options_form(self, user_input):
+        defaults = {
+            "api_key": self.config_entry.data.get("api_key"),
+            "selection": self.config_entry.data.get("selection"),
+            "competition_code": self.config_entry.data.get("competition_code"),
+            "team_id": self.config_entry.data.get("team_id"),
+            "name": self.config_entry.data.get("name"),
         }
 
         return self.async_show_form(
-            step_id="user",
+            step_id="init",
             data_schema=vol.Schema({
-                vol.Required("api_key", description={"suggested_value": "Chiave API obbligatoria"}, default=self.config_entry.data.get("api_key")): str,
-                vol.Optional("competition_code", description={"suggested_value": "Seleziona la competizione (opzionale)"}, default=self.config_entry.data.get("competition_code")): vol.In(competition_options),
-                vol.Optional("team_id", description={"suggested_value": "ID della squadra (opzionale)"}, default=self.config_entry.data.get("team_id")): str,
-                vol.Optional("name", description={"suggested_value": "Nome personalizzato (opzionale)"}, default=self.config_entry.data.get("name", "CalcioLive")): str,
+                vol.Optional("api_key", default=defaults.get("api_key")): str,
+                vol.Optional("name", default=defaults.get("name", "Nome Campionato")): str,
             }),
+            errors=self._errors,
         )
