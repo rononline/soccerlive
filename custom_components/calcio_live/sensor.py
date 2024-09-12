@@ -1,8 +1,14 @@
 import logging
 import aiohttp
 from homeassistant.helpers.entity import Entity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     try:
@@ -14,10 +20,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         sensors = []
 
+        # Inizializza hass.data[DOMAIN] se non esiste
+        if DOMAIN not in hass.data:
+            hass.data[DOMAIN] = {}
+
+        # Evita la duplicazione del sensore calciolive_competizioni
+        if "calciolive_competizioni" not in hass.data[DOMAIN] and competition_code:
+            sensors.append(CalcioLiveSensor(hass, f"calciolive_competizioni", api_key, competition_code, "competitions"))
+            hass.data[DOMAIN]["calciolive_competizioni"] = True
+        
         if competition_code:
             # Crea i sensori relativi alle competizioni
             sensors += [
-                CalcioLiveSensor(hass, f"calciolive_competizioni", api_key, competition_code, "competitions"),
                 CalcioLiveSensor(hass, f"calciolive_{competition_name}_classifica", api_key, competition_code, "standings"),
                 CalcioLiveSensor(hass, f"calciolive_{competition_name}_match_day", api_key, competition_code, "match_day"),
                 CalcioLiveSensor(hass, f"calciolive_{competition_name}_cannonieri", api_key, competition_code, "scorers")
@@ -29,10 +43,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         async_add_entities(sensors, True)
 
-        return True
     except Exception as e:
-        _LOGGER.error(f"Errore durante il setup dell'entry: {e}")
-        return False
+        _LOGGER.error(f"Errore durante la configurazione dei sensori: {e}")
+
 
 
 class CalcioLiveSensor(Entity):
