@@ -28,7 +28,7 @@ Questi sono i campionati supportati GRATUITAMENTE da football-data.org, ma a pag
     <img src="images/integrazione1.png" alt="HACS" width="300"/>
     <img src="images/integrazione2.png" alt="HACS" width="300"/>
     <img src="images/integrazione3.png" alt="HACS" width="300"/>
-    <img src="images/integrazione4.png" alt="HACS" width="300"/>
+    <img src="images/integrazione4.png" alt="HACS" width="900"/>
    
 7. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
 
@@ -57,8 +57,8 @@ Vengono creati 5 sensori:
  Questo sensore ci da le sfide della giornata in corso o future (nel caso siano finite tutte le partite)
 - sensor.calciolive_nomescelto_match_day
 
- Questo sensore viene creato solo se inserisci il team_id 
-- sensor.calciolive_nomescelto
+ Questo sensore viene creato quando configuri il Team con il Team_ID, xxx è il numero che hai messo, yyy è il nome che hai scelto
+- sensor.calciolive_team_xxx_yyy
 
 ## Informazioni
 Questa è la mia prima card e sicuramente c'è tanto lavoro da fare, se vi piace, potete ricambiare seguendomi nei social:
