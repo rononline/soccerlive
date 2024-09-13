@@ -1,7 +1,7 @@
 {
   "domain": "calcio_live",
   "name": "Calcio Live",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "documentation": "https://github.com/Bobsilvio/calcio-live",
   "dependencies": [],
   "codeowners": ["@Bobsilvio"],
