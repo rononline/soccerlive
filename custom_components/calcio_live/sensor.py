@@ -28,6 +28,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if "calciolive_competizioni" not in hass.data[DOMAIN] and competition_code:
             sensors.append(CalcioLiveSensor(hass, f"calciolive_competizioni", api_key, competition_code, "competitions"))
             hass.data[DOMAIN]["calciolive_competizioni"] = True
+        if "calciolive_matchof_day" not in hass.data[DOMAIN] and competition_code:
+            sensors.append(CalcioLiveSensor(hass, f"calciolive_matchof_day", api_key, competition_code, "matchof_day"))
+            hass.data[DOMAIN]["calciolive_matchof_day"] = True
         
         if competition_code:
             # Crea i sensori relativi alle competizioni
@@ -95,11 +98,12 @@ class CalcioLiveSensor(Entity):
         """Construct the URL for the API based on the sensor type."""
         base_url = "https://api.football-data.org/v4"
         competitions_url      = f"{base_url}/competitions"
-        competition_sp_url    = f"{base_url}/competitions/{self._competition_code}"
-        standings_url         = f"{base_url}/competitions/{self._competition_code}/standings?season=2024"
-        scorers_url           = f"{base_url}/competitions/{self._competition_code}/scorers"
-        match_url             = f"{base_url}/competitions/{self._competition_code}/matches?matchday="
-        match_team_url        = f"{base_url}/teams/{self._team_id}/matches"
+        competition_sp_url    = f"{base_url}/competitions/{self._competition_code}" #Competizioni
+        standings_url         = f"{base_url}/competitions/{self._competition_code}/standings?season=2024" #Classifica
+        scorers_url           = f"{base_url}/competitions/{self._competition_code}/scorers" #Capocannonieri
+        match_url             = f"{base_url}/competitions/{self._competition_code}/matches?matchday=" #Match giornata campionato
+        match_team_url        = f"{base_url}/teams/{self._team_id}/matches" #Match della squadra
+        matchof_day_url           = f"{base_url}/matches/" #Match del giorno
         
         if self._sensor_type == "competitions":
             return competitions_url
@@ -140,75 +144,113 @@ class CalcioLiveSensor(Entity):
         
         elif self._sensor_type == "team_matches" and self._team_id:
             return match_team_url
-        
+            
+        elif self._sensor_type == "matchof_day":
+            return matchof_day_url
+            
         return None
 
     def _process_data(self, data):
         if self._sensor_type == "competitions":
-            self._state = len(data.get("competitions", []))
-            self._attributes = {"competitions": data.get("competitions", [])}
+            count = data.get("count", 0)
+            filters = data.get("filters", {})
+            competitions = data.get("competitions", [])
+            self._state = {f"Campionati: {count}"}
+            
+            #self._state = len(data.get("competitions", []))
+            self._attributes = {"competitions": competitions}
 
         elif self._sensor_type == "standings":
+            filters = data.get("filters", {})
+            area = data.get("area", {})
+            competition = data.get("competition", {})
+            season = data.get("season", {})
+            standings = data.get("standings", [])
+            
+            campionato = data.get("competition", {}).get("name", "N/A")
             current_matchday = data.get("season", {}).get("currentMatchday", "N/A")
-            self._state = f"Giornata {current_matchday}"
+            
+            self._state = {f"Campionato: {campionato}", f"Giornata {current_matchday}"}
+            
             self._attributes = {
-                "competition": data.get("competition", {}),
-                "season": data.get("season", {}),
-                "standings": data.get("standings", []),
-                "area": data.get("area", {}),
-                "filters": data.get("filters", {}),
-                "current_matchday": current_matchday
+                "filters": filters,
+                "area": area,
+                "competition": competition,
+                "season": season,
+                "standings": standings
             }
 
-        elif self._sensor_type == "match_day":
-            matchday = data.get("filters", {}).get("matchday", "N/A")
-            matches = data.get("matches", [])
-            self._state = f"Giornata {matchday}"
+        elif self._sensor_type == "scorers": #Capocannonieri
+            count = data.get("count", 0)
+            filters = data.get("filters", {})
+            competition = data.get("competition", {})
+            season = data.get("season", {})
+            scorers = data.get("scorers", [])
+            
+            campionato = data.get("competition", {}).get("name", "N/A")
+            stagione = data.get("filters", {}).get("season", "N/A")
+            giornata = data.get("season", {}).get("currentMatchday", "N/A")
+            
+            self._state = {f"Campionato: {campionato}", f"Stagione: {stagione}", f"Giornata: {giornata}"}
+            
             self._attributes = {
-                "matchday": matchday,
-                "result_set": data.get("resultSet", {}),
-                "competition": data.get("competition", {}),
+                "count": count,
+                "filters": filters,
+                "competition": competition,
+                "season": season,
+                "scorers": scorers
+            }
+        
+        elif self._sensor_type == "match_day": #Match della giornata di campionato
+           filters = data.get("filters", {})
+           resultSet = data.get("resultSet", {})
+           competition = data.get("competition", {})
+           matches = data.get("matches", [])
+           
+           stagione = data.get("filters", {}).get("season", "N/A")
+           giornata = data.get("filters", {}).get("matchday", "N/A")
+           giocate = data.get("resultSet", {}).get("played", "N/A")
+           
+           self._state = {f"Stagione: {stagione}", f"Giornata: {giornata}", f"Giocate: {giocate}"}
+           
+           self._attributes = {
+               "filters": filters,
+               "resultSet": resultSet,
+               "competition": competition,
+               "matches": matches
+           }
+
+        elif self._sensor_type == "matchof_day": #Partite del giorno
+            filters = data.get("filters", {})
+            resultSet = data.get("resultSet", {})
+            matches = data.get("matches", [])
+            
+            totale = data.get("resultSet", {}).get("count", "N/A")
+            giocate = data.get("resultSet", {}).get("played", "N/A")
+            
+            self._state = {f"Totale: {totale}", f"Giocate: {giocate}"}
+            
+            self._attributes = {
+                "filters": filters,
+                "resultSet": resultSet,
                 "matches": matches
             }
 
-        elif self._sensor_type == "scorers":
-            self._state = data.get("count")
-            self._attributes = {
-                "competition": data.get("competition", {}),
-                "season": data.get("season", {}),
-                "scorers": data.get("scorers", [])
-            }
-
-        elif self._sensor_type == "team_matches":
-            result_set = data.get("resultSet", {})
+        elif self._sensor_type == "team_matches": #Partite squadra preferita
+            filters = data.get("filters", {})
+            resultSet = data.get("resultSet", {})
             matches = data.get("matches", [])
-
-            # Stato: numero di partite giocate
-            self._state = result_set.get("played", 0)
-
-            # Attributi: dettagli delle partite e altre informazioni
+            
+            totali = data.get("filters", {}).get("count", "N/A")
+            giocate = data.get("resultSet", {}).get("played", "N/A")
+            vinte = data.get("resultSet", {}).get("wins", "N/A")
+            pareggiate = data.get("resultSet", {}).get("draws", "N/A")
+            perse = data.get("resultSet", {}).get("losses", "N/A")
+            
+            self._state = {f"Totali: {totali}", f"Giocate: {giocate}", f"Vinte: {vinte}", f"Pareggiate: {pareggiate}", f"Perse: {perse}"}
+            
             self._attributes = {
-                "count": result_set.get("count", 0),
-                "first_match_date": result_set.get("first", "N/A"),
-                "last_match_date": result_set.get("last", "N/A"),
-                "played": result_set.get("wins", 0),
-                "wins": result_set.get("wins", 0),
-                "draws": result_set.get("draws", 0),
-                "losses": result_set.get("losses", 0),
-                "matches": []
+                "filters": filters,
+                "resultSet": resultSet,
+                "matches": matches
             }
-
-            # Elaborazione delle singole partite
-            for match in matches:
-                self._attributes["matches"].append({
-                    "competition_name": match.get("competition", {}).get("name", "N/A"),
-                    "competition_code": match.get("competition", {}).get("code", "N/A"),
-                    "matchday": match.get("matchday", "N/A"),
-                    "home_team": match.get("homeTeam", {}).get("name", "N/A"),
-                    "away_team": match.get("awayTeam", {}).get("name", "N/A"),
-                    "home_team_crest": match.get("homeTeam", {}).get("crest", ""),
-                    "away_team_crest": match.get("awayTeam", {}).get("crest", ""),
-                    "score_full_time": match.get("score", {}).get("fullTime", {}),
-                    "utc_date": match.get("utcDate", "N/A"),
-                    "status": match.get("status", "N/A"),
-                })
