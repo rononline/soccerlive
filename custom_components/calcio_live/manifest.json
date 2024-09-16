@@ -1,13 +1,12 @@
 {
   "domain": "calcio_live",
   "name": "Calcio Live",
-  "version": "1.0.10",
-  "documentation": "https://github.com/Bobsilvio/calcio-live",
-  "dependencies": [],
   "codeowners": ["@Bobsilvio"],
   "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Bobsilvio/calcio_live",
   "iot_class": "cloud_polling",
-  "config_flow": true,
+  "issue_tracker": "https://github.com/Bobsilvio/calcio_live/issues",
   "requirements": ["arrow", "aiofiles"],
-  "issue_tracker": "https://github.com/Bobsilvio/calcio-live/issues"
+  "version": "1.0.10",
 }
