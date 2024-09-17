@@ -86,7 +86,7 @@ class CalcioLiveSensor(Entity):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
                     if response.status != 200:
-                        _LOGGER.error(f"Errore HTTP {response.status} per {self._name}")
+                        #_LOGGER.error(f"Errore HTTP {response.status} per {self._name}")
                         return
                     data = await response.json()
                     self._process_data(data)
