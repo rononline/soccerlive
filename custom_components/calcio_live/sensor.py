@@ -6,12 +6,11 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+import random
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-
-semaphore = asyncio.Semaphore(30)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
     try:
@@ -19,38 +18,53 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         competition_name = entry.data.get("name")
         competition_code = entry.data.get("competition_code")
         team_id = entry.data.get("team_id")
-        scan_interval = timedelta(minutes=entry.options.get("scan_interval", 10))
 
+        base_scan_interval = timedelta(minutes=entry.options.get("scan_interval", 3))
         sensors = []
 
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
 
         if "calciolive_competizioni" not in hass.data[DOMAIN] and competition_code:
-            sensors.append(CalcioLiveSensor(hass, f"calciolive_competizioni", api_key, competition_code, "competitions", scan_interval))
+            sensors.append(CalcioLiveSensor(
+                hass, f"calciolive_competizioni", api_key, competition_code, "competitions", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+            ))
             hass.data[DOMAIN]["calciolive_competizioni"] = True
 
         if "calciolive_matchof_day" not in hass.data[DOMAIN] and competition_code:
-            sensors.append(CalcioLiveSensor(hass, f"calciolive_matchof_day", api_key, competition_code, "matchof_day", scan_interval))
+            sensors.append(CalcioLiveSensor(
+                hass, f"calciolive_matchof_day", api_key, competition_code, "matchof_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+            ))
             hass.data[DOMAIN]["calciolive_matchof_day"] = True
 
         if competition_code:
             sensors += [
-                CalcioLiveSensor(hass, f"calciolive_{competition_name}_classifica", api_key, competition_code, "standings", scan_interval),
-                CalcioLiveSensor(hass, f"calciolive_{competition_name}_match_day", api_key, competition_code, "match_day", scan_interval),
-                CalcioLiveSensor(hass, f"calciolive_{competition_name}_cannonieri", api_key, competition_code, "scorers", scan_interval)
+                CalcioLiveSensor(
+                    hass, f"calciolive_{competition_name}_classifica", api_key, competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                ),
+                CalcioLiveSensor(
+                    hass, f"calciolive_{competition_name}_match_day", api_key, competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                ),
+                CalcioLiveSensor(
+                    hass, f"calciolive_{competition_name}_cannonieri", api_key, competition_code, "scorers", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                )
             ]
 
         if team_id:
-            sensors.append(CalcioLiveSensor(hass, f"calciolive_{competition_name}", api_key, team_id, "team_matches", scan_interval, team_id=team_id))
+            sensors.append(CalcioLiveSensor(
+                hass, f"calciolive_{competition_name}", api_key, team_id, "team_matches", base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_id=team_id, config_entry_id=entry.entry_id
+            ))
 
         async_add_entities(sensors, True)
 
     except Exception as e:
         _LOGGER.error(f"Errore durante la configurazione dei sensori: {e}")
 
+
 class CalcioLiveSensor(Entity):
-    def __init__(self, hass, name, api_key, competition_code=None, sensor_type=None, scan_interval=timedelta(minutes=5), team_id=None):
+    _cache = {}  # Cache condivisa tra i sensori
+
+    def __init__(self, hass, name, api_key, competition_code=None, sensor_type=None, scan_interval=timedelta(minutes=5), team_id=None, config_entry_id=None):
         self.hass = hass
         self._name = name
         self._api_key = api_key
@@ -60,7 +74,8 @@ class CalcioLiveSensor(Entity):
         self._scan_interval = scan_interval
         self._state = None
         self._attributes = {}
-        self._request_count = 0 
+        self._config_entry_id = config_entry_id
+        self._request_count = 0
         self._last_request_time = None
 
     @property
@@ -84,34 +99,62 @@ class CalcioLiveSensor(Entity):
         """Indica se il sensore deve essere aggiornato."""
         return True
 
+    @property
+    def unique_id(self):
+        """Restituisce un ID unico per ogni sensore."""
+        return f"{self._name}_{self._sensor_type}"
+
+    @property
+    def config_entry_id(self):
+        """Associa l'entità alla config_entry."""
+        return self._config_entry_id
+
     async def async_update(self):
+        _LOGGER.info(f"Starting update for {self._name}")
+
+        cache_key = f"{self._sensor_type}_{self._competition_code}_{self._team_id}"
+        if cache_key in CalcioLiveSensor._cache and (datetime.now() - CalcioLiveSensor._cache[cache_key]["time"]).seconds < 60:
+            self._process_data(CalcioLiveSensor._cache[cache_key]["data"])
+            _LOGGER.info(f"Using cached data for {self._name}")
+            return
+
         url = await self._build_url()
         headers = {"X-Auth-Token": self._api_key}
 
         if url is None:
-            #_LOGGER.error(f"URL is None for {self._name}")
+            _LOGGER.error(f"URL is None for {self._name}")
             return
 
-        async with semaphore:  # Usa il semaforo per limitare a 50 richieste al minuto
+        retries = 0
+        while retries < 3:
             try:
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                     async with session.get(url, headers=headers) as response:
-                        if response.status == 429:
-                            #_LOGGER.error(f"Errore HTTP 429: Rate limit superato per {self._name}")
+                        if response.status == 200:
+                            data = await response.json()
+                            CalcioLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
+                            self._process_data(data)
+                            _LOGGER.info(f"Finished update for {self._name}")
+                            break
+                        elif response.status == 429:
+                            _LOGGER.error(f"Errore HTTP 429: Rate limit superato per {self._name}")
                             self._state = None
-                            await asyncio.sleep(60)  # Pausa di 1 minuto prima di ritentare
-                            return
-                        elif response.status != 200:
-                            return
-                        data = await response.json()
-                        self._process_data(data)
-
-                        self._request_count += 1
-                        self._last_request_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        _LOGGER.info(f"Richiesta API {self._request_count} effettuata per {self._name} alle {self._last_request_time}")
+                            await asyncio.sleep(60)
+                        else:
+                            _LOGGER.error(f"Errore HTTP {response.status} per {self._name}")
+                            await asyncio.sleep(5)
+                            retries += 1
             except aiohttp.ClientError as error:
                 _LOGGER.error(f"Errore nel recupero dei dati per {self._name}: {error}")
-                self._state = None
+                await asyncio.sleep(5)
+                retries += 1
+            except asyncio.TimeoutError:
+                _LOGGER.error(f"Timeout raggiunto per {self._name}")
+                await asyncio.sleep(5)
+                retries += 1
+
+        _LOGGER.info(f"Finished update for {self._name}")
+        
 
     async def _build_url(self):
         base_url = "https://api.football-data.org/v4"
@@ -227,7 +270,8 @@ class CalcioLiveSensor(Entity):
         elif self._sensor_type == "matchof_day": #Partite del giorno
             filters = data.get("filters", {})
             resultSet = data.get("resultSet", {})
-            matches = data.get("matches", [])
+            #matches = data.get("matches", [])
+            matches = data.get("matches", [])[:30]
             
             totale = data.get("resultSet", {}).get("count", "N/A")
             giocate = data.get("resultSet", {}).get("played", "N/A")
@@ -243,7 +287,8 @@ class CalcioLiveSensor(Entity):
         elif self._sensor_type == "team_matches": #Partite squadra preferita
             filters = data.get("filters", {})
             resultSet = data.get("resultSet", {})
-            matches = data.get("matches", [])
+            #matches = data.get("matches", [])
+            matches = data.get("matches", [])[:30]
             
             totali = data.get("filters", {}).get("count", "N/A")
             giocate = data.get("resultSet", {}).get("played", "N/A")
@@ -251,8 +296,7 @@ class CalcioLiveSensor(Entity):
             pareggiate = data.get("resultSet", {}).get("draws", "N/A")
             perse = data.get("resultSet", {}).get("losses", "N/A")
             
-            self._state = {f"Totali: {totali}", f"Giocate: {giocate}", f"Vinte: {vinte}", f"Pareggiate: {pareggiate}", f"Perse: {perse}"}
-            
+            self._state = f"Totali: {totali}, Giocate: {giocate}, Vinte: {vinte}, Pareggiate: {pareggiate}, Perse: {perse}"
             self._attributes = {
                 "filters": filters,
                 "resultSet": resultSet,
