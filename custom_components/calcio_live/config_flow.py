@@ -44,14 +44,17 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_campionato(self, user_input=None):
         if user_input is not None:
             self._data.update(user_input)
+
+            nome = user_input.get("name", "Nome Campionato (a piacere)")
+            nome_normalizzato = nome.replace(" ", "_").lower()
+
             return self.async_create_entry(
                 title=f"{COMPETITIONS[user_input['competition_code']]}",
                 data={
                     **self._data,
                     "competition_code": user_input["competition_code"],
                     "team_id": None,
-                    "name": user_input.get("name", "Nome Campionato (a piacere)"),
-                    "scan_interval": user_input.get("scan_interval", 10),  # Salva lo scan_interval
+                    "name": nome_normalizzato,
                 },
             )
 
@@ -60,7 +63,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required("competition_code"): vol.In(COMPETITIONS),
                 vol.Optional("name", default="Nome Campionato (a piacere)"): str,
-                vol.Optional("scan_interval", default=5): int,
             }),
             errors=self._errors,
         )
@@ -69,16 +71,17 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data.update(user_input)
             team_id = user_input["team_id"]
-            team_name = user_input.get("name", "Nome Squadra (a piacere)")
+
+            nome_squadra = user_input.get("name", "Nome Squadra (a piacere)")
+            nome_squadra_normalizzato = nome_squadra.replace(" ", "_").lower()
 
             return self.async_create_entry(
-                title=f"Team {team_id} {team_name}",
+                title=f"Team {team_id} {nome_squadra_normalizzato}",
                 data={
                     **self._data,
                     "competition_code": None,
                     "team_id": team_id,
-                    "name": f"Team {team_id} {team_name}",
-                    "scan_interval": user_input.get("scan_interval", 10),
+                    "name": f"Team {team_id} {nome_squadra_normalizzato}",
                 },
             )
 
@@ -87,7 +90,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required("team_id", description={"suggested_value": "Inserisci il Team ID"}): str,
                 vol.Optional("name", default="Nome Squadra (a piacere)"): str,
-                vol.Optional("scan_interval", default=5): int,
             }),
             errors=self._errors,
         )
@@ -117,7 +119,6 @@ class CalcioLiveOptionsFlowHandler(config_entries.OptionsFlow):
             "competition_code": self.config_entry.data.get("competition_code"),
             "team_id": self.config_entry.data.get("team_id"),
             "name": self.config_entry.data.get("name"),
-            "scan_interval": self.config_entry.options.get("scan_interval", 10),
         }
 
         return self.async_show_form(
@@ -125,7 +126,6 @@ class CalcioLiveOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Optional("api_key", default=defaults.get("api_key")): str,
                 vol.Optional("name", default=defaults.get("name", "Nome Campionato (a piacere)")): str,
-                vol.Optional("scan_interval", default=defaults.get("scan_interval", 10)): int,
             }),
             errors=self._errors,
         )
