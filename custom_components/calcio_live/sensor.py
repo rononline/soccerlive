@@ -36,32 +36,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
         if not hass.data[DOMAIN]["calciolive_competizioni_created"] and competition_code:
             sensors.append(CalcioLiveSensor(
-                hass, f"calciolive_competizioni", api_key, competition_code, "competitions", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                hass, f"calciolive_competizioni".replace(" ", "_").lower(), api_key, competition_code, "competitions", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
             ))
             hass.data[DOMAIN]["calciolive_competizioni_created"] = True
 
         if not hass.data[DOMAIN]["calciolive_matchof_day_created"] and competition_code:
             sensors.append(CalcioLiveSensor(
-                hass, f"calciolive_matchof_day", api_key, competition_code, "matchof_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                hass, f"calciolive_matchof_day".replace(" ", "_").lower(), api_key, competition_code, "matchof_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
             ))
             hass.data[DOMAIN]["calciolive_matchof_day_created"] = True
 
         if competition_code:
             sensors += [
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_classifica", api_key, competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_classifica".replace(" ", "_").lower(), api_key, competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 ),
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_match_day", api_key, competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_match_day".replace(" ", "_").lower(), api_key, competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 ),
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_cannonieri", api_key, competition_code, "scorers", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_cannonieri".replace(" ", "_").lower(), api_key, competition_code, "scorers", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 )
             ]
 
         if team_id:
             sensors.append(CalcioLiveSensor(
-                hass, f"calciolive_{competition_name}", api_key, team_id, "team_matches", base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_id=team_id, config_entry_id=entry.entry_id
+                hass, f"calciolive_{competition_name}".replace(" ", "_").lower(), api_key, team_id, "team_matches", base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_id=team_id, config_entry_id=entry.entry_id
             ))
 
         async_add_entities(sensors, True)
