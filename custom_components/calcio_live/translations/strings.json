@@ -1,0 +1,27 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Calcio Live Configuration",
+                "description": "Welcome to the Calcio Live configuration.\nSelect which sensors you want to create. You can also create multiple sensors for different leagues or specific teams.",
+                "data": {
+                    "selection": "Select and click send"
+                }
+            },
+            "campionato": {
+                "title": "Select League",
+                "description": "Choose the league you want.",
+                "data": {
+                    "competition_code": "League code"
+                }
+            },
+            "team": {
+                "title": "Select Team",
+                "description": "Choose the team you want to follow.",
+                "data": {
+                    "team_id": "Team ID"
+                }
+            }
+        }
+    }
+}

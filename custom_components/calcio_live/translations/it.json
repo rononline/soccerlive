@@ -1,0 +1,27 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configurazione Calcio Live",
+                "description": "Benvenuto nella configurazione di Calcio Live.\nSeleziona quali sensori vuoi creare, puoi creare anche più sensori per diversi campionati o diversi specifici team.",
+                "data": {
+                    "selection": "Seleziona e clicca invia"
+                }
+            },
+            "campionato": {
+                "title": "Seleziona Campionato",
+                "description": "Scegli il campionato che desideri.",
+                "data": {
+                    "competition_code": "Codice del campionato"
+                }
+            },
+            "team": {
+                "title": "Seleziona Squadra",
+                "description": "Scegli la squadra che desideri seguire.",
+                "data": {
+                    "team_id": "ID della squadra"
+                }
+            }
+        }
+    }
+}

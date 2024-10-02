@@ -1,0 +1,27 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configuration Calcio Live",
+                "description": "Bienvenue dans la configuration de Calcio Live.\nSélectionnez les capteurs que vous souhaitez créer. Vous pouvez également créer plusieurs capteurs pour différents championnats ou équipes spécifiques.",
+                "data": {
+                    "selection": "Sélectionnez et cliquez sur envoyer"
+                }
+            },
+            "campionato": {
+                "title": "Sélectionnez Championnat",
+                "description": "Choisissez le championnat que vous souhaitez.",
+                "data": {
+                    "competition_code": "Code du championnat"
+                }
+            },
+            "team": {
+                "title": "Sélectionnez Équipe",
+                "description": "Choisissez l'équipe que vous souhaitez suivre.",
+                "data": {
+                    "team_id": "ID de l'équipe"
+                }
+            }
+        }
+    }
+}
