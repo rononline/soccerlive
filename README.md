@@ -14,6 +14,11 @@ Non dimenticare di seguirmi sui social:
 [![YouTube](https://img.shields.io/badge/Subscribe_YouTube-%23FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@silviosmartalexa)
 
 
+## Video Guida
+
+[Guarda il video su YouTube](https://www.youtube.com/watch?v=K-FAJmwsGXs)
+
+
 ## Descrizione
 L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazioni in tempo reale sulle competizioni di calcio, come classifiche, cannonieri e giornate di campionato.
     
