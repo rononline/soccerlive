@@ -1,11 +1,11 @@
 from .const import _LOGGER
-from datetime import datetime
+from dateutil import parser
 
 def team_matches_data(data):
     try:
         team_data = data.get("team", {})
         team_name = team_data.get("displayName", "N/A")
-        team_logo = team_data.get("logos", [{}])[0].get("href", "N/A")
+        team_logo = team_data.get("logo", [{}])[0].get("href", "N/A")
     
         events = data.get("events", [])
         matches = []
@@ -27,7 +27,7 @@ def team_matches_data(data):
 def _extract_match_data(event):
     try:
         event_name = event.get("name", "N/A")
-        event_date = event.get("date", "N/A")
+        event_date = _parse_date(event.get("date", "N/A"))
         venue = event.get("competitions", [])[0].get("venue", {}).get("fullName", "N/A")
 
         home_team_data = event.get("competitions", [])[0].get("competitors", [])[0].get("team", {})
@@ -82,3 +82,12 @@ def _extract_match_data(event):
     except Exception as e:
         _LOGGER.error(f"Errore nell'estrazione dei dati della partita: {e}")
         return {}
+
+def _parse_date(date_str):
+    """Funzione per convertire la data da stringa ISO a formato leggibile."""
+    try:
+        parsed_date = parser.isoparse(date_str)
+        return parsed_date.strftime("%d/%m/%Y %H:%M")
+    except (ValueError, TypeError) as e:
+        _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
+        return "N/A"

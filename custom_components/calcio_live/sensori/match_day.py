@@ -1,4 +1,5 @@
 from .const import _LOGGER
+from dateutil import parser
 
 def match_day_data(data):
     try:
@@ -6,7 +7,8 @@ def match_day_data(data):
         matches = []
 
         for match in matches_data:
-            match_date = match.get("date", "N/A")
+            match_date = _parse_date(match.get("date", "N/A"))
+            
             competitions = match.get("competitions", [])
 
             if not competitions or len(competitions[0].get("competitors", [])) < 2:
@@ -113,3 +115,13 @@ def _get_odds(odds_info):
             over_under = odd.get("total", {}).get("displayName", "Total") + ": " + odd.get("total", {}).get("over", {}).get("line", "N/A")
 
     return home_odds, away_odds, draw_odds, over_under
+
+
+def _parse_date(date_str):
+    """Funzione per convertire la data da stringa ISO a formato leggibile."""
+    try:
+        parsed_date = parser.isoparse(date_str)
+        return parsed_date.strftime("%d/%m/%Y %H:%M")
+    except (ValueError, TypeError) as e:
+        _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
+        return "N/A"

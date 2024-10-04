@@ -83,7 +83,7 @@ def _parse_date(date_str):
     """Funzione per convertire la data da stringa ISO a formato leggibile."""
     try:
         parsed_date = parser.isoparse(date_str)
-        return parsed_date.strftime("%d-%m-%Y %H:%M")
+        return parsed_date.strftime("%d/%m/%Y %H:%M")
     except (ValueError, TypeError) as e:
         _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
         return "N/A"

@@ -4,7 +4,7 @@ from homeassistant.core import callback
 import logging
 import requests
 import aiohttp
-from .const import DOMAIN, COMPETITIONS
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,30 +49,61 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     
 
     async def async_step_campionato(self, user_input=None):
-        """Schermata per selezionare il campionato (senza richiesta API)."""
+        """Schermata per selezionare il campionato (recuperato tramite API, ordinato alfabeticamente e senza ricerca)."""
         if user_input is not None:
             competition_code = user_input.get("competition_code")
+            competition_name = await self._get_competition_name(competition_code)  # Recupera il nome completo
             self._data.update({"competition_code": competition_code})
 
-            nome_sensore = COMPETITIONS.get(competition_code, competition_code)
-
             return self.async_create_entry(
-                title=f"{COMPETITIONS[competition_code]}",
+                title=f"{competition_name}",
                 data={
                     **self._data,
                     "competition_code": competition_code,
                     "team_id": None,
-                    "name": nome_sensore,
+                    "name": competition_name,  # Salva il nome invece del codice
                 },
             )
+
+        # Recupera e ordina le competizioni
+        competitions = await self._get_competitions()
+    
+        # Ordinamento alfabetico per nome della competizione
+        sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
 
         return self.async_show_form(
             step_id="campionato",
             data_schema=vol.Schema({
-                vol.Required("competition_code"): vol.In(COMPETITIONS),
+                vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
             errors=self._errors,
         )
+
+    async def _get_competitions(self):
+        """Recupera e organizza le competizioni tramite API."""
+        url = "https://site.api.espn.com/apis/site/v2/leagues/dropdown?lang=en&region=us&calendartype=whitelist&limit=200&sport=soccer"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    competitions_data = await response.json()
+
+                    # Estrai le competizioni e usa il nome per il selettore
+                    competitions = {
+                        league['slug']: league['name']
+                        for league in competitions_data.get("leagues", [])
+                    }
+                    _LOGGER.debug(f"Competizioni caricate: {competitions}")
+                    return competitions
+        except aiohttp.ClientError as e:
+            _LOGGER.error(f"Errore nel caricamento delle competizioni: {e}")
+            return {}
+
+    async def _get_competition_name(self, competition_code):
+        """Recupera il nome della competizione dato il suo codice."""
+        competitions = await self._get_competitions()
+        return competitions.get(competition_code, "Nome Sconosciuto")
+    
 
 
     async def async_step_select_competition_for_team(self, user_input=None):
@@ -81,13 +112,17 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             competition_code = user_input.get("competition_code")
             self._data.update({"competition_code": competition_code})
 
+            # Recupera le squadre in modo dinamico
             await self._get_teams(competition_code)
             return await self.async_step_team()
+
+        competitions = await self._get_competitions()
+        sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
 
         return self.async_show_form(
             step_id="select_competition_for_team",
             data_schema=vol.Schema({
-                vol.Required("competition_code"): vol.In(COMPETITIONS),
+                vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
             errors=self._errors,
         )
@@ -112,7 +147,8 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 },
             )
 
-        team_options = {team['id']: team['displayName'] for team in self._teams}
+        # Ordina le squadre in ordine alfabetico
+        team_options = {team['id']: team['displayName'] for team in sorted(self._teams, key=lambda t: t['displayName'])}
         team_options[OPTION_MANUAL_TEAM] = OPTION_MANUAL_TEAM
 
         return self.async_show_form(
@@ -122,6 +158,29 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }),
             errors=self._errors,
         )
+
+    async def _get_teams(self, competition_code):
+        """Recupera la lista delle squadre dal campionato selezionato tramite API."""
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/teams"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    teams_data = await response.json()
+
+                    # Estrai le squadre e ordinale alfabeticamente
+                    self._teams = [
+                        {
+                            "id": team['team']['id'],
+                            "displayName": team['team']['displayName']
+                        }
+                        for team in teams_data.get("sports", [])[0].get("leagues", [])[0].get("teams", [])
+                    ]
+                    _LOGGER.debug(f"Squadre caricate per {competition_code}: {self._teams}")
+        except aiohttp.ClientError as e:
+            _LOGGER.error(f"Errore nel caricamento delle squadre per {competition_code}: {e}")
+            self._teams = []
+    
 
     async def async_step_manual_team(self, user_input=None):
         """Schermata per inserire manualmente l'ID del team."""
@@ -147,25 +206,3 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }),
             errors=self._errors,
         )
-
-    async def _get_teams(self, competition_code):
-        """Recupera la lista delle squadre dal campionato selezionato tramite API."""
-        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/teams"
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    response.raise_for_status()
-                    teams_data = await response.json()
-
-                    # Estrai le squadre
-                    self._teams = [
-                        {
-                            "id": team['team']['id'],
-                            "displayName": team['team']['displayName']
-                        }
-                        for team in teams_data.get("sports", [])[0].get("leagues", [])[0].get("teams", [])
-                    ]
-                    _LOGGER.debug(f"Squadre caricate per {competition_code}: {self._teams}")
-        except aiohttp.ClientError as e:
-            _LOGGER.error(f"Errore nel caricamento delle squadre per {competition_code}: {e}")
-            self._teams = []

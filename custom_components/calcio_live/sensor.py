@@ -21,26 +21,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             hass.data[DOMAIN] = {}
 
         if team_id:
-            team_name = competition_name.replace(" ", "_").lower()
+            team_name = competition_name.replace(" ", "_").replace(".", "_").lower()
+            competition_name = competition_code.replace(" ", "_").replace(".", "_").lower()
             
             sensors += [
                 CalcioLiveSensor(
-                    hass, f"calciolive_{team_name}_next".lower(), competition_code, "team_match", base_scan_interval, team_id=team_id, config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_{team_name}_next", competition_code, "team_match", base_scan_interval, team_id=team_id, config_entry_id=entry.entry_id
                 ),
                 CalcioLiveSensor(
-                    hass, f"calciolive_{team_name}".lower(), competition_code, "team_matches", base_scan_interval, team_id=team_id, config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_{team_name}", competition_code, "team_matches", base_scan_interval, team_id=team_id, config_entry_id=entry.entry_id
                 )
             ]
 
 
         # Se c'è il competition_code, creiamo solo i sensori "classifica" e "match_day"
         elif competition_code:
+            competition_name = competition_name.replace(" ", "_").replace(".", "_").lower()
+            
             sensors += [
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_classifica".replace(" ", "_").lower(), competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_classifica", competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 ),
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_match_day".replace(" ", "_").lower(), competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_{competition_name}_match_day", competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 )
             ]
 
@@ -165,7 +168,7 @@ class CalcioLiveSensor(Entity):
             from .sensori.classifica import classifica_data
             
             processed_data = classifica_data(data)
-            self._state = f"Classifica Serie A"
+            self._state = f"Classifica"
             self._attributes = processed_data
 
         elif self._sensor_type == "match_day":
@@ -179,7 +182,7 @@ class CalcioLiveSensor(Entity):
             from .sensori.team_matches import team_matches_data
             
             match_data = team_matches_data(data)
-            self._state = f"Prossime {len(match_data['matches'])} partite"
+            self._state = f"Concluse {len(match_data['matches'])} partite"
             self._attributes = {
                 "team_name": match_data["team_name"],
                 "team_logo": match_data["team_logo"],

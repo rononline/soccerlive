@@ -1,7 +1,5 @@
 from .const import _LOGGER
-
 from dateutil import parser
-from datetime import datetime, timedelta
 
 def classifica_data(data):
     try:
