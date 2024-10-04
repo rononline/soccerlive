@@ -5,7 +5,7 @@ def team_matches_data(data):
     try:
         team_data = data.get("team", {})
         team_name = team_data.get("displayName", "N/A")
-        team_logo = team_data.get("logo", [{}])[0].get("href", "N/A")
+        team_logo = team_data.get("logo", [])
     
         events = data.get("events", [])
         matches = []
