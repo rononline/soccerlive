@@ -1,5 +1,6 @@
 from .const import _LOGGER
 from dateutil import parser
+from datetime import timedelta
 
 def team_match_data(data):
     try:
@@ -80,9 +81,10 @@ def team_match_data(data):
         return {}
 
 def _parse_date(date_str):
-    """Funzione per convertire la data da stringa ISO a formato leggibile."""
     try:
         parsed_date = parser.isoparse(date_str)
+        # Aggiungi 2 ore all'orario
+        parsed_date = parsed_date + timedelta(hours=2)
         return parsed_date.strftime("%d/%m/%Y %H:%M")
     except (ValueError, TypeError) as e:
         _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
