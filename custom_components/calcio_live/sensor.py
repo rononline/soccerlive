@@ -12,7 +12,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     try:
         competition_name = entry.data.get("name")
         competition_code = entry.data.get("competition_code")
-        team_id = entry.data.get("team_id")
+        team_name = entry.data.get("team_name")
 
         base_scan_interval = timedelta(minutes=entry.options.get("scan_interval", 3))
         sensors = []
@@ -20,19 +20,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
 
-        if team_id:
-            team_name = competition_name.replace(" ", "_").replace(".", "_").lower()
+        # Se c'è il nome della squadra, creiamo i sensori "team_match" e "team_matches"
+        if team_name:
+            team_name_normalized = team_name.replace(" ", "_").replace(".", "_").lower()
             competition_name = competition_code.replace(" ", "_").replace(".", "_").lower()
-            
+
             sensors += [
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_{team_name}_next", competition_code, "team_match", base_scan_interval, team_id=team_id, config_entry_id=entry.entry_id
+                    hass, f"calciolive_next_{competition_name}_{team_name_normalized}", competition_code, "team_match", base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name, config_entry_id=entry.entry_id
                 ),
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_{team_name}", competition_code, "team_matches", base_scan_interval, team_id=team_id, config_entry_id=entry.entry_id
+                    hass, f"calciolive_all_{competition_name}_{team_name_normalized}", competition_code, "team_matches", base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name, config_entry_id=entry.entry_id
                 )
             ]
-
 
         # Se c'è il competition_code, creiamo solo i sensori "classifica" e "match_day"
         elif competition_code:
@@ -40,10 +40,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             
             sensors += [
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_classifica", competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_classifica_{competition_name}", competition_code, "standings", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 ),
                 CalcioLiveSensor(
-                    hass, f"calciolive_{competition_name}_match_day", competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
+                    hass, f"calciolive_all_{competition_name}", competition_code, "match_day", base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id
                 )
             ]
 
@@ -53,12 +53,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         _LOGGER.error(f"Errore durante la configurazione dei sensori: {e}")
 
 
-
-
 class CalcioLiveSensor(Entity):
     _cache = {}
 
-    def __init__(self, hass, name, code, sensor_type=None, scan_interval=timedelta(minutes=5), team_id=None, config_entry_id=None):
+    def __init__(self, hass, name, code, sensor_type=None, scan_interval=timedelta(minutes=5), team_name=None, config_entry_id=None):
         self.hass = hass
         self._name = name
         self._code = code
@@ -67,7 +65,7 @@ class CalcioLiveSensor(Entity):
         self._state = None
         self._attributes = {}
         self._config_entry_id = config_entry_id
-        self._team_id = team_id
+        self._team_name = team_name  # Aggiornamento per team_name
         self._request_count = 0
         self._last_request_time = None
 
@@ -102,7 +100,7 @@ class CalcioLiveSensor(Entity):
     async def async_update(self):
         _LOGGER.info(f"Starting update for {self._name}")
 
-        cache_key = f"{self._sensor_type}_{self._code}_{self._team_id}"
+        cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
         if cache_key in CalcioLiveSensor._cache and (datetime.now() - CalcioLiveSensor._cache[cache_key]["time"]).seconds < 60:
             self._process_data(CalcioLiveSensor._cache[cache_key]["data"])
             _LOGGER.info(f"Using cached data for {self._name}")
@@ -137,66 +135,103 @@ class CalcioLiveSensor(Entity):
 
         
     async def _build_url(self):
+        current_year = datetime.now().year  # Estrae l'anno corrente
         start_date, end_date = self._get_week_range()
         
+        # Chiamata API per ottenere i dettagli della stagione (inclusi startDate e endDate)
+        season_data = await self._get_season_data()  # Funzione per ottenere i dati della stagione
+    
+        # Estrai le date di inizio e fine campionato dalla risposta
+        season_start = season_data.get("startDate", "2024-08-01").replace("-", "")  # Default a una data fittizia se mancante
+        season_end = season_data.get("endDate", "2025-07-01").replace("-", "")  # Default a una data fittizia se mancante
+    
         base_url   = "https://site.web.api.espn.com/apis/v2/sports/soccer"
         base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
-        standings_url = f"{base_url}/{self._code}/standings?season=2024" #classifica
-        match_day_url = f"{base_url_2}/{self._code}/scoreboard?dates={start_date}-{end_date}&limit=100" #partite della settimana
-        team_url = f"{base_url_2}/{self._code}/teams/{self._team_id}" #team squadra
-        team_url_schedule = f"{base_url_2}/{self._code}/teams/{self._team_id}/schedule" #team squadra
+    
+        standings_url = f"{base_url}/{self._code}/standings?season={current_year}"  # Classifica
+        match_day_url = f"{base_url_2}/{self._code}/scoreboard?limit=100&dates={start_date}-{end_date}"  # Partite della settimana
+    
+        # Usa le date di inizio e fine campionato dinamicamente per il team_url_schedule
+        team_url_schedule = f"{base_url_2}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
 
         if self._sensor_type == "standings":
             return standings_url
+        
         elif self._sensor_type == "match_day":
             return match_day_url
-        elif self._sensor_type == "team_match" and self._team_id:
-            return team_url
-        elif self._sensor_type == "team_matches" and self._team_id:
+        
+        elif self._sensor_type == "team_matches" and self._team_name:
             return team_url_schedule
+        
+        elif self._sensor_type == "team_match" and self._team_name:
+            return match_day_url
+        
         return None
+    
     
     def _get_week_range(self):
         today = datetime.now()
-        start_of_period = today - timedelta(days=today.weekday() + 3)  # Inizio 3 giorni prima
-        end_of_period = today + timedelta(days=(7 - today.weekday()))  # Fine Lunedì della settimana successiva
+        start_of_period = today - timedelta(days=10)  # 10 giorni prima della data corrente
+        end_of_period = today + timedelta(days=30)  # 1 mese dopo la data corrente
         return start_of_period.strftime('%Y%m%d'), end_of_period.strftime('%Y%m%d')
+        
 
+    async def _get_season_data(self):
+        """Funzione per ottenere i dettagli della stagione, incluse startDate ed endDate"""
+        url = f"https://site.web.api.espn.com/apis/v2/sports/soccer/{self._code}/standings"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+
+                    # Assumendo che i dettagli della stagione siano in data['season']
+                    season_data = data.get("season", {})
+                    _LOGGER.debug(f"Dettagli della stagione: {season_data}")
+                    return season_data
+        except Exception as e:
+            _LOGGER.error(f"Errore durante il caricamento dei dati della stagione: {e}")
+            return {}
+    
     
     def _process_data(self, data):
+        from .sensori.scoreboard import process_match_data
+
         if self._sensor_type == "standings":
             from .sensori.classifica import classifica_data
-            
+        
             processed_data = classifica_data(data)
-            self._state = f"Classifica"
+            self._state = "Classifica"
             self._attributes = processed_data
 
-        elif self._sensor_type == "match_day":
-            from .sensori.match_day import match_day_data
-            
-            matches = match_day_data(data)
+        elif self._sensor_type == "match_day":  # Tutte le partite della settimana
+            match_data = process_match_data(data, self.hass)
             self._state = "Matches of the Week"
-            self._attributes = matches
-
-        elif self._sensor_type == "team_matches":
-            from .sensori.team_matches import team_matches_data
-            
-            match_data = team_matches_data(data)
-            self._state = f"Concluse {len(match_data['matches'])} partite"
             self._attributes = {
-                "team_name": match_data["team_name"],
-                "team_logo": match_data["team_logo"],
-                "matches": match_data["matches"]
+                "league_info": match_data.get("league_info", "N/A"),
+                "matches": match_data.get("matches", [])
             }
-        
-           
-        elif self._sensor_type == "team_match":
-            from .sensori.team_match import team_match_data
             
-            team_match = team_match_data(data)
-            self._state = f"Prossimo match: {team_match.get('home_team', 'N/A')} vs {team_match.get('away_team', 'N/A')}"
-            self._attributes = team_match
-        
-        
-        
+            
+        elif self._sensor_type in ["team_matches", "team_match"]:  # Partite di una specifica squadra o solo il prossimo match
+            # Funzione per gestire i dati delle partite della squadra
+            def get_team_match_data(next_match_only=False):
+                return process_match_data(data, self.hass, team_name=self._team_name, next_match_only=next_match_only)
 
+            if self._sensor_type == "team_matches":
+                match_data = get_team_match_data()
+                self._state = f"{len(match_data['matches'])} partite per {match_data['team_name']}"
+                self._attributes = {
+                    "league_info": match_data.get("league_info", "N/A"),
+                    "team_name": match_data.get("team_name", "N/A"),
+                    "team_logo": match_data.get("team_logo", "N/A"),
+                    "matches": match_data.get("matches", [])
+                }
+
+            elif self._sensor_type == "team_match":  # Prossimo match della squadra
+                team_match = get_team_match_data(next_match_only=True)
+                next_match = team_match.get("matches", [{}])[0]
+                self._state = f"Prossimo match: {next_match.get('home_team', 'N/A')} vs {next_match.get('away_team', 'N/A')}"
+                self._attributes = team_match
+    
+        

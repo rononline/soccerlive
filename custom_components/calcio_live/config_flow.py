@@ -130,34 +130,33 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_team(self, user_input=None):
         """Schermata per selezionare la squadra (dopo aver selezionato il campionato)."""
         if user_input is not None:
-            if user_input["team_id"] == OPTION_MANUAL_TEAM:
-                return await self.async_step_manual_team()
+            team_name = user_input["team_name"]
+            competition_code = self._data.get("competition_code", "N/A")
+            competition_name = await self._get_competition_name(competition_code)  # Recupera il nome della competizione
+            self._data.update({"team_name": team_name})
 
-            team_id = user_input["team_id"]
-            self._data.update({"team_id": team_id})
-
-            nome_squadra = next((team['displayName'] for team in self._teams if team['id'] == team_id), "Nome Squadra")
-            nome_squadra_normalizzato = nome_squadra.replace(" ", "_").lower()
+            nome_squadra_normalizzato = team_name.replace(" ", "_").lower()
 
             return self.async_create_entry(
-                title=f"Team {team_id} {nome_squadra_normalizzato}",
+                title=f"Team {competition_name} {nome_squadra_normalizzato}",  # Nome con competizione
                 data={
                     **self._data,
-                    "name": f"Team {team_id} {nome_squadra_normalizzato}",
+                    "name": f"Team {competition_name} {nome_squadra_normalizzato}",  # Salva anche nel dato
                 },
             )
 
         # Ordina le squadre in ordine alfabetico
-        team_options = {team['id']: team['displayName'] for team in sorted(self._teams, key=lambda t: t['displayName'])}
-        team_options[OPTION_MANUAL_TEAM] = OPTION_MANUAL_TEAM
+        team_options = {team['displayName']: team['displayName'] for team in sorted(self._teams, key=lambda t: t['displayName'])}
 
         return self.async_show_form(
             step_id="team",
             data_schema=vol.Schema({
-                vol.Required("team_id"): vol.In(team_options),
+                vol.Required("team_name"): vol.In(team_options),
             }),
             errors=self._errors,
         )
+    
+    
 
     async def _get_teams(self, competition_code):
         """Recupera la lista delle squadre dal campionato selezionato tramite API."""
@@ -186,15 +185,17 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Schermata per inserire manualmente l'ID del team."""
         if user_input is not None:
             team_id = user_input["manual_team_id"]
+            competition_code = self._data.get("competition_code", "N/A")
+            competition_name = await self._get_competition_name(competition_code)  # Recupera il nome della competizione
             nome_squadra = user_input.get("name", "Nome Squadra (a piacere)")
             nome_squadra_normalizzato = nome_squadra.replace(" ", "_").lower()
 
             return self.async_create_entry(
-                title=f"Team {team_id} {nome_squadra_normalizzato}",
+                title=f"Team {competition_name} {team_id} {nome_squadra_normalizzato}",  # Nome con competizione
                 data={
                     **self._data,
                     "team_id": team_id,
-                    "name": f"Team {team_id} {nome_squadra_normalizzato}",
+                    "name": f"Team {competition_name} {team_id} {nome_squadra_normalizzato}",  # Salva anche nel dato
                 },
             )
 
@@ -206,3 +207,4 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }),
             errors=self._errors,
         )
+    
