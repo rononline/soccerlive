@@ -3,23 +3,39 @@
         "step": {
             "user": {
                 "title": "Configurazione Calcio Live",
-                "description": "Benvenuto nella configurazione di Calcio Live.\nSeleziona quali sensori vuoi creare, puoi creare anche più sensori per diversi campionati o diversi specifici team.",
+                "description": "Benvenuto nella configurazione di Calcio Live.\n\nSeleziona una delle seguenti opzioni per creare un sensore:\n\n- **Campionato**: Per monitorare tutte le partite di un campionato.\n- **Squadra**: Per monitorare le partite di una squadra specifica.\n- **Inserimento Manuale**: Se conosci l'ID di una squadra e vuoi configurarlo manualmente.",
                 "data": {
                     "selection": "Seleziona e clicca invia"
                 }
             },
             "campionato": {
                 "title": "Seleziona Campionato",
-                "description": "Scegli il campionato che desideri.",
+                "description": "Scegli il campionato che desideri monitorare.\n\nVerranno mostrate le partite di tutte le squadre appartenenti al campionato selezionato.",
                 "data": {
                     "competition_code": "Codice del campionato"
                 }
             },
             "team": {
                 "title": "Seleziona Squadra",
-                "description": "Scegli la squadra che desideri seguire.",
+                "description": "Scegli la squadra che desideri seguire.\n\nVerranno mostrate solo le partite della squadra selezionata.",
                 "data": {
                     "team_id": "ID della squadra"
+                }
+            },
+            "manual_team": {
+                "title": "Inserimento Manuale",
+                "description": "Inserisci manualmente l'ID della squadra che desideri seguire.\n\nPuoi anche fornire un nome personalizzato per identificarla facilmente.",
+                "data": {
+                    "manual_team_id": "ID manuale della squadra",
+                    "name": "Nome personalizzato della squadra (opzionale)"
+                }
+            },
+            "dates": {
+                "title": "Configura Date",
+                "description": "Specifica il periodo di monitoraggio per le partite.\n\n- **Data di inizio**: Da quando iniziare a monitorare.\n- **Data di fine**: Fino a quando monitorare.\n\nEntrambe le date devono essere nel formato **YYYY-MM-DD**.",
+                "data": {
+                    "start_date": "Data di inizio (YYYY-MM-DD)",
+                    "end_date": "Data di fine (YYYY-MM-DD)"
                 }
             }
         }

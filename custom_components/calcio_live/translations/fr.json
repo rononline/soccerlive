@@ -2,24 +2,40 @@
     "config": {
         "step": {
             "user": {
-                "title": "Configuration Calcio Live",
-                "description": "Bienvenue dans la configuration de Calcio Live.\nSélectionnez les capteurs que vous souhaitez créer. Vous pouvez également créer plusieurs capteurs pour différents championnats ou équipes spécifiques.",
+                "title": "Configuration de Calcio Live",
+                "description": "Bienvenue dans l'assistant de configuration de Calcio Live.\n\nChoisissez parmi les options suivantes pour créer un capteur :\n\n- **Championnat** : Suivre tous les matchs d'un championnat spécifique.\n- **Équipe** : Suivre les matchs d'une équipe spécifique.\n- **Saisie manuelle** : Si vous connaissez l'ID de l'équipe, vous pouvez le configurer manuellement.",
                 "data": {
                     "selection": "Sélectionnez et cliquez sur envoyer"
                 }
             },
             "campionato": {
-                "title": "Sélectionnez Championnat",
-                "description": "Choisissez le championnat que vous souhaitez.",
+                "title": "Sélectionnez un Championnat",
+                "description": "Choisissez le championnat que vous souhaitez surveiller.\n\nCela affichera tous les matchs des équipes dans le championnat sélectionné.",
                 "data": {
                     "competition_code": "Code du championnat"
                 }
             },
             "team": {
-                "title": "Sélectionnez Équipe",
-                "description": "Choisissez l'équipe que vous souhaitez suivre.",
+                "title": "Sélectionnez une Équipe",
+                "description": "Choisissez l'équipe que vous souhaitez suivre.\n\nCela affichera uniquement les matchs de l'équipe sélectionnée.",
                 "data": {
                     "team_id": "ID de l'équipe"
+                }
+            },
+            "manual_team": {
+                "title": "Saisie Manuelle",
+                "description": "Saisissez manuellement l'ID de l'équipe que vous souhaitez suivre.\n\nVous pouvez également fournir un nom personnalisé pour une identification plus facile.",
+                "data": {
+                    "manual_team_id": "ID de l'équipe (manuelle)",
+                    "name": "Nom personnalisé de l'équipe (facultatif)"
+                }
+            },
+            "dates": {
+                "title": "Configurer les Dates",
+                "description": "Spécifiez la période de surveillance des matchs.\n\n- **Date de début** : À partir de quand commencer à surveiller.\n- **Date de fin** : Jusqu'à quand surveiller.\n\nLes deux dates doivent être au format **AAAA-MM-JJ**.",
+                "data": {
+                    "start_date": "Date de début (AAAA-MM-JJ)",
+                    "end_date": "Date de fin (AAAA-MM-JJ)"
                 }
             }
         }

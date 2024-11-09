@@ -55,7 +55,6 @@ def classifica_data(data):
 
 
 def _parse_date(date_str):
-    """Funzione per convertire la data da stringa ISO a formato leggibile."""
     try:
         parsed_date = parser.isoparse(date_str)
         return parsed_date.strftime("%d-%m-%Y")

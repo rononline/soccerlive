@@ -3,23 +3,39 @@
         "step": {
             "user": {
                 "title": "Calcio Live Configuration",
-                "description": "Welcome to the Calcio Live configuration.\nSelect which sensors you want to create. You can also create multiple sensors for different leagues or specific teams.",
+                "description": "Welcome to the Calcio Live configuration wizard.\n\nChoose one of the following options to create a sensor:\n\n- **League**: Monitor all matches in a specific league.\n- **Team**: Monitor matches for a specific team.\n- **Manual Input**: If you know the team ID and want to configure it manually.",
                 "data": {
                     "selection": "Select and click send"
                 }
             },
             "campionato": {
                 "title": "Select League",
-                "description": "Choose the league you want.",
+                "description": "Choose the league you want to monitor.\n\nThis will display matches for all teams in the selected league.",
                 "data": {
                     "competition_code": "League code"
                 }
             },
             "team": {
                 "title": "Select Team",
-                "description": "Choose the team you want to follow.",
+                "description": "Choose the team you want to follow.\n\nThis will display only the matches for the selected team.",
                 "data": {
                     "team_id": "Team ID"
+                }
+            },
+            "manual_team": {
+                "title": "Manual Input",
+                "description": "Manually enter the ID of the team you want to follow.\n\nYou can also provide a custom name for easier identification.",
+                "data": {
+                    "manual_team_id": "Manual Team ID",
+                    "name": "Custom Team Name (optional)"
+                }
+            },
+            "dates": {
+                "title": "Configure Dates",
+                "description": "Specify the monitoring period for matches.\n\n- **Start Date**: From when to start monitoring.\n- **End Date**: Until when to monitor.\n\nBoth dates must be in the format **YYYY-MM-DD**.",
+                "data": {
+                    "start_date": "Start Date (YYYY-MM-DD)",
+                    "end_date": "End Date (YYYY-MM-DD)"
                 }
             }
         }
