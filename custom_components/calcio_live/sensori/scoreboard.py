@@ -1,7 +1,7 @@
 from .const import _LOGGER
 from dateutil import parser
-from pytz import timezone, utc
-from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 
 def process_league_data(data, hass=None):
     try:
@@ -38,9 +38,9 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
         team_logo = None
 
         if isinstance(start_date, str):
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=utc)
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         if isinstance(end_date, str):
-            end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=utc)
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
         for match in matches_data:
             match_name = match.get("name", "").lower()
@@ -50,7 +50,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
 
             match_date_str = match.get("date", "")
             try:
-                match_date = parser.isoparse(match_date_str).astimezone(utc) if match_date_str else None
+                match_date = parser.isoparse(match_date_str).astimezone(timezone.utc) if match_date_str else None
             except ValueError:
                 _LOGGER.error(f"Errore nel parsing della data della partita: {match_date_str}")
                 continue
@@ -165,8 +165,8 @@ def _get_details(details):
 def _parse_date(hass, date_str, show_time=True):
     try:
         user_timezone = hass.config.time_zone
-        parsed_date = parser.isoparse(date_str).replace(tzinfo=utc)
-        local_tz = timezone(user_timezone)
+        parsed_date = parser.isoparse(date_str).replace(tzinfo=timezone.utc)
+        local_tz = ZoneInfo(user_timezone)
         local_date = parsed_date.astimezone(local_tz)
 
         if show_time:
@@ -176,6 +176,3 @@ def _parse_date(hass, date_str, show_time=True):
     except (ValueError, TypeError) as e:
         _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
         return "N/A"
-
-
-
