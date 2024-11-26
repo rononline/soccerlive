@@ -54,11 +54,13 @@ L'integrazione "Calcio Live" per Home Assistant permette di ottenere informazion
 
 
 
-6. Scegli il campionato da seguire o della tua squadra, è molto intuitivo i nomi sono assegnati automaticamente e la squadra la devi scegliere in base al campionato, ma non ti preoccupare, se non la trovi puoi inserire in fondo ad ogni campionato un id personale.
+6. Scegli il campionato da seguire o della tua squadra, è molto intuitivo i nomi sono assegnati automaticamente e la squadra la devi scegliere in base al campionato, ma non ti preoccupare, se non la trovi puoi inserire in fondo ad ogni campionato un id personale o all'inizio della configurazione.
+Nella versione v2.1.1 è stata introdotta la data, quindi puoi scegliere da che data a che data vedere le partite, puoi selezionare anche tutto il campionato inserendo 1 anno intero.
 
     <img src="images/integrazione1.png" alt="HACS" width="300"/>
     <img src="images/integrazione2.png" alt="HACS" width="300"/>
     <img src="images/integrazione3.png" alt="HACS" width="300"/>
+    <img src="images/integrazione4.png" alt="HACS" width="300"/>
 
 
    
