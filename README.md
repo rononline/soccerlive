@@ -74,6 +74,82 @@ Nella versione v2.1.1 è stata introdotta la data, quindi puoi scegliere da che 
 
 ## Note
    Puoi seguire più campionati o più squadre
+   
+## Automazioni
+### Notifica 15 minuti prima dell'inizio della partita
+<img src="images/inizio_partita.jpg" alt="iniziopartita" width="300"/>
+
+Notifica l'inizio della partita 15 minuti prima usando il sensore `sensor.calciolive_next...`.  
+**Nota**: Cambia anche `notify.mobile_app_xxx` con il tuo dispositivo.
+
+```yaml
+alias: CalcioLive - Notifica 15 minuti prima della partita Inter
+description: Invia una notifica al cellulare 15 minuti prima dell'inizio della partita.
+trigger:
+  - platform: template
+    value_template: >
+      {{
+      (as_timestamp(strptime(state_attr('sensor.calciolive_next_ita_1_internazionale',
+      'matches')[0].date, '%d/%m/%Y %H:%M')) - 900) | timestamp_custom('%Y-%m-%d
+      %H:%M') == now().strftime('%Y-%m-%d %H:%M') }}
+condition:
+  - condition: template
+    value_template: >
+      {{ state_attr('sensor.calciolive_next_ita_1_internazionale',
+      'matches')[0].state == 'pre' }}
+action:
+  - service: notify.mobile_app_xxx
+    data:
+      title: CalcioLive - Promemoria Partita
+      message: >
+        La partita tra {{
+        state_attr('sensor.calciolive_next_ita_1_internazionale',
+        'matches')[0].home_team }} e {{
+        state_attr('sensor.calciolive_next_ita_1_internazionale',
+        'matches')[0].away_team }} inizierà tra 15 minuti!
+      data:
+        image: >
+          {{ state_attr('sensor.calciolive_next_ita_1_internazionale', 'team_logo') }}
+mode: single
+```
+---
+
+Notifica Goal con dettagli su minuti e giocatore usando il sensore `sensor.calciolive_next...`.  
+**Nota**: Cambia anche `notify.mobile_app_xxx` con il tuo dispositivo.
+
+
+```yaml
+alias: CalcioLive - Notifica Goal Internazionale con Minuti e Giocatore
+description: Invia una notifica quando Internazionale segna un gol, specificando i minuti e il nome del giocatore.
+trigger:
+  - platform: template
+    value_template: >
+      {% for event in state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].match_details %}
+        {% if 'Goal' in event or 'penalty' in event %}
+          true
+        {% endif %}
+      {% endfor %}
+condition: []
+action:
+  - service: notify.mobile_app_xxx
+    data_template:
+      title: >
+        CalcioLive - Partita {{
+        state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].home_team
+        }} vs {{
+        state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].away_team
+        }}
+      message: >
+        {% for event in state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].match_details %}
+          {% if 'Goal' in event or 'penalty' in event %}
+            {% set minuto = event.split("'")[0].split("-")[-1].strip() %}
+            {% set giocatore = event.split("': ")[1].strip() %}
+            ⚽ {{ 'Rigore segnato da' if 'penalty' in event else 'Gol segnato da' }} {{ giocatore }} al minuto {{ minuto }}!
+          {% endif %}
+        {% endfor %}
+mode: single
+```
+
 
 ## Informazioni
 Questa è la mia prima card e sicuramente c'è tanto lavoro da fare, se vi piace, potete ricambiare seguendomi nei social:
