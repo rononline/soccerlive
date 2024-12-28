@@ -114,9 +114,9 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             matches.append(match_data)
 
         if next_match_only:
+            # Priorità 1: Partite in corso
             live_matches = [m for m in matches if m["state"] == "in"]
             if live_matches:
-                # Priorità alle partite in corso
                 return {
                     "league_info": league_info,
                     "team_name": team_name if team_name else "Tutte le partite",
@@ -124,12 +124,12 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                     "matches": [live_matches[0]]
                 }
 
-            recent_finished_matches = [
-                m for m in matches
-                if m["state"] == "finished" and is_within_last_48_hours(m["end_time"])
+            # Priorità 2: Partite terminate entro 48 ore
+            recent_finished_matches = [m for m in matches
+                if m["state"] == "post" and is_within_last_48_hours(m["date"])
             ]
+            
             if recent_finished_matches:
-                # Priorità alle partite terminate di recente
                 return {
                     "league_info": league_info,
                     "team_name": team_name if team_name else "Tutte le partite",
@@ -137,17 +137,16 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                     "matches": [recent_finished_matches[0]]
                 }
 
+            # Priorità 3: Prossime partite
             upcoming_matches = [m for m in matches if m["state"] == "pre"]
             if upcoming_matches:
-                # Mostra la prossima partita
                 return {
                     "league_info": league_info,
                     "team_name": team_name if team_name else "Tutte le partite",
                     "team_logo": team_logo if team_logo else "N/A",
                     "matches": [upcoming_matches[0]]
                 }
-        
-
+                
         return {
             "league_info": league_info,
             "team_name": team_name if team_name else "Tutte le partite",
@@ -161,12 +160,23 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
 
 def is_within_last_48_hours(end_time):
     try:
-        end_time_dt = parser.isoparse(end_time).astimezone(timezone.utc)
-        return datetime.now(timezone.utc) - end_time_dt <= timedelta(hours=48)
+        # Converte la stringa formattata in oggetto datetime
+        if isinstance(end_time, str):
+            end_time_dt = datetime.strptime(end_time, "%d/%m/%Y %H:%M").replace(tzinfo=timezone.utc)
+        elif isinstance(end_time, datetime):
+            end_time_dt = end_time
+        else:
+            raise ValueError("La data fornita non è né una stringa né un oggetto datetime")
+        
+        # Ottiene l'orario attuale con timezone UTC
+        current_time = datetime.now(timezone.utc)
+        
+        # Confronta l'intervallo di 48 ore
+        return current_time - end_time_dt <= timedelta(hours=48)
     except Exception as e:
         _LOGGER.error(f"Errore nel calcolo dell'intervallo di 48 ore: {e}")
         return False
-        
+
 def _get_statistics(competitor):
     statistics = {}
     stats = competitor.get("statistics", [])
