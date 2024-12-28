@@ -103,6 +103,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "away_logo": away_logo,
                 "away_form": away_form,
                 "away_score": away_score,
+                "away_statistics": away_statistics,
                 "state": match_state,
                 "status": match_status,
                 "clock": clock,
