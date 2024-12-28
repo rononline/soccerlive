@@ -116,6 +116,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
         if next_match_only:
             live_matches = [m for m in matches if m["state"] == "in"]
             if live_matches:
+                # Priorità alle partite in corso
                 return {
                     "league_info": league_info,
                     "team_name": team_name if team_name else "Tutte le partite",
@@ -123,14 +124,29 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                     "matches": [live_matches[0]]
                 }
 
+            recent_finished_matches = [
+                m for m in matches
+                if m["state"] == "finished" and is_within_last_48_hours(m["end_time"])
+            ]
+            if recent_finished_matches:
+                # Priorità alle partite terminate di recente
+                return {
+                    "league_info": league_info,
+                    "team_name": team_name if team_name else "Tutte le partite",
+                    "team_logo": team_logo if team_logo else "N/A",
+                    "matches": [recent_finished_matches[0]]
+                }
+
             upcoming_matches = [m for m in matches if m["state"] == "pre"]
             if upcoming_matches:
+                # Mostra la prossima partita
                 return {
                     "league_info": league_info,
                     "team_name": team_name if team_name else "Tutte le partite",
                     "team_logo": team_logo if team_logo else "N/A",
                     "matches": [upcoming_matches[0]]
                 }
+        
 
         return {
             "league_info": league_info,
@@ -143,7 +159,14 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
         _LOGGER.error(f"Errore nel processare i dati delle partite: {e}")
         return {}
 
-
+def is_within_last_48_hours(end_time):
+    try:
+        end_time_dt = parser.isoparse(end_time).astimezone(timezone.utc)
+        return datetime.now(timezone.utc) - end_time_dt <= timedelta(hours=48)
+    except Exception as e:
+        _LOGGER.error(f"Errore nel calcolo dell'intervallo di 48 ore: {e}")
+        return False
+        
 def _get_statistics(competitor):
     statistics = {}
     stats = competitor.get("statistics", [])
