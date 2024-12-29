@@ -120,36 +120,49 @@ Notifica Goal con dettagli su minuti e giocatore usando il sensore `sensor.calci
 
 ```yaml
 alias: CalcioLive - Notifica Goal Internazionale con Minuti e Giocatore
-description: Invia una notifica quando Internazionale segna un gol, specificando i minuti e il nome del giocatore.
-trigger:
-  - platform: template
-    value_template: >
-      {% for event in state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].match_details %}
-        {% if 'Goal' in event or 'penalty' in event %}
+description: Invia una notifica per ogni gol segnato, inclusi i rigori.
+triggers:
+  - value_template: >
+      {% for event in state_attr('sensor.calciolive_next_ita_1_internazionale',
+      'matches')[0].match_details %}
+        {% if 'Goal' in event or 'Penalty' in event %}
           true
         {% endif %}
       {% endfor %}
-condition: []
-action:
-  - service: notify.mobile_app_xxx
-    data_template:
-      title: >
-        CalcioLive - Partita {{
-        state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].home_team
-        }} vs {{
-        state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].away_team
-        }}
-      message: >
-        {% for event in state_attr('sensor.calciolive_next_ita_1_internazionale', 'matches')[0].match_details %}
-          {% if 'Goal' in event or 'penalty' in event %}
-            {% set minuto = event.split("'")[0].split("-")[-1].strip() %}
-            {% set giocatore = event.split("': ")[1].strip() %}
-            ⚽ {{ 'Rigore segnato da' if 'penalty' in event else 'Gol segnato da' }} {{ giocatore }} al minuto {{ minuto }}!
-          {% endif %}
-        {% endfor %}
-mode: single
+    trigger: template
+conditions: []
+actions:
+  - variables:
+      match_details: >-
+        {{ state_attr('sensor.calciolive_next_ita_1_internazionale',
+        'matches')[0].match_details }}
+  - repeat:
+      for_each: "{{ match_details }}"
+      sequence:
+        - variables:
+            event: "{{ repeat.item }}"
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: |
+                    {{ 'Goal' in event or 'Penalty' in event }}
+              sequence:
+                - data_template:
+                    title: >
+                      Partita {{
+                      state_attr('sensor.calciolive_next_ita_1_internazionale',
+                      'matches')[0].home_team }} vs {{
+                      state_attr('sensor.calciolive_next_ita_1_internazionale',
+                      'matches')[0].away_team }}
+                    message: >
+                      {% set tipo = 'Rigore segnato da' if 'Penalty' in event
+                      else 'Gol segnato da' %} {% set minuto =
+                      event.split("'")[0].split("-")[-1].strip() %} {% set
+                      giocatore = event.split("': ")[1].strip() %} ⚽ {{ tipo }}
+                      {{ giocatore }} al minuto {{ minuto }}!
+                  action: notify.mobile_app_silvio_iphone
+mode: queued
 ```
-
 
 ## Informazioni
 Questa è la mia prima card e sicuramente c'è tanto lavoro da fare, se vi piace, potete ricambiare seguendomi nei social:
