@@ -160,7 +160,7 @@ actions:
                       event.split("'")[0].split("-")[-1].strip() %} {% set
                       giocatore = event.split("': ")[1].strip() %} ⚽ {{ tipo }}
                       {{ giocatore }} al minuto {{ minuto }}!
-                  action: notify.mobile_app_silvio_iphone
+                  action: notify.mobile_app_xxx
 mode: queued
 ```
 
