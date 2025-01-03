@@ -156,7 +156,7 @@ class CalcioLiveSensor(Entity):
         base_url = "https://site.web.api.espn.com/apis/v2/sports/soccer"
         base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 
-        standings_url = f"{base_url}/{self._code}/standings?season={datetime.now().year}"
+        standings_url = f"{base_url}/{self._code}/standings?"
         match_day_url = f"{base_url_2}/{self._code}/scoreboard?limit=100&dates={self._start_date.strftime('%Y%m%d')}-{self._end_date.strftime('%Y%m%d')}"
         team_url_schedule = f"{base_url_2}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
 
