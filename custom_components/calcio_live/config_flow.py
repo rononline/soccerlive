@@ -111,7 +111,13 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             team_name = user_input["team_name"]
             competition_code = self._data.get("competition_code", "N/A")
             competition_name = await self._get_competition_name(competition_code)
-            self._data.update({"team_name": team_name, "name": f"Team {competition_name} {team_name}"})
+
+            # Trova l'ID della squadra selezionata
+            selected_team = next((team for team in self._teams if team["displayName"] == team_name), None)
+            team_id = selected_team["id"] if selected_team else None
+
+            # Aggiorna self._data con il team_id
+            self._data.update({"team_name": team_name, "team_id": team_id, "name": f"Team {competition_name} {team_name}"})
 
             return await self.async_step_dates()
 
@@ -210,9 +216,15 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 async with session.get(url) as response:
                     response.raise_for_status()
                     teams_data = await response.json()
+                
+                    leagues = teams_data.get("sports", [{}])[0].get("leagues", [{}])
+                    if not leagues:
+                        self._teams = []
+                        return
+
                     self._teams = [
-                        {"id": team['team']['id'], "displayName": team['team']['displayName']}
-                        for team in teams_data.get("sports", [])[0].get("leagues", [])[0].get("teams", [])
+                        {"id": team["team"]["id"], "displayName": team["team"]["displayName"]}
+                        for league in leagues for team in league.get("teams", [])
                     ]
         except aiohttp.ClientError as e:
             _LOGGER.error(f"Errore nel caricamento delle squadre per {competition_code}: {e}")

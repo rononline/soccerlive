@@ -29,11 +29,22 @@ def process_league_data(data, hass=None):
         _LOGGER.error(f"Errore nel processare i dati della lega: {e}")
         return []
 
-
+def get_season_slug_or_displayname(match):
+    season_data = match.get("season", {})
+    
+    # Controlla prima per 'slug', se esiste
+    slug = season_data.get("slug")
+    if slug:
+        return slug
+    
+    # Se non trova 'slug', prova a prendere 'displayName'
+    display_name = season_data.get("displayName")
+    return display_name
+    
 def process_match_data(data, hass, team_name=None, next_match_only=False, start_date=None, end_date=None):
     try:
         matches_data = data.get("events", [])
-        league_info = process_league_data(data, hass) 
+        league_info = process_league_data(data, hass)
         matches = []
         team_logo = None
 
@@ -44,11 +55,11 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
 
         for match in matches_data:
             match_name = match.get("name", "").lower()
-
             if team_name and team_name.lower() not in match_name:
                 continue
 
             match_date_str = match.get("date", "")
+
             try:
                 match_date = parser.isoparse(match_date_str).astimezone(timezone.utc) if match_date_str else None
             except ValueError:
@@ -59,24 +70,28 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 continue
             if end_date and match_date and match_date > end_date:
                 continue
+            
+            #Solo per il mixed
+            season_info = get_season_slug_or_displayname(match)
 
             competitions = match.get("competitions", [])
-            if not competitions or len(competitions[0].get("competitors", [])) < 2:
-                _LOGGER.warning(f"Partita senza dati completi: {match}")
-                continue
-
             competitors = competitions[0].get("competitors", [])
-
             home_team_data = competitors[0].get("team", {})
             home_team = home_team_data.get("displayName", "N/A")
-            home_logo = home_team_data.get("logo", "N/A")
+            home_logo = home_team_data.get("logo", None)
+            if not home_logo:
+                home_logos = home_team_data.get("logos", [{}])
+                home_logo = home_logos[0].get("href", "N/A")
+
             home_form = competitors[0].get("form", "N/A")
             home_score = competitors[0].get("score", "N/A")
             home_statistics = _get_statistics(competitors[0])
-
             away_team_data = competitors[1].get("team", {})
             away_team = away_team_data.get("displayName", "N/A")
-            away_logo = away_team_data.get("logo", "N/A")
+            away_logo = away_team_data.get("logo", None)
+            if not away_logo:
+                away_logos = away_team_data.get("logos", [{}])
+                away_logo = away_logos[0].get("href", "N/A")
             away_form = competitors[1].get("form", "N/A")
             away_score = competitors[1].get("score", "N/A")
             away_statistics = _get_statistics(competitors[1])
@@ -94,6 +109,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
 
             match_data = {
                 "date": _parse_date(hass, match.get("date")),
+                "season_info": season_info, #per il mixed
                 "home_team": home_team,
                 "home_logo": home_logo,
                 "home_form": home_form,
