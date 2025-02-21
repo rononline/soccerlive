@@ -86,8 +86,12 @@ class CalcioLiveSensor(Entity):
         self._attributes = {}
         self._config_entry_id = config_entry_id
         self._team_name = team_name
-        self._start_date = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now()
-        self._end_date = datetime.strptime(end_date, "%Y-%m-%d") if end_date else datetime.now() + timedelta(days=30)
+        today = datetime.now()
+        self._start_date = (today - relativedelta(months=3)).strftime("%Y-%m-%d") if not start_date else start_date
+        self._end_date = (today + relativedelta(months=4)).strftime("%Y-%m-%d") if not end_date else end_date
+        self._start_date = datetime.strptime(self._start_date, "%Y-%m-%d")
+        self._end_date = datetime.strptime(self._end_date, "%Y-%m-%d")
+        
         self._request_count = 0
         self._last_request_time = None
 
@@ -106,7 +110,7 @@ class CalcioLiveSensor(Entity):
             "request_count": self._request_count,
             "last_request_time": self._last_request_time,
             "start_date": self._start_date.strftime("%Y-%m-%d"),
-            "end_date": self._end_date.strftime("%Y-%m-%d")
+            "end_date": self._end_date.strftime("%Y-%m-%d"),
         }
 
     @property
