@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 OPTION_SELECT_CAMPIONATO = "Campionato"
 OPTION_SELECT_TEAM = "Team"
 OPTION_MANUAL_TEAM = "Inserimento Manuale ID"
+OPTION_ALL_TODAY = "Tutte le partite del giorno"
 
 @config_entries.HANDLERS.register(DOMAIN)
 class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -35,6 +36,15 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif selection == OPTION_SELECT_TEAM:
                 self._data.update(user_input)
                 return await self.async_step_select_competition_for_team()
+            
+            elif selection == OPTION_ALL_TODAY:
+                self._data.update(user_input)
+                self._data["competition_code"] = "99999"  # Assegna un valore fittizio per creare il sensore
+                return self.async_create_entry(
+                    title="Tutte le partite di oggi",
+                    data=self._data,
+                )
+            
 
             elif selection == OPTION_MANUAL_TEAM:
                 self._data.update(user_input)
@@ -43,7 +53,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM, OPTION_MANUAL_TEAM]),
+                vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_MANUAL_TEAM]),
             }),
             errors=self._errors,
             description_placeholders={
@@ -52,6 +62,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "Seleziona una delle opzioni per creare un sensore:\n\n"
                     "- **Campionato**: per monitorare tutte le partite di un campionato.\n"
                     "- **Squadra**: per monitorare una specifica squadra.\n"
+                    "- **Tutte**: per monitorare tutte le partite della giornata (di tutto il mondo).\n"
                     "- **Inserimento Manuale**: se conosci l'ID della squadra specifica."
                 )
             }
@@ -167,21 +178,33 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_dates(self, user_input=None):
         """Schermata per configurare start_date e end_date."""
+        today = datetime.now()
+
+        # Recupero delle date dinamiche tramite il metodo _get_calendar_data
+        start_date, end_date = await self._get_calendar_data()
+
+        # Se non vengono trovate date dal calendario, usa valori predefiniti
+        if start_date is None or end_date is None:
+            start_date = today.strftime("%Y-%m-%d")  # Default: la data di oggi
+            end_date = (today + timedelta(days=30)).strftime("%Y-%m-%d")  # Default: 30 giorni da oggi
+
+        # Se l'utente ha fornito input, aggiorniamo i dati
         if user_input is not None:
             self._data.update({
-                "start_date": user_input.get("start_date", datetime.now().strftime("%Y-%m-%d")),
-                "end_date": user_input.get("end_date", (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")),
+                "start_date": user_input.get("start_date", start_date),
+                "end_date": user_input.get("end_date", end_date),
             })
             return self.async_create_entry(
                 title=self._data.get("name", "Calcio Live"),
                 data=self._data,
             )
 
+        # Mostra il form per l'inserimento delle date con i valori predefiniti
         return self.async_show_form(
             step_id="dates",
             data_schema=vol.Schema({
-                vol.Optional("start_date", default=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")): str,
-                vol.Optional("end_date", default=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")): str,
+                vol.Optional("start_date", default=start_date): str,
+                vol.Optional("end_date", default=end_date): str,
             }),
             description_placeholders={
                 "description": (
@@ -192,6 +215,26 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
             }
         )
+    
+    
+    
+    async def _get_calendar_data(self,):
+        """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
+        competition_code = self._data.get("competition_code", "N/A")
+        calendar_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/scoreboard"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(calendar_url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    # Estrai le date di inizio e fine dal calendario
+                    calendar_start_date = data.get("calendarStartDate", "2024-07-01T04:00Z")
+                    calendar_end_date = data.get("calendarEndDate", "2025-07-01T03:59Z")
+                    return calendar_start_date[:10], calendar_end_date[:10]
+        except Exception as e:
+            _LOGGER.error(f"Errore nel recupero del calendario: {e}")
+            return None, None
+    
 
     async def _get_competitions(self):
         url = "https://site.api.espn.com/apis/site/v2/leagues/dropdown?lang=en&region=us&calendartype=whitelist&limit=200&sport=soccer"
@@ -241,7 +284,8 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        super().__init__()
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
@@ -249,9 +293,12 @@ class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
 
         today = datetime.now()
 
-        start_date = self.config_entry.options.get("start_date", (today - relativedelta(months=3)).strftime("%Y-%m-%d"))
-
-        end_date = self.config_entry.options.get("end_date", (today + relativedelta(months=4)).strftime("%Y-%m-%d"))
+        start_date = self._config_entry.options.get(
+            "start_date", self._config_entry.data.get("start_date", (today - relativedelta(months=3)).strftime("%Y-%m-%d"))
+        )
+        end_date = self._config_entry.options.get(
+            "end_date", self._config_entry.data.get("end_date", (today + relativedelta(months=4)).strftime("%Y-%m-%d"))
+        )
         
 
         return self.async_show_form(
@@ -259,13 +306,8 @@ class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Optional("start_date", default=start_date): str,
                 vol.Optional("end_date", default=end_date): str,
+                vol.Optional("info", default="⚠ Dopo la modifica, riavvia Home Assistant.", description=""): str,
             }),
-            description_placeholders={
-                "description": (
-                    "Modifica il periodo di monitoraggio per le partite.\n\n"
-                    "- La data di inizio determina da quando iniziare a monitorare.\n"
-                    "- La data di fine determina fino a quando monitorare.\n\n"
-                    "Entrambe le date devono essere nel formato **YYYY-MM-DD**."
-                )
-            }
         )
+        
+        

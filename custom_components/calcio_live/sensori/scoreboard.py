@@ -76,16 +76,17 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
 
             competitions = match.get("competitions", [])
             competitors = competitions[0].get("competitors", [])
+
             home_team_data = competitors[0].get("team", {})
             home_team = home_team_data.get("displayName", "N/A")
             home_logo = home_team_data.get("logo", None)
             if not home_logo:
                 home_logos = home_team_data.get("logos", [{}])
                 home_logo = home_logos[0].get("href", "N/A")
-
             home_form = competitors[0].get("form", "N/A")
             home_score = competitors[0].get("score", "N/A")
             home_statistics = _get_statistics(competitors[0])
+
             away_team_data = competitors[1].get("team", {})
             away_team = away_team_data.get("displayName", "N/A")
             away_logo = away_team_data.get("logo", None)
@@ -224,5 +225,5 @@ def _parse_date(hass, date_str, show_time=True):
         else:
             return local_date.strftime("%d/%m/%Y")
     except (ValueError, TypeError) as e:
-        _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
+        #_LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
         return "N/A"

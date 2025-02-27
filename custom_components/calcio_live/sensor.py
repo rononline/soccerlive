@@ -15,18 +15,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         team_name = entry.data.get("team_name")
         selection = entry.data.get("selection")
         team_id = entry.data.get("team_id")
-        #_LOGGER.error(f"LOG DATA: {entry.data}")
         #{'competition_code': 'uefa.champions', 'end_date': '2025-07-26', 'name': 'Team UEFA Champions League Internazionale', 'selection': 'Team', 'start_date': '2024-11-27', 'team_name': 'Internazionale'}
         
-        start_date = entry.options.get("start_date", datetime.now().strftime("%Y-%m-%d"))
-        end_date = entry.options.get("end_date", (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"))
-
+#        _LOGGER.error(f"Entry data completo: {entry.data}")
+#        _LOGGER.error(f"Entry options completo: {entry.options}")
+                
+        start_date_1 = entry.data.get("start_date")
+        end_date_1 = entry.data.get("end_date")
+        
+        start_date = entry.data.get("start_date", datetime.now().strftime("%Y-%m-%d"))
+        end_date = entry.data.get("end_date", (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"))
+        
+        
         base_scan_interval = timedelta(minutes=entry.options.get("scan_interval", 3))
         sensors = []
 
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
-
+        
+        _LOGGER.debug(f"Calcio Live Config Entry: {entry.data}")  # Log per capire cosa c'è nell'entry
+    
         if team_name:
             team_name_normalized = team_name.replace(" ", "_").replace(".", "_").lower()
             competition_name = competition_code.replace(" ", "_").replace(".", "_").lower()
@@ -48,22 +56,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id
                 )
             ]
-
         elif competition_code:
-            competition_name = competition_name.replace(" ", "_").replace(".", "_").lower()
+            if competition_code == "99999":  # Se il competition_code è fittizio, crea il sensore per tutte le partite
+                sensors += [
+                    CalcioLiveSensor(
+                        hass, "calciolive_all_today", competition_code, "all_matches_today",
+                        base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
+                        start_date=start_date, end_date=end_date, team_id=team_id
+                    )
+                ]
+            else:
+                competition_name = competition_name.replace(" ", "_").replace(".", "_").lower()
 
-            sensors += [
-                CalcioLiveSensor(
-                    hass, f"calciolive_classifica_{competition_name}", competition_code, "standings",
-                    base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
-                    start_date=start_date, end_date=end_date, team_id=team_id
-                ),
-                CalcioLiveSensor(
-                    hass, f"calciolive_all_{competition_name}", competition_code, "match_day",
-                    base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
-                    start_date=start_date, end_date=end_date, team_id=team_id
-                )
-            ]
+                sensors += [
+                    CalcioLiveSensor(
+                        hass, f"calciolive_classifica_{competition_name}", competition_code, "standings",
+                        base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
+                        start_date=start_date, end_date=end_date, team_id=team_id
+                    ),
+                    CalcioLiveSensor(
+                        hass, f"calciolive_all_{competition_name}", competition_code, "match_day",
+                        base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
+                        start_date=start_date, end_date=end_date, team_id=team_id
+                    )
+                ]
 
         async_add_entities(sensors, True)
 
@@ -86,15 +102,21 @@ class CalcioLiveSensor(Entity):
         self._attributes = {}
         self._config_entry_id = config_entry_id
         self._team_name = team_name
-        today = datetime.now()
-        self._start_date = (today - relativedelta(months=3)).strftime("%Y-%m-%d") if not start_date else start_date
-        self._end_date = (today + relativedelta(months=4)).strftime("%Y-%m-%d") if not end_date else end_date
+        # Usa le date fornite dal config_entry
+        self._start_date = start_date  # (start_date o valore di default)
+        self._end_date = end_date      # (end_date o valore di default)
+        
+        # Conversione delle date in oggetti datetime
         self._start_date = datetime.strptime(self._start_date, "%Y-%m-%d")
         self._end_date = datetime.strptime(self._end_date, "%Y-%m-%d")
         
         self._request_count = 0
         self._last_request_time = None
 
+        self.base_url = "https://site.web.api.espn.com/apis/v2/sports/soccer"
+        self.base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
+        self.base_url_3 = "https://site.web.api.espn.com/apis/site/v2/sports/soccer"
+        
     @property
     def name(self):
         return self._name
@@ -161,44 +183,59 @@ class CalcioLiveSensor(Entity):
                 await asyncio.sleep(5)
                 retries += 1
 
+    
     async def _build_url(self):
-        season_data = await self._get_season_data()
-
-        season_start = season_data.get("startDate", "2024-08-01").replace("-", "")
-        season_end = season_data.get("endDate", "2025-07-01").replace("-", "")
-
-        base_url = "https://site.web.api.espn.com/apis/v2/sports/soccer"
-        base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
+        base_url    = "https://site.web.api.espn.com/apis/v2/sports/soccer"
+        base_url_2  = "https://site.api.espn.com/apis/site/v2/sports/soccer"
         base_url_3  = "https://site.web.api.espn.com/apis/site/v2/sports/soccer"
+        season_data = ""
+        season_start = ""
+        season_end = ""
+    
+        if self._code:
+            season_start, season_end = await self._get_calendar_data()
 
-        standings_url = f"{base_url}/{self._code}/standings?"
-        match_day_url = f"{base_url_2}/{self._code}/scoreboard?limit=100&dates={self._start_date.strftime('%Y%m%d')}-{self._end_date.strftime('%Y%m%d')}"
-        team_url_schedule = f"{base_url_2}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
-        team_url_schedule_mixed = f"{base_url_3}/all/teams/{self._team_id}/schedule?fixture=true"
-
+        # Se le date non sono state recuperate, utilizza quelle di default
+        if not season_start or not season_end:
+            season_start = self._start_date.strftime("%Y-%m-%d")
+            season_end = self._end_date.strftime("%Y-%m-%d")
+    
+        season_start = season_start[:10].replace("-", "")
+        season_end = season_end[:10].replace("-", "")
+    
+        standings_url = f"{self.base_url}/{self._code}/standings?"
+        scoreboard_url = f"{self.base_url_2}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
+        all_matches_today_url = f"{self.base_url_2}/all/scoreboard"
+        team_url_schedule_mixed = f"{self.base_url_3}/all/teams/{self._team_id}/schedule?fixture=true"
+    
         if self._sensor_type == "standings":
             return standings_url
-        elif self._sensor_type == "match_day":
-            return match_day_url
-        elif self._sensor_type == "team_matches" and self._team_name:
-            return team_url_schedule
-        elif self._sensor_type == "team_match" and self._team_name:
-            return match_day_url
+        elif self._sensor_type in ("match_day", "team_match", "team_matches"):
+            return scoreboard_url
         elif self._sensor_type == "team_matches_mixed" and self._team_name:
             return team_url_schedule_mixed
-        return None
+        elif self._sensor_type == "all_matches_today":
+            return all_matches_today_url
 
-    async def _get_season_data(self):
-        url = f"https://site.web.api.espn.com/apis/v2/sports/soccer/{self._code}/standings"
+        return None
+    
+    
+    async def _get_calendar_data(self,):
+        """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
+        calendar_url = f"{self.base_url_2}/{self._code}/scoreboard"
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
+                async with session.get(calendar_url) as response:
                     response.raise_for_status()
                     data = await response.json()
-                    return data.get("season", {})
+                    # Estrai le date di inizio e fine dal calendario
+                    calendar_start_date = data.get("calendarStartDate", "2024-07-01T04:00Z")
+                    calendar_end_date = data.get("calendarEndDate", "2025-07-01T03:59Z")
+                    return calendar_start_date, calendar_end_date
         except Exception as e:
-            _LOGGER.error(f"Errore durante il caricamento dei dati della stagione: {e}")
-            return {}
+            _LOGGER.error(f"Errore nel recupero del calendario: {e}")
+            return None, None
+
 
     def _process_data(self, data):
         from .sensori.scoreboard import process_match_data
@@ -210,22 +247,21 @@ class CalcioLiveSensor(Entity):
             self._attributes = processed_data
 
         elif self._sensor_type == "match_day":
-            match_data = process_match_data(data, self.hass, start_date=self._start_date.strftime("%Y-%m-%d"),
-                                            end_date=self._end_date.strftime("%Y-%m-%d"))
+            match_data = process_match_data(data, self.hass, start_date=self._start_date.strftime("%Y-%m-%d"), end_date=self._end_date.strftime("%Y-%m-%d"))
             self._state = "Matches of the Week"
             self._attributes = {
                 "league_info": match_data.get("league_info", "N/A"),
                 "matches": match_data.get("matches", [])
             }
-
-        elif self._sensor_type in ["team_matches", "team_match", "team_matches_mixed"]:
+        
+        elif self._sensor_type in ["team_matches", "team_match", "team_matches_mixed", "all_matches_today"]:
             def get_team_match_data(next_match_only=False):
                 return process_match_data(
                     data, self.hass, team_name=self._team_name, next_match_only=next_match_only,
                     start_date=self._start_date.strftime("%Y-%m-%d"), end_date=self._end_date.strftime("%Y-%m-%d")
                 )
 
-            if self._sensor_type in ["team_matches", "team_matches_mixed"]:
+            if self._sensor_type in ["team_matches", "team_matches_mixed", "all_matches_today"]:
                 match_data = get_team_match_data()
                 matches = match_data.get("matches", [])
                 if matches:
@@ -256,5 +292,4 @@ class CalcioLiveSensor(Entity):
                 else:
                     self._state = "Nessuna partita disponibile"
                     self._attributes = team_match
-    
-            
+
