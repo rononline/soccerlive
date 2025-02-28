@@ -220,8 +220,13 @@ class CalcioLiveSensor(Entity):
         return None
     
     
-    async def _get_calendar_data(self,):
+    async def _get_calendar_data(self):
         """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
+    
+        if self._code == "99999":
+           # _LOGGER.warning("Competition code 99999 escluso dal recupero del calendario.")
+            return None, None
+
         calendar_url = f"{self.base_url_2}/{self._code}/scoreboard"
         try:
             async with aiohttp.ClientSession() as session:

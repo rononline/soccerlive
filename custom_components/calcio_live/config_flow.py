@@ -216,11 +216,14 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
     
-    
-    
-    async def _get_calendar_data(self,):
+    async def _get_calendar_data(self):
         """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
         competition_code = self._data.get("competition_code", "N/A")
+
+        if competition_code == "99999":
+            #_LOGGER.warning("Competition code 99999 escluso dal recupero del calendario.")
+            return None, None
+
         calendar_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/scoreboard"
         try:
             async with aiohttp.ClientSession() as session:
