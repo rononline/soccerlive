@@ -71,6 +71,14 @@ Nella versione v2.1.1 è stata introdotta la data, quindi puoi scegliere da che 
 ### 7. Per la card, vai su: https://github.com/Bobsilvio/calcio-live-card e segui le istruzioni
 
 
+### 8. Per evitare di caricare il sistema di registrazioni sui dati delle partite.
+Nel configuration.yaml inserire questo codice:
+```yaml
+recorder:
+  exclude:
+    entity_globs:
+      - sensor.calciolive_*
+  ```
 
 ## Note
    Puoi seguire più campionati o più squadre
