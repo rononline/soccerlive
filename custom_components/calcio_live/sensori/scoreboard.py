@@ -180,16 +180,17 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 }
 
             # Priorità 2: Partite terminate entro la finestra configurata (default 48h)
+            # ESPN returns events in chronological order, so [-1] is the most recent.
             recent_finished_matches = [m for m in matches
                 if m["state"] == "post" and is_within_recent_window(m["date"], recent_match_hours)
             ]
-            
+
             if recent_finished_matches:
                 return {
                     "league_info": league_info,
                     "team_name": team_name if team_name else "Alle wedstrijden",
                     "team_logo": team_logo if team_logo else "N/A",
-                    "matches": [recent_finished_matches[0]]
+                    "matches": [recent_finished_matches[-1]]
                 }
 
             # Priorità 3: Prossime partite
@@ -201,7 +202,16 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                     "team_logo": team_logo if team_logo else "N/A",
                     "matches": [upcoming_matches[0]]
                 }
-                
+
+            # Off-season: no live/recent/upcoming match — return empty so sensor
+            # does not fall back to the full season list (oldest match first = wrong).
+            return {
+                "league_info": league_info,
+                "team_name": team_name if team_name else "Alle wedstrijden",
+                "team_logo": team_logo if team_logo else "N/A",
+                "matches": []
+            }
+
         return {
             "league_info": league_info,
             "team_name": team_name if team_name else "Alle wedstrijden",

@@ -806,7 +806,7 @@ class CalcioLiveSensor(Entity):
             if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)
         ]
         if recent_finished_matches:
-            last_match = recent_finished_matches[0]
+            last_match = recent_finished_matches[-1]  # ESPN chronological: [-1] is most recent
             computed.update({
                 "last_match_home_team": last_match.get("home_team", "N/A"),
                 "last_match_away_team": last_match.get("away_team", "N/A"),
@@ -901,7 +901,7 @@ class CalcioLiveSensor(Entity):
                         # Priorità 2: Ultima partita terminata (più recente)
                         finished_matches = [m for m in matches if m.get("state") == "post"]
                         if finished_matches:
-                            fm = finished_matches[0]  # Prima della lista = più recente
+                            fm = finished_matches[-1]  # ESPN returns chronologically: [-1] is most recent
                             self._state = f"✅ {fm.get('home_team','?')} {fm.get('home_score','?')} - {fm.get('away_score','?')} {fm.get('away_team','?')}"
                         else:
                             # Priorità 3: Prossima partita in programma
