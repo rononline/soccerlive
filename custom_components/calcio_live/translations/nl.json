@@ -38,7 +38,7 @@
             },
             "manual_team": {
                 "title": "Handmatige invoer",
-                "description": "Voer het team-ID handmatig in.\n\n**Hoe vind je het Team ID:** open de teampagina op espn.com — het ID is het getal in de URL: espn.com/soccer/team/_/id/**9723**/portland-timbers. Of open https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams en zoek op de teamnaam.\n\nJe kunt ook een aangepaste naam opgeven om het team gemakkelijk te herkennen.",
+                "description": "Voer het team-ID handmatig in.\n\n**Hoe vind je het Team ID:** open de teampagina op espn.com — het ID is het getal in de URL: espn.com/soccer/team/_/id/**9723**/portland-timbers.\n\nJe kunt ook een aangepaste naam opgeven om het team gemakkelijk te herkennen.",
                 "data": {
                     "manual_team_id": "Team ID",
                     "name": "Aangepaste naam (optioneel)"
