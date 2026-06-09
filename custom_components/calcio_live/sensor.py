@@ -199,7 +199,11 @@ class CalcioLiveSensor(Entity):
         self._store = Store(self.hass, 1, store_key)
         stored = await self._store.async_load()
         if stored and "dispatched" in stored:
-            self._match_finished_dispatched = set(stored["dispatched"])
+            dispatched = stored["dispatched"]
+            # Cap at 500 to prevent unbounded growth across seasons
+            if len(dispatched) > 500:
+                dispatched = dispatched[:500]
+            self._match_finished_dispatched = set(dispatched)
             _LOGGER.debug(
                 f"Caricati {len(self._match_finished_dispatched)} match_finished da storage per {self._name}"
             )
@@ -244,6 +248,13 @@ class CalcioLiveSensor(Entity):
 
         self._pending_events = []
         self._save_store_needed = False
+
+        # Prune cache entries older than 5 minutes to prevent unbounded growth
+        _now = datetime.now()
+        CalcioLiveSensor._cache = {
+            k: v for k, v in CalcioLiveSensor._cache.items()
+            if (_now - v["time"]).total_seconds() < 300
+        }
 
         cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
         if cache_key in CalcioLiveSensor._cache and (datetime.now() - CalcioLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
