@@ -8,8 +8,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN] = {}
 
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     return True
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Herlaad de integratie zodra opties gewijzigd worden (scan_interval, recent_match_hours)."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])

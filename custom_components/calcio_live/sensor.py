@@ -232,6 +232,10 @@ class CalcioLiveSensor(Entity):
         }
 
     @property
+    def scan_interval(self):
+        return self._scan_interval
+
+    @property
     def should_poll(self):
         return True
 
