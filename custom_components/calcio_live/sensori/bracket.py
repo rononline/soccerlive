@@ -11,24 +11,6 @@ una traduzione localizzata.
 from .const import _LOGGER
 import re
 
-# Etichetta del round in base al numero di tie. Si nomina dal più piccolo (Final)
-# salendo. UCL 2024-26 ha anche un Knockout Playoff Round prima dell'R16: lo
-# riconosciamo perché c'è un secondo round da 8 tie che NON è R16 (l'R16 è il
-# penultimo da 8).
-DEFAULT_NAMES = {
-    1: "Final",
-    2: "Semifinals",
-    4: "Quarterfinals",
-    8: "Round of 16",
-    16: "Round of 32",
-}
-ITALIAN_NAMES = {
-    1: "Finale",
-    2: "Semifinali",
-    4: "Quarti di finale",
-    8: "Ottavi di finale",
-    16: "Sedicesimi",
-}
 
 
 def _parse_aggregate(note_text):
@@ -75,10 +57,26 @@ def process_bracket_data(data):
             note_text = ""
             if notes:
                 note_text = notes[0].get("headline", "") or notes[0].get("text", "") or ""
+
+            season = e.get("season") if isinstance(e.get("season"), dict) else {}
+            slug = str(season.get("slug", "")).lower()
+
+            slug_map = {
+                "round-of-32": ("Round of 32", "Laatste 32"),
+                "round-of-16": ("Round of 16", "Achtste finales"),
+                "quarterfinals": ("Quarterfinals", "Kwartfinales"),
+                "semifinals": ("Semifinals", "Halve finales"),
+                "3rd-place-match": ("Third Place", "Troostfinale"),
+                "final": ("Final", "Finale"),
+            }
+
             is_first_leg = "1st Leg" in note_text
             is_second_leg = "2nd Leg" in note_text
-            is_final_single = (not is_first_leg and not is_second_leg) and "Final" in note_text
-            # se non riconosciuto come leg KO, skip (potrebbero essere league phase residui)
+            is_single_ko = slug in slug_map
+            is_final_single = is_single_ko or (
+                not is_first_leg and not is_second_leg and "Final" in note_text
+            )
+
             if not (is_first_leg or is_second_leg or is_final_single):
                 continue
 
@@ -129,7 +127,6 @@ def process_bracket_data(data):
             if is_first_leg:
                 tie["leg1"] = leg_payload
                 tie["first_leg_date"] = e.get("date", "")
-                # Inizializza team_a/b dalla prima leg vista (home della 1st leg = team_a)
                 if not tie["team_a"]["name"]:
                     tie["team_a"] = {"name": home_team, "logo": home_logo, "abbrev": home_abbrev, "id": home_id}
                     tie["team_b"] = {"name": away_team, "logo": away_logo, "abbrev": away_abbrev, "id": away_id}
@@ -144,17 +141,22 @@ def process_bracket_data(data):
                     )
                     tie["tied"] = agg.get("tied", False)
                     tie["completed"] = leg_payload["state"] == "post"
-                # Se non abbiamo ancora team_a (capita se 1st leg è prima che facciamo update),
-                # popoliamolo invertendo (la 2nd leg ha home/away invertiti rispetto alla 1st)
                 if not tie["team_a"]["name"]:
                     tie["team_a"] = {"name": away_team, "logo": away_logo, "abbrev": away_abbrev, "id": away_id}
                     tie["team_b"] = {"name": home_team, "logo": home_logo, "abbrev": home_abbrev, "id": home_id}
+
             elif is_final_single:
+                round_name, round_name_nl = slug_map.get(slug, ("Final", "Finale"))
+                tie["round_name"] = round_name
+                tie["round_name_nl"] = round_name_nl
+
                 tie["single"] = leg_payload
                 tie["first_leg_date"] = e.get("date", "")
+
                 if not tie["team_a"]["name"]:
                     tie["team_a"] = {"name": home_team, "logo": home_logo, "abbrev": home_abbrev, "id": home_id}
                     tie["team_b"] = {"name": away_team, "logo": away_logo, "abbrev": away_abbrev, "id": away_id}
+
                 # Determina vincitore se completata
                 hs, as_ = leg_payload["home_score"], leg_payload["away_score"]
                 if leg_payload["state"] == "post" and hs is not None and as_ is not None:
@@ -165,7 +167,6 @@ def process_bracket_data(data):
                         tie["winner_team"] = away_team
                     else:
                         tie["tied"] = True
-
         # Ordino i tie per data della 1st leg (o single)
         sorted_ties = sorted(
             ties.values(),
@@ -216,10 +217,10 @@ def process_bracket_data(data):
         # con KO Playoffs prima dell'R16), uso "Knockout Playoffs".
         canonical = {
             1: ("Final", "Finale"),
-            2: ("Semifinals", "Semifinali"),
-            4: ("Quarterfinals", "Quarti di finale"),
-            8: ("Round of 16", "Ottavi di finale"),
-            16: ("Round of 32", "Sedicesimi"),
+            2: ("Semifinals", "Halve finales"),
+            4: ("Quarterfinals", "Kwartfinales"),
+            8: ("Round of 16", "Achtste finales"),
+            16: ("Round of 32", "Laatste 32"),
         }
         n = len(sized_rounds)
         labels = [None] * n
@@ -229,32 +230,30 @@ def process_bracket_data(data):
             for idx in range(n - 1, -1, -1):
                 actual = sized_rounds[idx]["size"]
                 if actual == expected:
-                    labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"{actual*2}-esimi"))
+                    labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
                     expected = actual * 2
                 elif idx + 1 < n and actual == sized_rounds[idx + 1]["size"]:
                     # Stessa size del round successivo → playoff/preliminare
                     if actual == 8:
-                        labels[idx] = ("Knockout Playoffs", "Spareggi KO")
+                        labels[idx] = ("Knockout Playoffs", "KO-play-offs")
                     elif actual == 16:
-                        labels[idx] = ("Preliminary Round", "Turno preliminare")
+                        labels[idx] = ("Preliminary Round", "Voorronde")
                     else:
-                        labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"{actual*2}-esimi"))
+                        labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
                     # non cambio expected: il prossimo round (precedente) dovrebbe essere doppio
                     expected = actual * 2
                 else:
-                    labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"{actual*2}-esimi"))
+                    labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
                     expected = actual * 2
 
         for idx, sr in enumerate(sized_rounds):
-            name_en, name_it = labels[idx]
-            # team_a/team_b portano un 'id' usato solo internamente per il raggruppamento
-            # dei tie: la card non lo legge, lo rimuoviamo dall'output.
+            name_en, name_nl = labels[idx]
             for tie in sr["ties"]:
                 tie.get("team_a", {}).pop("id", None)
                 tie.get("team_b", {}).pop("id", None)
             out["rounds"].append({
                 "name": name_en,
-                "name_it": name_it,
+                "name_nl": name_nl,
                 "size": sr["size"],
                 "ties": sr["ties"],
             })

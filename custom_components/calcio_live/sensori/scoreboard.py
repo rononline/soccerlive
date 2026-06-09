@@ -174,7 +174,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             if live_matches:
                 return {
                     "league_info": league_info,
-                    "team_name": team_name if team_name else "Tutte le partite",
+                    "team_name": team_name if team_name else "Alle wedstrijden",
                     "team_logo": team_logo if team_logo else "N/A",
                     "matches": [live_matches[0]]
                 }
@@ -187,7 +187,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             if recent_finished_matches:
                 return {
                     "league_info": league_info,
-                    "team_name": team_name if team_name else "Tutte le partite",
+                    "team_name": team_name if team_name else "Alle wedstrijden",
                     "team_logo": team_logo if team_logo else "N/A",
                     "matches": [recent_finished_matches[0]]
                 }
@@ -197,14 +197,14 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             if upcoming_matches:
                 return {
                     "league_info": league_info,
-                    "team_name": team_name if team_name else "Tutte le partite",
+                    "team_name": team_name if team_name else "Alle wedstrijden",
                     "team_logo": team_logo if team_logo else "N/A",
                     "matches": [upcoming_matches[0]]
                 }
                 
         return {
             "league_info": league_info,
-            "team_name": team_name if team_name else "Tutte le partite",
+            "team_name": team_name if team_name else "Alle wedstrijden",
             "team_logo": team_logo if team_logo else "N/A",
             "matches": matches
         }

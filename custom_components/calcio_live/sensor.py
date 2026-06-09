@@ -179,15 +179,14 @@ class CalcioLiveSensor(Entity):
         self._request_count = 0
         self._last_request_time = None
         
-        # Traccia i punteggi precedenti per rilevare i goal
         self._previous_scores = {}
-        
-        # Traccia i cartellini precedenti per evitare duplicati
         self._previous_match_details = {}
-        
-        # Traccia le partite per cui è stato dispatchato l'evento di fine
         self._match_finished_dispatched = set()
         self._store = None
+
+        # Events collected during executor-thread processing, fired on event loop
+        self._pending_events: list = []
+        self._save_store_needed: bool = False
 
         self.base_url = "https://site.web.api.espn.com/apis/v2/sports/soccer"
         self.base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
@@ -243,12 +242,15 @@ class CalcioLiveSensor(Entity):
     async def async_update(self):
         _LOGGER.info(f"Starting update for {self._name}")
 
+        self._pending_events = []
+        self._save_store_needed = False
+
         cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
-        if cache_key in CalcioLiveSensor._cache and (datetime.now() - CalcioLiveSensor._cache[cache_key]["time"]).seconds < 60:
-            # Offload heavy sync processing to executor to avoid blocking event loop
+        if cache_key in CalcioLiveSensor._cache and (datetime.now() - CalcioLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
             await self.hass.async_add_executor_job(
                 self._process_data, CalcioLiveSensor._cache[cache_key]["data"]
             )
+            await self._flush_pending_events()
             _LOGGER.info(f"Using cached data for {self._name}")
             return
 
@@ -264,15 +266,15 @@ class CalcioLiveSensor(Entity):
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                     async with session.get(url, headers=_ESPN_HEADERS) as response:
                         if response.status == 200:
-                            # Parse JSON in executor — large payloads (e.g. team_matches_mixed,
-                            # bracket scoreboards) can block the event loop for seconds otherwise
                             raw = await response.read()
                             data = await self.hass.async_add_executor_job(json.loads, raw)
                             _LOGGER.debug(f"Data received for {self._name}")
                             CalcioLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
-                            # Offload heavy sync processing to executor as well
                             await self.hass.async_add_executor_job(self._process_data, data)
                             await self._enrich_with_summary()
+                            await self._flush_pending_events()
+                            self._request_count += 1
+                            self._last_request_time = datetime.now().isoformat()
                             _LOGGER.info(f"Finished update for {self._name}")
                             break
                         else:
@@ -292,6 +294,15 @@ class CalcioLiveSensor(Entity):
     def _filter_end_str(self):
         d = self._dyn_end_date or self._end_date
         return d.strftime("%Y-%m-%d")
+
+    async def _flush_pending_events(self):
+        """Fire events collected during executor processing on the event loop (thread-safe)."""
+        for event_type, event_data in self._pending_events:
+            self.hass.bus.fire(event_type, event_data)
+        self._pending_events = []
+        if self._save_store_needed:
+            self._save_store_needed = False
+            await self._save_match_finished_store()
 
     async def _enrich_with_summary(self):
         """Per il sensor team_match, aggiunge lineup/formazione/keyEvents/h2h
@@ -318,10 +329,6 @@ class CalcioLiveSensor(Entity):
 
     
     async def _build_url(self):
-        base_url    = "https://site.web.api.espn.com/apis/v2/sports/soccer"
-        base_url_2  = "https://site.api.espn.com/apis/site/v2/sports/soccer"
-        base_url_3  = "https://site.web.api.espn.com/apis/site/v2/sports/soccer"
-        season_data = ""
         season_start = ""
         season_end = ""
 
@@ -572,12 +579,12 @@ class CalcioLiveSensor(Entity):
                 "venue": match.get("venue", "N/A"),
                 "match_status": match.get("status", "N/A"),
                 "season_info": match.get("season_info", "N/A"),
-                "league_name": match.get("league_name", "N/A"),  # ← NUOVO: Nome della lega
+                "league_name": match.get("league_name", "N/A"),
                 "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self.hass.bus.fire("calcio_live_goal", event_data)
-            _LOGGER.info(f"Goal rilevato! {scoring_team} segna {goals_count} goal(s). Giocatore: {player_name} ({minute}). Score: {home_score}-{away_score}")
+            self._pending_events.append(("calcio_live_goal", event_data))
+            _LOGGER.info(f"Doelpunt gedetecteerd! {scoring_team} scoort {goals_count} doelpunt(en). Speler: {player_name} ({minute}). Stand: {home_score}-{away_score}")
         except Exception as e:
             _LOGGER.error(f"Errore nel dispatch dell'evento goal: {e}")
 
@@ -631,12 +638,12 @@ class CalcioLiveSensor(Entity):
                 "venue": match.get("venue", "N/A"),
                 "match_status": match.get("status", "N/A"),
                 "season_info": match.get("season_info", "N/A"),
-                "league_name": match.get("league_name", "N/A"),  # ← NUOVO: Nome della lega
-                "competition_code": self._code,  # ← Per filtrare accuratamente per lega
+                "league_name": match.get("league_name", "N/A"),
+                "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self.hass.bus.fire(event_type, event_data)
-            _LOGGER.info(f"Cartellino rilevato! {card_type.upper()} al {minute} | {player}")
+            self._pending_events.append((event_type, event_data))
+            _LOGGER.info(f"Kaart gedetecteerd! {card_type.upper()} op {minute} | {player}")
         except Exception as e:
             _LOGGER.error(f"Errore nel dispatch dell'evento cartellino: {e}")
 
@@ -651,8 +658,8 @@ class CalcioLiveSensor(Entity):
             if match_id not in self._match_finished_dispatched:
                 self._dispatch_match_finished_event(match)
                 self._match_finished_dispatched.add(match_id)
-                self.hass.async_create_task(self._save_match_finished_store())
-                _LOGGER.info(f"Evento fine partita dispatchato per: {match_id}")
+                self._save_store_needed = True
+                _LOGGER.info(f"Wedstrijd-eindevent verzameld voor: {match_id}")
 
     def _dispatch_match_finished_event(self, match):
         """Dispatcha un evento di fine partita"""
@@ -669,15 +676,15 @@ class CalcioLiveSensor(Entity):
                 "venue": match.get("venue", "N/A"),
                 "match_status": match.get("status", "N/A"),
                 "date": match.get("date", "N/A"),
-                "competition_code": self._code,  # ← Per filtrare accuratamente per lega
+                "competition_code": self._code,
                 "season_info": match.get("season_info", "N/A"),
-                "league_name": match.get("league_name", "N/A"),  # ← NUOVO: Nome della lega
+                "league_name": match.get("league_name", "N/A"),
                 "goal_scorers": goal_scorers,
                 "goal_scorers_str": ", ".join(goal_scorers) if goal_scorers else "N/A",
                 "sensor_name": self._name,
             }
-            self.hass.bus.fire("calcio_live_match_finished", event_data)
-            _LOGGER.info(f"Partita Terminata! {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Goal di: {', '.join(goal_scorers)}")
+            self._pending_events.append(("calcio_live_match_finished", event_data))
+            _LOGGER.info(f"Wedstrijd afgelopen! {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Doelpuntenmakers: {', '.join(goal_scorers)}")
         except Exception as e:
             _LOGGER.error(f"Errore nel dispatch dell'evento fine partita: {e}")
 
@@ -794,9 +801,9 @@ class CalcioLiveSensor(Entity):
             computed["has_upcoming_match"] = False
         
         # Info ultima partita terminata (ultimi 48 ore)
-        from .sensori.scoreboard import is_within_last_48_hours
+        from .sensori.scoreboard import is_within_recent_window
         recent_finished_matches = [m for m in matches
-            if m.get("state") == "post" and is_within_last_48_hours(m.get("date"))
+            if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)
         ]
         if recent_finished_matches:
             last_match = recent_finished_matches[0]
@@ -827,7 +834,7 @@ class CalcioLiveSensor(Entity):
 
         if self._sensor_type == "news":
             articles = process_news_data(data)
-            self._state = f"{len(articles)} articoli" if articles else "Nessun articolo"
+            self._state = f"{len(articles)} artikelen" if articles else "Geen artikelen"
             self._attributes = {
                 "articles": articles,
                 "competition_code": self._code,
@@ -839,11 +846,10 @@ class CalcioLiveSensor(Entity):
             bracket = process_bracket_data(data)
             rounds = bracket.get("rounds", [])
             if rounds:
-                # Stato: nome dell'ultimo round disponibile (più avanzato)
                 last = rounds[-1]
-                self._state = f"{last.get('name')} ({last.get('size')} squadre)"
+                self._state = f"{last.get('name_nl', last.get('name'))} ({last.get('size')} ploegen)"
             else:
-                self._state = "Bracket non disponibile"
+                self._state = "Bracket niet beschikbaar"
             self._attributes = {
                 "rounds": rounds,
                 "ties_count": bracket.get("ties_count", 0),
@@ -854,12 +860,12 @@ class CalcioLiveSensor(Entity):
         if self._sensor_type == "standings":
             from .sensori.classifica import classifica_data
             processed_data = classifica_data(data)
-            self._state = "Classifica"
+            self._state = "Stand"
             self._attributes = processed_data
 
         elif self._sensor_type == "match_day":
             match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
-            self._state = "Matches of the Week"
+            self._state = "Speelronde"
             self._attributes = {
                 "league_info": match_data.get("league_info", "N/A"),
                 "matches": match_data.get("matches", [])
@@ -904,9 +910,9 @@ class CalcioLiveSensor(Entity):
                                 um = upcoming_matches[0]
                                 self._state = f"⏳ {um.get('home_team','?')} vs {um.get('away_team','?')} ({um.get('date','?')})"
                             else:
-                                self._state = f"📊 {len(matches)} partite disponibili"
+                                self._state = f"📊 {len(matches)} wedstrijden beschikbaar"
                 else:
-                    self._state = "Nessuna partita disponibile"
+                    self._state = "Geen wedstrijden beschikbaar"
 
                 # Computa attributi per tutte le partite
                 computed_attrs = self._compute_all_matches_attributes(matches)
@@ -924,15 +930,15 @@ class CalcioLiveSensor(Entity):
                 # sensor.calciolive_next_ita_1_internazionale
                 team_match = get_team_match_data(next_match_only=True)
                 matches = team_match.get("matches", []) or []
-                next_match = team_match.get("next_match")
+                next_match = matches[0] if matches else None
 
                 if next_match:
                     if next_match.get("state") == "in":
                         self._state = f"{next_match.get('home_score','?')} - {next_match.get('away_score','?')} ({next_match.get('clock','')})"
                     else:
-                        self._state = f"Prossimo match: {next_match.get('home_team','N/A')} vs {next_match.get('away_team','N/A')}"
+                        self._state = f"Volgende wedstrijd: {next_match.get('home_team','N/A')} vs {next_match.get('away_team','N/A')}"
                 else:
-                    self._state = "Nessuna partita disponibile"
+                    self._state = "Geen wedstrijden beschikbaar"
 
                 # Computa attributi della prossima partita
                 computed_attrs = self._compute_next_match_attributes(next_match) if next_match else {}

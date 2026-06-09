@@ -1,5 +1,6 @@
 from .const import _LOGGER
 from dateutil import parser
+from datetime import datetime
 
 def classifica_data(data):
     try:
@@ -19,7 +20,7 @@ def classifica_data(data):
                     "rank": rank,
                     "team_id": team.get("id"),
                     "team_name": team.get("displayName"),
-                    "team_logo": team.get("logos", [])[0].get("href"),
+                    "team_logo": (team.get("logos") or [{}])[0].get("href", "N/A"),
                     "points": stats.get("points", "N/A"),
                     "games_played": stats.get("gamesPlayed", "N/A"),
                     "wins": stats.get("wins", "N/A"),
@@ -40,7 +41,12 @@ def classifica_data(data):
             })
 
         seasons_data = data.get("seasons", [])
-        current_season = next((s for s in seasons_data if s.get("year") == 2024), None)
+        current_year = datetime.now().year
+        current_season = (
+            next((s for s in seasons_data if s.get("year") == current_year), None)
+            or next((s for s in seasons_data if s.get("year") == current_year - 1), None)
+            or (seasons_data[-1] if seasons_data else None)
+        )
 
         season_display_name = current_season.get("displayName", "N/A") if current_season else "N/A"
         season_start = _parse_date(current_season.get("startDate", "N/A")) if current_season else None

@@ -194,8 +194,11 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             team_id = user_input["manual_team_id"]
             competition_code = self._data.get("competition_code", "N/A")
-            competition_name = await self._get_competition_name(competition_code)
-            nome_squadra = user_input.get("name", "Nome Squadra (a piacere)")
+            if competition_code and competition_code != "N/A":
+                competition_name = await self._get_competition_name(competition_code)
+            else:
+                competition_name = "Vrije invoer"
+            nome_squadra = user_input.get("name", "Teamnaam (naar keuze)")
             nome_squadra_normalizzato = nome_squadra.replace(" ", "_").lower()
 
             self._data.update({"team_id": team_id, "name": f"Team {competition_name} {team_id} {nome_squadra_normalizzato}"})
@@ -221,46 +224,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-    async def async_step_dates(self, user_input=None):
-        """Schermata per configurare start_date e end_date."""
-        today = datetime.now()
-
-        # Recupero delle date dinamiche tramite il metodo _get_calendar_data
-        start_date, end_date = await self._get_calendar_data()
-
-        # Se non vengono trovate date dal calendario, usa valori predefiniti
-        if start_date is None or end_date is None:
-            start_date = today.strftime("%Y-%m-%d")  # Default: la data di oggi
-            end_date = (today + timedelta(days=30)).strftime("%Y-%m-%d")  # Default: 30 giorni da oggi
-
-        # Se l'utente ha fornito input, aggiorniamo i dati
-        if user_input is not None:
-            self._data.update({
-                "start_date": user_input.get("start_date", start_date),
-                "end_date": user_input.get("end_date", end_date),
-            })
-            return self.async_create_entry(
-                title=self._data.get("name", "Calcio Live"),
-                data=self._data,
-            )
-
-        # Mostra il form per l'inserimento delle date con i valori predefiniti
-        return self.async_show_form(
-            step_id="dates",
-            data_schema=vol.Schema({
-                vol.Optional("start_date", default=start_date): str,
-                vol.Optional("end_date", default=end_date): str,
-            }),
-            description_placeholders={
-                "description": (
-                    "Inserisci il periodo di monitoraggio per le partite.\n\n"
-                    "- La data di inizio determina da quando iniziare a monitorare.\n"
-                    "- La data di fine determina fino a quando monitorare.\n\n"
-                    "Entrambe le date devono essere nel formato **YYYY-MM-DD**."
-                )
-            }
-        )
-    
     async def _get_calendar_data(self):
         """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
         competition_code = self._data.get("competition_code", "N/A")
@@ -287,7 +250,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _get_competitions(self):
         url = "https://site.api.espn.com/apis/site/v2/leagues/dropdown?lang=en&region=us&calendartype=whitelist&limit=200&sport=soccer"
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                 async with session.get(url) as response:
                     response.raise_for_status()
                     competitions_data = await response.json()
@@ -304,7 +267,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _get_teams(self, competition_code):
         url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/teams"
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                 async with session.get(url) as response:
                     response.raise_for_status()
                     teams_data = await response.json()
@@ -325,15 +288,10 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        """Gestore per il flusso delle opzioni."""
-        return CalcioLiveOptionsFlow(config_entry)
+        return CalcioLiveOptionsFlow()
 
 
 class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
-
-    def __init__(self, config_entry):
-        super().__init__()
-        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
@@ -341,13 +299,13 @@ class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
 
         today = datetime.now()
 
-        start_date = self._config_entry.options.get(
-            "start_date", self._config_entry.data.get("start_date", (today - relativedelta(months=3)).strftime("%Y-%m-%d"))
+        start_date = self.config_entry.options.get(
+            "start_date", self.config_entry.data.get("start_date", (today - relativedelta(months=3)).strftime("%Y-%m-%d"))
         )
-        end_date = self._config_entry.options.get(
-            "end_date", self._config_entry.data.get("end_date", (today + relativedelta(months=4)).strftime("%Y-%m-%d"))
+        end_date = self.config_entry.options.get(
+            "end_date", self.config_entry.data.get("end_date", (today + relativedelta(months=4)).strftime("%Y-%m-%d"))
         )
-        recent_match_hours = self._config_entry.options.get("recent_match_hours", 24)
+        recent_match_hours = self.config_entry.options.get("recent_match_hours", 24)
 
         return self.async_show_form(
             step_id="init",
