@@ -301,6 +301,8 @@ class CalcioLiveSensor(Entity):
             except asyncio.TimeoutError:
                 await asyncio.sleep(5)
                 retries += 1
+        else:
+            _LOGGER.warning(f"Alle pogingen mislukt voor {self._name} — geen data ontvangen van ESPN")
 
     def _filter_start_str(self):
         d = self._dyn_start_date or self._start_date

@@ -224,28 +224,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-    async def _get_calendar_data(self):
-        """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
-        competition_code = self._data.get("competition_code", "N/A")
 
-        if competition_code == "99999":
-            #_LOGGER.warning("Competition code 99999 escluso dal recupero del calendario.")
-            return None, None
-
-        calendar_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/scoreboard"
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(calendar_url) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    # Estrai le date di inizio e fine dal calendario
-                    calendar_start_date = data.get("calendarStartDate", "2025-08-01T04:00Z")
-                    calendar_end_date = data.get("calendarEndDate", "2026-07-01T03:59Z")
-                    return calendar_start_date[:10], calendar_end_date[:10]
-        except Exception as e:
-            _LOGGER.error(f"Errore nel recupero del calendario: {e}")
-            return None, None
-    
 
     async def _get_competitions(self):
         url = "https://site.api.espn.com/apis/site/v2/leagues/dropdown?lang=en&region=us&calendartype=whitelist&limit=200&sport=soccer"
