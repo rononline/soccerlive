@@ -55,6 +55,7 @@ def classifica_data(data):
         top_leagues = data.get("leagues", [])
         league_logo = top_leagues[0].get("logos", [{}])[0].get("href", "N/A") if top_leagues else "N/A"
         league_name = top_leagues[0].get("name", "N/A") if top_leagues else "N/A"
+        league_abbreviation = top_leagues[0].get("abbreviation", "N/A") if top_leagues else "N/A"
 
         return {
             "season": season_display_name,
@@ -62,6 +63,7 @@ def classifica_data(data):
             "season_end": season_end,
             "league_logo": league_logo,
             "league_name": league_name,
+            "league_abbreviation": league_abbreviation,
             "standings_groups": standings_list
         }
     except Exception as e:
