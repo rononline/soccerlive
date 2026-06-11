@@ -962,20 +962,27 @@ class CalcioLiveSensor(Entity):
                 all_matches = all_data.get("matches", []) or []
                 pre_matches = [m for m in all_matches if m.get("state") == "pre"]
                 # Sla de eerste (= next_match) over; neem de volgende 4
+                # Inclusief live wedstrijden voor live score in de lijst
+                upcoming_candidates = [m for m in all_matches if m.get("state") in ("pre", "in")][1:5]
                 upcoming_matches = [
                     {
                         "date": m.get("date"),
-                        "date": m.get("date"),
+                        "state": m.get("state"),
                         "home_team": m.get("home_team"),
                         "home_abbrev": m.get("home_abbrev"),
                         "home_logo": m.get("home_logo"),
                         "home_color": m.get("home_color"),
+                        "home_score": m.get("home_score"),
                         "away_team": m.get("away_team"),
                         "away_abbrev": m.get("away_abbrev"),
                         "away_logo": m.get("away_logo"),
                         "away_color": m.get("away_color"),
+                        "away_score": m.get("away_score"),
+                        "clock": m.get("clock"),
+                        "head_to_head": (m.get("head_to_head") or [])[:3],
+                        "event_id": m.get("event_id"),
                     }
-                    for m in pre_matches[1:5]
+                    for m in upcoming_candidates
                 ]
 
                 # Computa attributi della prossima partita
