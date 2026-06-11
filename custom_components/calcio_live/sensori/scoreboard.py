@@ -233,7 +233,7 @@ def is_within_recent_window(end_time, hours=24):
     """Ritorna True se la partita (kickoff) è avvenuta entro le ultime `hours`."""
     try:
         if isinstance(end_time, str):
-            end_time_dt = datetime.strptime(end_time, "%d/%m/%Y %H:%M").replace(tzinfo=timezone.utc)
+            end_time_dt = datetime.strptime(end_time, "%d-%m-%Y %H:%M").replace(tzinfo=timezone.utc)
         elif isinstance(end_time, datetime):
             end_time_dt = end_time
         else:
@@ -418,9 +418,9 @@ def _parse_date(hass, date_str, show_time=True):
         local_date = parsed_date.astimezone(local_tz)
 
         if show_time:
-            return local_date.strftime("%d/%m/%Y %H:%M")
+            return local_date.strftime("%d-%m-%Y %H:%M")
         else:
-            return local_date.strftime("%d/%m/%Y")
+            return local_date.strftime("%d-%m-%Y")
     except (ValueError, TypeError) as e:
         #_LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
         return "N/A"
