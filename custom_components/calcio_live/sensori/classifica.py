@@ -52,16 +52,14 @@ def classifica_data(data):
         season_start = _parse_date(current_season.get("startDate", "N/A")) if current_season else None
         season_end = _parse_date(current_season.get("endDate", "N/A")) if current_season else None
 
-        top_leagues = data.get("leagues", [])
-        league_logo = top_leagues[0].get("logos", [{}])[0].get("href", "N/A") if top_leagues else "N/A"
-        league_name = top_leagues[0].get("name", "N/A") if top_leagues else "N/A"
-        league_abbreviation = top_leagues[0].get("abbreviation", "N/A") if top_leagues else "N/A"
+        # De standings-API heeft name/abbreviation op het top-niveau (geen leagues-array)
+        league_name = data.get("name", "N/A")
+        league_abbreviation = data.get("abbreviation", "N/A")
 
         return {
             "season": season_display_name,
             "season_start": season_start,
             "season_end": season_end,
-            "league_logo": league_logo,
             "league_name": league_name,
             "league_abbreviation": league_abbreviation,
             "standings_groups": standings_list
