@@ -48,6 +48,10 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
         matches = []
         team_logo = None
 
+        # ESPN returns league name at the top level, not per-competition
+        top_leagues = data.get("leagues", [])
+        top_league_name = top_leagues[0].get("name", "N/A") if top_leagues else "N/A"
+
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         if isinstance(end_date, str):
@@ -70,13 +74,15 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 continue
             if end_date and match_date and match_date > end_date:
                 continue
-            
+
             #Solo per il mixed
             season_info = get_season_slug_or_displayname(match)
 
             competitions = match.get("competitions", [])
-            # Estrai il nome della lega/competizione
+            # Estrai il nome della lega/competizione: prima dalla competition stessa, poi dal top-level
             league_name = competitions[0].get("league", {}).get("displayName", "N/A") if competitions else "N/A"
+            if league_name == "N/A":
+                league_name = top_league_name
             
             competitors = competitions[0].get("competitors", []) if competitions else []
 
