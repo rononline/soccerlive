@@ -925,7 +925,7 @@ class CalcioLiveSensor(Entity):
                             upcoming_matches = [m for m in matches if m.get("state") == "pre"]
                             if upcoming_matches:
                                 um = upcoming_matches[0]
-                                self._state = f"⏳ {um.get('home_team','?')} vs {um.get('away_team','?')} ({um.get('date','?')})"
+                                self._state = f"⏳ {um.get('home_team','?')} tegen {um.get('away_team','?')} ({um.get('date','?')})"
                             else:
                                 self._state = f"📊 {len(matches)} wedstrijden beschikbaar"
                 else:
@@ -953,7 +953,7 @@ class CalcioLiveSensor(Entity):
                     if next_match.get("state") == "in":
                         self._state = f"{next_match.get('home_score','?')} - {next_match.get('away_score','?')} ({next_match.get('clock','')})"
                     else:
-                        self._state = f"Volgende wedstrijd: {next_match.get('home_team','N/A')} vs {next_match.get('away_team','N/A')}"
+                        self._state = f"Volgende wedstrijd: {next_match.get('home_team','N/A')} tegen {next_match.get('away_team','N/A')}"
                 else:
                     self._state = "Geen wedstrijden beschikbaar"
 
