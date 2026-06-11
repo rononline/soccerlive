@@ -957,6 +957,24 @@ class CalcioLiveSensor(Entity):
                 else:
                     self._state = "Geen wedstrijden beschikbaar"
 
+                # Haal de volgende 4 aankomende wedstrijden op voor de kaartlijst (lichtgewicht)
+                all_data = get_team_match_data(next_match_only=False)
+                all_matches = all_data.get("matches", []) or []
+                pre_matches = [m for m in all_matches if m.get("state") == "pre"]
+                # Sla de eerste (= next_match) over; neem de volgende 4
+                upcoming_matches = [
+                    {
+                        "date": m.get("date"),
+                        "home_team": m.get("home_team"),
+                        "home_abbrev": m.get("home_abbrev"),
+                        "home_logo": m.get("home_logo"),
+                        "away_team": m.get("away_team"),
+                        "away_abbrev": m.get("away_abbrev"),
+                        "away_logo": m.get("away_logo"),
+                    }
+                    for m in pre_matches[1:5]
+                ]
+
                 # Computa attributi della prossima partita
                 computed_attrs = self._compute_next_match_attributes(next_match) if next_match else {}
 
@@ -964,5 +982,6 @@ class CalcioLiveSensor(Entity):
                     **team_match,
                     "matches": matches,
                     "next_match": next_match,
-                    **computed_attrs,  # Aggiungi gli attributi computati
+                    "upcoming_matches": upcoming_matches,
+                    **computed_attrs,
                 }
