@@ -52,11 +52,17 @@ def classifica_data(data):
         season_start = _parse_date(current_season.get("startDate", "N/A")) if current_season else None
         season_end = _parse_date(current_season.get("endDate", "N/A")) if current_season else None
 
+        top_leagues = data.get("leagues", [])
+        league_logo = top_leagues[0].get("logos", [{}])[0].get("href", "N/A") if top_leagues else "N/A"
+        league_name = top_leagues[0].get("name", "N/A") if top_leagues else "N/A"
+
         return {
             "season": season_display_name,
             "season_start": season_start,
             "season_end": season_end,
-            "standings_groups": standings_list  # Mantiene le classifiche separate
+            "league_logo": league_logo,
+            "league_name": league_name,
+            "standings_groups": standings_list
         }
     except Exception as e:
         _LOGGER.error(f"Errore nel processare i dati della classifica: {e}")

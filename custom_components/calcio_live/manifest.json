@@ -1,12 +1,18 @@
 {
   "domain": "calcio_live",
   "name": "Voetbal Live",
-  "codeowners": ["@rononline"],
+  "codeowners": [
+    "@rononline"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/rononline/calcio-live",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/rononline/calcio-live/issues",
-  "requirements": ["arrow", "aiofiles", "pytz==2023.3"],
-  "version": "2.12.7"
+  "requirements": [
+    "arrow",
+    "aiofiles",
+    "pytz==2023.3"
+  ],
+  "version": "2.12.9"
 }
