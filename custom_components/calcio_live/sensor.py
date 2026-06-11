@@ -965,12 +965,15 @@ class CalcioLiveSensor(Entity):
                 upcoming_matches = [
                     {
                         "date": m.get("date"),
+                        "date": m.get("date"),
                         "home_team": m.get("home_team"),
                         "home_abbrev": m.get("home_abbrev"),
                         "home_logo": m.get("home_logo"),
+                        "home_color": m.get("home_color"),
                         "away_team": m.get("away_team"),
                         "away_abbrev": m.get("away_abbrev"),
                         "away_logo": m.get("away_logo"),
+                        "away_color": m.get("away_color"),
                     }
                     for m in pre_matches[1:5]
                 ]
