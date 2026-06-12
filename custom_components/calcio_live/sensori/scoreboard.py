@@ -1,4 +1,5 @@
-from .const import _LOGGER
+import logging
+_LOGGER = logging.getLogger(__name__)
 from dateutil import parser
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta, timezone

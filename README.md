@@ -28,6 +28,7 @@ Na het instellen worden automatisch sensoren aangemaakt, afhankelijk van je keuz
 | `team_matches_mixed` | `calciolive_all_mixed_*` | Alle wedstrijden van een team (alle competities) |
 | `match_day` | `calciolive_all_*` | Alle wedstrijden van een competitie |
 | `standings` | `calciolive_classifica_*` | Stand van een competitie |
+| `top_scorers` | `calciolive_cannonieri_*` | Topscorers van een competitie (auto-aangemaakt) |
 | `bracket` | `calciolive_bracket_*` | KO-schema (automatisch voor bekertoernooien) |
 | `all_matches_today` | `calciolive_all_today` | Alle wedstrijden van vandaag wereldwijd |
 | `news` | `calciolive_news_*` | Nieuwsfeed van een competitie |
@@ -150,6 +151,46 @@ action:
 mode: single
 ```
 
+### Melding bij aftrap
+
+```yaml
+alias: Voetbal - Wedstrijd begint
+trigger:
+  - platform: event
+    event_type: calcio_live_match_started
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.event.data.home_team == 'Feyenoord Rotterdam'
+         or trigger.event.data.away_team == 'Feyenoord Rotterdam' }}
+action:
+  - service: notify.mobile_app_mijn_telefoon
+    data:
+      title: "🟢 Wedstrijd begint!"
+      message: >
+        {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
+        — {{ trigger.event.data.venue }}
+mode: single
+```
+
+### Melding bij wissel
+
+```yaml
+alias: Voetbal - Wissel melding
+trigger:
+  - platform: event
+    event_type: calcio_live_substitution
+action:
+  - service: notify.mobile_app_mijn_telefoon
+    data:
+      title: "🔄 Wissel"
+      message: >
+        {{ trigger.event.data.player }} ({{ trigger.event.data.team }})
+        op minuut {{ trigger.event.data.minute }}'
+        — {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
+mode: queued
+```
+
 ### Filteren op competitie
 
 ```yaml
@@ -185,9 +226,11 @@ condition:
 
 | Event | Wanneer | Belangrijkste velden |
 |---|---|---|
+| `calcio_live_match_started` | Bij aftrap | `home_team`, `away_team`, `venue`, `date`, `league_name`, `competition_code` |
 | `calcio_live_goal` | Bij elk doelpunt | `team`, `player`, `minute`, `home_score`, `away_score`, `league_name`, `competition_code` |
-| `calcio_live_yellow_card` | Bij gele kaart | `player`, `minute`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_red_card` | Bij rode kaart | `player`, `minute`, `home_team`, `away_team`, `league_name` |
+| `calcio_live_yellow_card` | Bij gele kaart | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `calcio_live_red_card` | Bij rode kaart | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `calcio_live_substitution` | Bij wissel | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
 | `calcio_live_match_finished` | Bij eindsignaal | `home_score`, `away_score`, `goal_scorers`, `goal_scorers_str`, `league_name` |
 
 ---

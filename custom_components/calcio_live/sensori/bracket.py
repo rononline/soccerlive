@@ -8,7 +8,8 @@ Etichette in inglese (standard internazionale football). La card può aggiungere
 una traduzione localizzata.
 """
 
-from .const import _LOGGER
+import logging
+_LOGGER = logging.getLogger(__name__)
 import re
 
 

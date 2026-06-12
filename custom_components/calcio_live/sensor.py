@@ -7,9 +7,12 @@ from homeassistant.helpers.storage import Store
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+import logging
 import random
 import re
-from .const import DOMAIN, _LOGGER
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 # Competizioni con fase a eliminazione diretta (knockout bracket)
 KNOCKOUT_LEAGUES = {
@@ -196,10 +199,12 @@ class CalcioLiveSensor(Entity):
         
         self._previous_scores = {}
         self._previous_match_details = {}
+        self._previous_match_states = {}
         self._match_finished_dispatched = set()
         self._match_finished_list = []
         self._store = None
         self._summary_cache = {}
+        self._scorers_unavailable = False
 
         # Events collected during executor-thread processing, fired on event loop
         self._pending_events: list = []
@@ -259,13 +264,14 @@ class CalcioLiveSensor(Entity):
 
     @property
     def unique_id(self):
-        return self._name
+        return f"{self._name}_{self._sensor_type}"
 
     @property
     def device_info(self):
+        display = self._code if self._code and self._code not in ("N/A", "") else (self._team_name or self._name)
         return {
             "identifiers": {(DOMAIN, self._config_entry_id)},
-            "name": f"Calcio Live · {self._code}",
+            "name": f"Calcio Live · {display}",
             "manufacturer": "ESPN",
             "entry_type": "service",
         }
@@ -294,6 +300,9 @@ class CalcioLiveSensor(Entity):
             )
             await self._flush_pending_events()
             _LOGGER.info(f"Using cached data for {self._name}")
+            return
+
+        if self._scorers_unavailable:
             return
 
         url = await self._build_url()
@@ -677,6 +686,8 @@ class CalcioLiveSensor(Entity):
                         self._dispatch_card_event("yellow", detail, match)
                     elif "Red Card" in detail:
                         self._dispatch_card_event("red", detail, match)
+                    elif "Substitution" in detail:
+                        self._dispatch_substitution_event(detail, match)
             
             # Aggiorna i dettagli
             self._previous_match_details[match_id] = match_details.copy()
@@ -713,6 +724,54 @@ class CalcioLiveSensor(Entity):
             _LOGGER.info(f"Kaart gedetecteerd! {card_type.upper()} op {minute} | {player}")
         except Exception as e:
             _LOGGER.error(f"Errore nel dispatch dell'evento cartellino: {e}")
+
+    def _dispatch_substitution_event(self, detail_str, match):
+        """Dispatcha een wissel-event."""
+        try:
+            parts = detail_str.split("': ")
+            minute = parts[0].split(" - ")[1] if " - " in parts[0] else "N/A"
+            player = parts[1] if len(parts) > 1 else "N/A"
+            team_match = re.search(r'\[([^\]]+)\]', detail_str)
+            team = team_match.group(1) if team_match else "N/A"
+            event_data = {
+                "player": player,
+                "minute": minute,
+                "team": team,
+                "home_team": match.get("home_team", "N/A"),
+                "away_team": match.get("away_team", "N/A"),
+                "home_score": match.get("home_score", "N/A"),
+                "away_score": match.get("away_score", "N/A"),
+                "league_name": match.get("league_name", "N/A"),
+                "competition_code": self._code,
+                "sensor_name": self._name,
+            }
+            self._pending_events.append(("calcio_live_substitution", event_data))
+            _LOGGER.info(f"Wissel: {player} ({team}) op {minute}")
+        except Exception as e:
+            _LOGGER.error(f"Fout bij dispatchen wissel-event: {e}")
+
+    def _detect_and_dispatch_match_started(self, matches):
+        """Dispatcha een event wanneer een wedstrijd van 'pre' naar 'in' gaat."""
+        for match in matches:
+            match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
+            current_state = match.get("state")
+            prev_state = self._previous_match_states.get(match_id)
+            if current_state == "in" and prev_state == "pre":
+                event_data = {
+                    "home_team": match.get("home_team", "N/A"),
+                    "away_team": match.get("away_team", "N/A"),
+                    "home_logo": match.get("home_logo", "N/A"),
+                    "away_logo": match.get("away_logo", "N/A"),
+                    "venue": match.get("venue", "N/A"),
+                    "date": match.get("date", "N/A"),
+                    "league_name": match.get("league_name", "N/A"),
+                    "competition_code": self._code,
+                    "sensor_name": self._name,
+                }
+                self._pending_events.append(("calcio_live_match_started", event_data))
+                _LOGGER.info(f"Wedstrijd gestart: {match.get('home_team', 'N/A')} vs {match.get('away_team', 'N/A')}")
+            if current_state:
+                self._previous_match_states[match_id] = current_state
 
     def _detect_and_dispatch_match_finished(self, matches):
         """Rileva quando una partita finisce e dispatcha un evento"""
@@ -849,6 +908,7 @@ class CalcioLiveSensor(Entity):
             self._detect_and_dispatch_goals(matches)
             self._detect_and_dispatch_cards(matches)
             self._detect_and_dispatch_match_finished(matches)
+            self._detect_and_dispatch_match_started(matches)
         
         computed = {}
         
@@ -1011,9 +1071,26 @@ class CalcioLiveSensor(Entity):
 
             elif self._sensor_type == "team_match":
                 # sensor.calciolive_next_ita_1_internazionale
-                team_match = get_team_match_data(next_match_only=True)
-                matches = team_match.get("matches", []) or []
-                next_match = matches[0] if matches else None
+                # Verwerk alle wedstrijden één keer en leid next_match er uit af
+                all_data = get_team_match_data()
+                all_matches = all_data.get("matches", []) or []
+
+                from .sensori.scoreboard import is_within_recent_window
+                _live = [m for m in all_matches if m.get("state") == "in"]
+                _recent_post = [m for m in all_matches
+                    if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)]
+                _upcoming = [m for m in all_matches if m.get("state") == "pre"]
+
+                if _live:
+                    next_match = _live[0]
+                elif _recent_post:
+                    next_match = _recent_post[-1]
+                elif _upcoming:
+                    next_match = _upcoming[0]
+                else:
+                    next_match = None
+
+                matches = [next_match] if next_match else []
 
                 if next_match:
                     if next_match.get("state") == "in":
@@ -1023,10 +1100,6 @@ class CalcioLiveSensor(Entity):
                 else:
                     self._state = "Geen wedstrijden beschikbaar"
 
-                # Haal alle wedstrijden op voor aankomende lijst en vorige resultaten
-                all_data = get_team_match_data(next_match_only=False)
-                all_matches = all_data.get("matches", []) or []
-                pre_matches = [m for m in all_matches if m.get("state") == "pre"]
                 finished_matches = [m for m in all_matches if m.get("state") == "post"]
                 previous_matches = [
                     {
@@ -1072,7 +1145,7 @@ class CalcioLiveSensor(Entity):
                 computed_attrs = self._compute_next_match_attributes(next_match) if next_match else {}
 
                 self._attributes = {
-                    **team_match,
+                    **all_data,
                     "matches": matches,
                     "next_match": next_match,
                     "upcoming_matches": upcoming_matches,
