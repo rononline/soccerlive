@@ -6,9 +6,9 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/rononline/calcio-live",
+  "documentation": "https://github.com/rononline/voetbal-live",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/rononline/calcio-live/issues",
+  "issue_tracker": "https://github.com/rononline/voetbal-live/issues",
   "requirements": [
     "python-dateutil>=2.8.2"
   ],

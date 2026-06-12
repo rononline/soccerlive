@@ -237,4 +237,4 @@ condition:
 
 ## 📜 License
 
-MIT — data via ESPN public APIs.
+GPL-3.0 — data via ESPN public APIs.
