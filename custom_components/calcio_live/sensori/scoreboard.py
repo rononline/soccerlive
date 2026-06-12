@@ -407,7 +407,9 @@ def _get_details(details):
         clock = detail.get("clock", {}).get("displayValue", "N/A")
         athletes = [athlete.get("displayName", "Unknown") for athlete in detail.get("athletesInvolved", [])]
         athletes_str = ", ".join(athletes) if athletes else "N/A"
-        events.append(f"{event_type} - {clock}: {athletes_str}")
+        team_abbr = (detail.get("team", {}) or {}).get("abbreviation", "")
+        team_str = f" [{team_abbr}]" if team_abbr else ""
+        events.append(f"{event_type}{team_str} - {clock}: {athletes_str}")
     return events
 
 def _parse_date(hass, date_str, show_time=True):

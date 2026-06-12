@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import random
+import re
 from .const import DOMAIN, _LOGGER
 
 # Competizioni con fase a eliminazione diretta (knockout bracket)
@@ -107,7 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     CalcioLiveSensor(
                         hass, "calciolive_all_today", competition_code, "all_matches_today",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
-                        start_date=start_date, end_date=end_date, team_id=team_id
+                        start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
                     )
                 ]
             else:
@@ -140,6 +141,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     except Exception as e:
         _LOGGER.error(f"Errore durante la configurazione dei sensori: {e}")
+        raise
 
 
 class CalcioLiveSensor(Entity):
@@ -183,6 +185,7 @@ class CalcioLiveSensor(Entity):
         self._previous_match_details = {}
         self._match_finished_dispatched = set()
         self._store = None
+        self._summary_cache = {}
 
         # Events collected during executor-thread processing, fired on event loop
         self._pending_events: list = []
@@ -241,7 +244,7 @@ class CalcioLiveSensor(Entity):
 
     @property
     def unique_id(self):
-        return f"{self._name}_{self._sensor_type}"
+        return self._name
 
     @property
     def config_entry_id(self):
@@ -333,6 +336,12 @@ class CalcioLiveSensor(Entity):
         event_id = first.get("event_id")
         if not event_id:
             return
+
+        # Post-match summaries won't change: serve from cache to avoid repeated fetches
+        if event_id in self._summary_cache:
+            first.update(self._summary_cache[event_id])
+            return
+
         summary = await self._fetch_match_summary(event_id)
         if not summary:
             return
@@ -343,6 +352,10 @@ class CalcioLiveSensor(Entity):
         # lineup/key_events/h2h da matches[0]. Niente copia a livello top per non
         # raddoppiare il payload e sforare il limite di 16384 byte del recorder.
         first.update(summary_data)
+
+        # Cache only finished matches — live matches must keep refreshing
+        if first.get("state") == "post":
+            self._summary_cache[event_id] = summary_data
 
     
     async def _build_url(self):
@@ -428,7 +441,7 @@ class CalcioLiveSensor(Entity):
 
         calendar_url = f"{self.base_url_2}/{self._code}/scoreboard"
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                 async with session.get(calendar_url, headers={"Accept-Language": "en"}) as response:
                     response.raise_for_status()
                     raw = await response.read()
@@ -635,19 +648,20 @@ class CalcioLiveSensor(Entity):
     def _dispatch_card_event(self, card_type, detail_str, match):
         """Dispatcha un evento di cartellino"""
         try:
-            # Parse: "Yellow Card - 27'': Destiny Udogie" o "Red Card - 29'': Cristian Romero"
+            # Parse: "Yellow Card [TOT] - 27': Destiny Udogie" o "Red Card - 29': Cristian Romero"
             parts = detail_str.split("': ")
             minute = parts[0].split(" - ")[1] if " - " in parts[0] else "N/A"
             player = parts[1] if len(parts) > 1 else "N/A"
-            
-            # Distingui se il giocatore è della squadra casa o ospite
-            # Semplice heuristica: controlla il match_details per il contesto
-            
+
+            team_match = re.search(r'\[([^\]]+)\]', detail_str)
+            team = team_match.group(1) if team_match else "N/A"
+
             event_type = f"calcio_live_{card_type}_card"
             event_data = {
                 "card_type": card_type.upper(),
                 "player": player,
                 "minute": minute,
+                "team": team,
                 "home_team": match.get("home_team", "N/A"),
                 "away_team": match.get("away_team", "N/A"),
                 "home_score": match.get("home_score", "N/A"),
