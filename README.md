@@ -1,43 +1,43 @@
-# ⚽ Voetbal Live — Home Assistant Integratie
+# ⚽ Football Live — Home Assistant Integration
 
-Realtime voetbaldata in Home Assistant via de ESPN API.  
-Fork van [Calcio Live](https://github.com/Bobsilvio/calcio-live) door @Bobsilvio — uitgebreid met Nederlandse vertaling en diverse bugfixes.
-
----
-
-## 📦 Installatie via HACS
-
-1. Voeg de repository toe als **custom repository** in HACS:  
-   `https://github.com/rononline/voetbal-live` — categorie: **Integratie**
-2. Installeer **Voetbal Live** via HACS
-3. Herstart Home Assistant
-4. Ga naar **Instellingen → Integraties → Integratie toevoegen** en zoek op `Voetbal Live`
-
-> Installeer ook de bijbehorende kaarten: [Voetbal Live Card](https://github.com/rononline/voetbal-live-card)
+Real-time football data in Home Assistant via the ESPN API.  
+Fork of [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @Bobsilvio — extended with multi-language support, new sensors, events and various bug fixes.
 
 ---
 
-## 🗃️ Sensortypes
+## 📦 Installation via HACS
 
-Na het instellen worden automatisch sensoren aangemaakt, afhankelijk van je keuze:
+1. Add the repository as a **custom repository** in HACS:  
+   `https://github.com/rononline/voetbal-live` — category: **Integration**
+2. Install **Voetbal Live** via HACS
+3. Restart Home Assistant
+4. Go to **Settings → Integrations → Add Integration** and search for `Voetbal Live`
 
-| Sensortype | Naam | Beschrijving |
+> Also install the companion cards: [Football Live Card](https://github.com/rononline/voetbal-live-card)
+
+---
+
+## 🗃️ Sensor types
+
+Sensors are created automatically depending on your selection:
+
+| Sensor type | Name | Description |
 |---|---|---|
-| `team_match` | `calciolive_next_*` | Volgende / huidige wedstrijd van een team |
-| `team_matches` | `calciolive_all_*` | Alle wedstrijden van een team (competitie-specifiek) |
-| `team_matches_mixed` | `calciolive_all_mixed_*` | Alle wedstrijden van een team (alle competities) |
-| `match_day` | `calciolive_all_*` | Alle wedstrijden van een competitie |
-| `standings` | `calciolive_classifica_*` | Stand van een competitie |
-| `top_scorers` | `calciolive_cannonieri_*` | Topscorers van een competitie (auto-aangemaakt) |
-| `bracket` | `calciolive_bracket_*` | KO-schema (automatisch voor bekertoernooien) |
-| `all_matches_today` | `calciolive_all_today` | Alle wedstrijden van vandaag wereldwijd |
-| `news` | `calciolive_news_*` | Nieuwsfeed van een competitie |
+| `team_match` | `calciolive_next_*` | Next / current match for a team |
+| `team_matches` | `calciolive_all_*` | All matches for a team (competition-specific) |
+| `team_matches_mixed` | `calciolive_all_mixed_*` | All matches for a team (all competitions) |
+| `match_day` | `calciolive_all_*` | All matches in a competition |
+| `standings` | `calciolive_classifica_*` | League standings |
+| `top_scorers` | `calciolive_cannonieri_*` | Top scorers for a competition (auto-created) |
+| `bracket` | `calciolive_bracket_*` | Knockout bracket (auto-created for cup competitions) |
+| `all_matches_today` | `calciolive_all_today` | All matches worldwide today |
+| `news` | `calciolive_news_*` | News feed for a competition |
 
 ---
 
-## ⚙️ Recorder uitsluiten
+## ⚙️ Exclude from recorder
 
-Voeg dit toe aan `configuration.yaml` om database-waarschuwingen te voorkomen:
+Add this to `configuration.yaml` to avoid database warnings:
 
 ```yaml
 recorder:
@@ -48,23 +48,23 @@ recorder:
 
 ---
 
-## 🔢 Team ID vinden
+## 🔢 Finding a Team ID
 
-In de meeste gevallen **niet nodig**: bij het kiezen van competitie + team wordt het ID automatisch ingevuld. Alleen nodig bij handmatige invoer (bijv. voor de *mixed* sensor).
+Usually **not needed**: the ID is filled in automatically when you select a competition and team. Only required for manual entry.
 
-1. **Via ESPN-website**: open de teampagina op `espn.com` — het ID staat in de URL:  
+1. **Via ESPN website**: open the team page on `espn.com` — the ID is the number in the URL:  
    `espn.com/soccer/team/_/id/`**`9723`**`/portland-timbers` → Team ID = **9723**
 2. **Via ESPN API**:  
    `https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams`
 
 ---
 
-## 🔔 Automaties
+## 🔔 Automations
 
-### Melding 15 minuten voor aanvang
+### Notification 15 minutes before kick-off
 
 ```yaml
-alias: Voetbal - Melding voor aanvang
+alias: Football - Match starting soon
 trigger:
   - platform: template
     value_template: >
@@ -74,28 +74,50 @@ condition:
     value_template: >
       {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_status') == 'pre' }}
 action:
-  - service: notify.mobile_app_mijn_telefoon
+  - service: notify.mobile_app_my_phone
     data:
-      title: "⚽ Wedstrijd begint over 15 min!"
+      title: "⚽ Match starts in 15 min!"
       message: >
         {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_home_team') }}
         vs {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_away_team') }}
 mode: single
 ```
 
-### Melding bij doelpunt
+### Notification on kick-off
 
 ```yaml
-alias: Voetbal - Doelpunt melding
+alias: Football - Match started
+trigger:
+  - platform: event
+    event_type: calcio_live_match_started
+condition:
+  - condition: template
+    value_template: >
+      {{ trigger.event.data.home_team == 'Feyenoord Rotterdam'
+         or trigger.event.data.away_team == 'Feyenoord Rotterdam' }}
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "🟢 Match started!"
+      message: >
+        {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
+        — {{ trigger.event.data.venue }}
+mode: single
+```
+
+### Notification on goal
+
+```yaml
+alias: Football - Goal notification
 trigger:
   - platform: event
     event_type: calcio_live_goal
     event_data:
-      team: Feyenoord Rotterdam   # weglaten voor alle teams
+      team: Feyenoord Rotterdam   # omit to receive for all teams
 action:
-  - service: notify.mobile_app_mijn_telefoon
+  - service: notify.mobile_app_my_phone
     data:
-      title: "⚽ DOELPUNT!"
+      title: "⚽ GOAL!"
       message: >
         {% set m = trigger.event.data.minute %}
         {{ trigger.event.data.player }}{{ " (" ~ m ~ "')" if m and m != 'N/A' else '' }} —
@@ -104,30 +126,48 @@ action:
 mode: queued
 ```
 
-### Melding bij gele of rode kaart
+### Notification on yellow or red card
 
 ```yaml
-alias: Voetbal - Kaart melding
+alias: Football - Card notification
 trigger:
   - platform: event
     event_type: calcio_live_yellow_card
   - platform: event
     event_type: calcio_live_red_card
 action:
-  - service: notify.mobile_app_mijn_telefoon
+  - service: notify.mobile_app_my_phone
     data:
       title: >
-        {{ '🟥 RODE KAART!' if trigger.event_type == 'calcio_live_red_card' else '🟨 Gele kaart' }}
+        {{ '🟥 RED CARD!' if trigger.event_type == 'calcio_live_red_card' else '🟨 Yellow card' }}
       message: >
         {{ trigger.event.data.player }} ({{ trigger.event.data.minute }}')
         — {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
 mode: queued
 ```
 
-### Melding bij einde wedstrijd
+### Notification on substitution
 
 ```yaml
-alias: Voetbal - Eindstand melding
+alias: Football - Substitution
+trigger:
+  - platform: event
+    event_type: calcio_live_substitution
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "🔄 Substitution"
+      message: >
+        {{ trigger.event.data.player }} ({{ trigger.event.data.team }})
+        minute {{ trigger.event.data.minute }}'
+        — {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
+mode: queued
+```
+
+### Notification on full time
+
+```yaml
+alias: Football - Final score
 trigger:
   - platform: event
     event_type: calcio_live_match_finished
@@ -139,67 +179,27 @@ condition:
       - condition: template
         value_template: "{{ trigger.event.data.away_team == 'Feyenoord Rotterdam' }}"
 action:
-  - service: notify.mobile_app_mijn_telefoon
+  - service: notify.mobile_app_my_phone
     data:
-      title: "⏹️ Wedstrijd afgelopen"
+      title: "⏹️ Full time"
       message: >
         {{ trigger.event.data.home_team }} {{ trigger.event.data.home_score }}
         - {{ trigger.event.data.away_score }} {{ trigger.event.data.away_team }}
         {% if trigger.event.data.goal_scorers_str != 'N/A' %}
-        · Doelpuntenmakers: {{ trigger.event.data.goal_scorers_str }}
+        · Scorers: {{ trigger.event.data.goal_scorers_str }}
         {% endif %}
 mode: single
 ```
 
-### Melding bij aftrap
+### Filter by competition
 
 ```yaml
-alias: Voetbal - Wedstrijd begint
-trigger:
-  - platform: event
-    event_type: calcio_live_match_started
-condition:
-  - condition: template
-    value_template: >
-      {{ trigger.event.data.home_team == 'Feyenoord Rotterdam'
-         or trigger.event.data.away_team == 'Feyenoord Rotterdam' }}
-action:
-  - service: notify.mobile_app_mijn_telefoon
-    data:
-      title: "🟢 Wedstrijd begint!"
-      message: >
-        {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
-        — {{ trigger.event.data.venue }}
-mode: single
-```
-
-### Melding bij wissel
-
-```yaml
-alias: Voetbal - Wissel melding
-trigger:
-  - platform: event
-    event_type: calcio_live_substitution
-action:
-  - service: notify.mobile_app_mijn_telefoon
-    data:
-      title: "🔄 Wissel"
-      message: >
-        {{ trigger.event.data.player }} ({{ trigger.event.data.team }})
-        op minuut {{ trigger.event.data.minute }}'
-        — {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
-mode: queued
-```
-
-### Filteren op competitie
-
-```yaml
-# Alleen Eredivisie-events
+# Eredivisie events only
 condition:
   - condition: template
     value_template: "{{ trigger.event.data.competition_code == 'ned.1' }}"
 
-# Of op leanaam
+# Or by league name
 condition:
   - condition: template
     value_template: "{{ trigger.event.data.league_name == 'Dutch Eredivisie' }}"
@@ -207,34 +207,34 @@ condition:
 
 ---
 
-## 📊 Beschikbare sensor-attributen
+## 📊 Available sensor attributes
 
-**Volgende wedstrijd** (`next_match_*`):
+**Next match** (`next_match_*`):
 `home_team`, `away_team`, `home_score`, `away_score`, `date`, `datetime_iso`, `minutes_until`, `status` (`pre`/`in`/`post`), `clock`, `period`, `venue`, `home_logo`, `away_logo`, `home_form`, `away_form`
 
-**Live wedstrijd** (`live_match_*`): zelfde velden als `next_match_*`
+**Live match** (`live_match_*`): same fields as `next_match_*`
 
-**Laatste wedstrijd** (`last_match_*`):
+**Last match** (`last_match_*`):
 `home_team`, `away_team`, `home_score`, `away_score`, `date`, `venue`
 
-**Tellers & booleans**:
+**Counters & booleans**:
 `total_matches`, `live_matches_count`, `upcoming_matches_count`, `finished_matches_count`, `has_live_match`, `has_upcoming_match`, `has_recent_match`
 
 ---
 
-## 📡 Beschikbare events
+## 📡 Available events
 
-| Event | Wanneer | Belangrijkste velden |
+| Event | Fired when | Key fields |
 |---|---|---|
-| `calcio_live_match_started` | Bij aftrap | `home_team`, `away_team`, `venue`, `date`, `league_name`, `competition_code` |
-| `calcio_live_goal` | Bij elk doelpunt | `team`, `player`, `minute`, `home_score`, `away_score`, `league_name`, `competition_code` |
-| `calcio_live_yellow_card` | Bij gele kaart | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_red_card` | Bij rode kaart | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_substitution` | Bij wissel | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_match_finished` | Bij eindsignaal | `home_score`, `away_score`, `goal_scorers`, `goal_scorers_str`, `league_name` |
+| `calcio_live_match_started` | Kick-off (pre → in) | `home_team`, `away_team`, `venue`, `date`, `league_name`, `competition_code` |
+| `calcio_live_goal` | Goal scored | `team`, `player`, `minute`, `home_score`, `away_score`, `league_name`, `competition_code` |
+| `calcio_live_yellow_card` | Yellow card | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `calcio_live_red_card` | Red card | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `calcio_live_substitution` | Substitution | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `calcio_live_match_finished` | Full time | `home_score`, `away_score`, `goal_scorers`, `goal_scorers_str`, `league_name` |
 
 ---
 
-## 📜 Licentie
+## 📜 License
 
-MIT — data via ESPN publieke API's.
+MIT — data via ESPN public APIs.
