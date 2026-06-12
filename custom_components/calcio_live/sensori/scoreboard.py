@@ -412,6 +412,31 @@ def _get_details(details):
         events.append(f"{event_type}{team_str} - {clock}: {athletes_str}")
     return events
 
+def process_scorers_data(data):
+    """Extracts top scorers list from ESPN /leaders endpoint."""
+    scorers = []
+    try:
+        for section in (data.get("leaders", []) or []):
+            if "goal" not in section.get("name", "").lower():
+                continue
+            for entry in (section.get("leaders", []) or []):
+                athlete = entry.get("athlete", {}) or {}
+                team = entry.get("team", {}) or {}
+                scorers.append({
+                    "rank": entry.get("rank", len(scorers) + 1),
+                    "goals": entry.get("displayValue", "0"),
+                    "player": athlete.get("displayName", ""),
+                    "short_name": athlete.get("shortName", ""),
+                    "headshot": (athlete.get("headshot", {}) or {}).get("href", ""),
+                    "team_name": team.get("displayName", ""),
+                    "team_logo": team.get("logo", "") or "",
+                })
+            break
+    except Exception as e:
+        _LOGGER.error(f"Errore nel processare top scorers: {e}")
+    return scorers
+
+
 def _parse_date(hass, date_str, show_time=True):
     try:
         user_timezone = hass.config.time_zone

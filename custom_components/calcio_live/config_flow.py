@@ -60,17 +60,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM]),
             }),
             errors=self._errors,
-            description_placeholders={
-                "description": (
-                    "Benvenuto nella configurazione di Calcio Live.\n\n"
-                    "Seleziona una delle opzioni per creare un sensore:\n\n"
-                    "- **Campionato**: per monitorare tutte le partite di un campionato.\n"
-                    "- **Squadra**: per monitorare una specifica squadra.\n"
-                    "- **Tutte**: per monitorare tutte le partite della giornata (di tutto il mondo).\n"
-                    "- **Notizie**: feed news di una competizione.\n"
-                    "- **Inserimento Manuale**: se conosci l'ID della squadra specifica."
-                )
-            }
         )
 
     async def async_step_news_competition(self, user_input=None):
@@ -95,9 +84,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
             errors=self._errors,
-            description_placeholders={
-                "description": "Scegli la competizione da cui ricevere le notizie."
-            }
         )
 
     async def async_step_campionato(self, user_input=None):
@@ -122,12 +108,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
             errors=self._errors,
-            description_placeholders={
-                "description": (
-                    "Scegli il campionato che desideri monitorare.\n"
-                    "Verranno mostrati i dati relativi a tutte le squadre del campionato selezionato."
-                )
-            }
         )
 
     async def async_step_select_competition_for_team(self, user_input=None):
@@ -147,12 +127,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
             errors=self._errors,
-            description_placeholders={
-                "description": (
-                    "Scegli il campionato per il quale vuoi selezionare una squadra specifica.\n"
-                    "Dopo aver scelto il campionato, potrai selezionare una squadra dalla lista."
-                )
-            }
         )
 
     async def async_step_team(self, user_input=None):
@@ -182,12 +156,6 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required("team_name"): vol.In(team_options),
             }),
             errors=self._errors,
-            description_placeholders={
-                "description": (
-                    "Scegli la squadra che desideri monitorare.\n"
-                    "Verranno mostrate solo le partite di questa squadra."
-                )
-            }
         )
 
     async def async_step_manual_team(self, user_input=None):
@@ -213,15 +181,9 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="manual_team",
             data_schema=vol.Schema({
                 vol.Required("manual_team_id"): str,
-                vol.Optional("name", default="Nome Squadra (a piacere)"): str,
+                vol.Optional("name", default=""): str,
             }),
             errors=self._errors,
-            description_placeholders={
-                "description": (
-                    "Se conosci l'ID della squadra, puoi inserirlo manualmente.\n"
-                    "Puoi anche specificare un nome personalizzato per identificarla facilmente."
-                )
-            }
         )
 
 
@@ -274,6 +236,7 @@ class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
+            user_input.pop("info", None)
             return self.async_create_entry(title="", data=user_input)
 
         today = datetime.now()
@@ -285,14 +248,15 @@ class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
             "end_date", self.config_entry.data.get("end_date", (today + relativedelta(months=4)).strftime("%Y-%m-%d"))
         )
         recent_match_hours = self.config_entry.options.get("recent_match_hours", 24)
+        scan_interval = self.config_entry.options.get("scan_interval", 3)
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
+                vol.Optional("scan_interval", default=scan_interval): vol.In([1, 2, 3, 5, 10]),
+                vol.Optional("recent_match_hours", default=recent_match_hours): vol.In([6, 12, 24, 48]),
                 vol.Optional("start_date", default=start_date): str,
                 vol.Optional("end_date", default=end_date): str,
-                vol.Optional("recent_match_hours", default=recent_match_hours): vol.In([6, 12, 24, 48]),
-                vol.Optional("info", default="⚠ Dopo la modifica, riavvia Home Assistant.", description=""): str,
             }),
         )
         
