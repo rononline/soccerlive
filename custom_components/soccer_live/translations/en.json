@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Calcio Live setup",
-                "description": "Welcome to the Calcio Live configuration wizard.\n\nChoose what you want to monitor:\n\n- **League**: every match of a specific league (a knockout bracket sensor is created automatically for cup competitions).\n- **Team**: matches of a specific team.\n- **All matches today**: every match in the world played today.\n- **News**: news feed for a specific competition.\n- **Manual entry**: enter the team ID manually.",
+                "title": "Soccer Live setup",
+                "description": "Welcome to the Soccer Live configuration wizard.\n\nChoose what you want to monitor:\n\n- **League**: every match of a specific league (a knockout bracket sensor is created automatically for cup competitions).\n- **Team**: matches of a specific team.\n- **All matches today**: every match in the world played today.\n- **News**: news feed for a specific competition.\n- **Manual entry**: enter the team ID manually.",
                 "data": {
                     "selection": "What do you want to monitor?"
                 }
@@ -57,7 +57,7 @@
     "options": {
         "step": {
             "init": {
-                "title": "Calcio Live options",
+                "title": "Soccer Live options",
                 "description": "Tune the polling behavior and how long to keep the last finished match visible on the team card before switching to the next upcoming match.",
                 "data": {
                     "scan_interval": "Scan interval (minutes)",

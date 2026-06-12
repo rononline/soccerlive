@@ -74,8 +74,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if selection == "News":
             comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
             sensors += [
-                CalcioLiveSensor(
-                    hass, f"calciolive_news_{comp_norm}", competition_code, "news",
+                SoccerLiveSensor(
+                    hass, f"soccerlive_news_{comp_norm}", competition_code, "news",
                     base_scan_interval + timedelta(minutes=10) + timedelta(seconds=random.randint(0, 30)),
                     config_entry_id=entry.entry_id,
                     start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
@@ -91,20 +91,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             # team_match and team_matches require a valid competition_code for URL building
             if competition_code and competition_code not in ("N/A", ""):
                 sensors += [
-                    CalcioLiveSensor(
-                        hass, f"calciolive_next_{competition_name}_{team_name_normalized}", competition_code, "team_match",
+                    SoccerLiveSensor(
+                        hass, f"soccerlive_next_{competition_name}_{team_name_normalized}", competition_code, "team_match",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name,
                         config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
                     ),
-                    CalcioLiveSensor(
-                        hass, f"calciolive_all_{competition_name}_{team_name_normalized}", competition_code, "team_matches",
+                    SoccerLiveSensor(
+                        hass, f"soccerlive_all_{competition_name}_{team_name_normalized}", competition_code, "team_matches",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name,
                         config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
                     ),
                 ]
             sensors += [
-                CalcioLiveSensor(
-                    hass, f"calciolive_all_mixed_{team_name_normalized}", competition_code, "team_matches_mixed",
+                SoccerLiveSensor(
+                    hass, f"soccerlive_all_mixed_{team_name_normalized}", competition_code, "team_matches_mixed",
                     base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name,
                     config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
                 )
@@ -112,8 +112,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         elif competition_code:
             if competition_code == "99999":  # Se il competition_code è fittizio, crea il sensore per tutte le partite
                 sensors += [
-                    CalcioLiveSensor(
-                        hass, "calciolive_all_today", competition_code, "all_matches_today",
+                    SoccerLiveSensor(
+                        hass, "soccerlive_all_today", competition_code, "all_matches_today",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
                         start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
                     )
@@ -122,21 +122,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 competition_name = competition_name.replace(" ", "_").replace(".", "_").lower()
 
                 sensors += [
-                    CalcioLiveSensor(
-                        hass, f"calciolive_classifica_{competition_name}", competition_code, "standings",
+                    SoccerLiveSensor(
+                        hass, f"soccerlive_classifica_{competition_name}", competition_code, "standings",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
                         start_date=start_date, end_date=end_date, team_id=team_id
                     ),
-                    CalcioLiveSensor(
-                        hass, f"calciolive_all_{competition_name}", competition_code, "match_day",
+                    SoccerLiveSensor(
+                        hass, f"soccerlive_all_{competition_name}", competition_code, "match_day",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
                         start_date=start_date, end_date=end_date, team_id=team_id
                     )
                 ]
                 # Top scorers sensor
                 sensors.append(
-                    CalcioLiveSensor(
-                        hass, f"calciolive_cannonieri_{competition_name}", competition_code, "top_scorers",
+                    SoccerLiveSensor(
+                        hass, f"soccerlive_cannonieri_{competition_name}", competition_code, "top_scorers",
                         base_scan_interval + timedelta(minutes=5) + timedelta(seconds=random.randint(0, 30)),
                         config_entry_id=entry.entry_id,
                         start_date=start_date, end_date=end_date, team_id=team_id
@@ -145,8 +145,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 # Auto-aggiungi il sensor bracket per competizioni con fase KO
                 if competition_code in KNOCKOUT_LEAGUES:
                     sensors.append(
-                        CalcioLiveSensor(
-                            hass, f"calciolive_bracket_{competition_name}", competition_code, "bracket",
+                        SoccerLiveSensor(
+                            hass, f"soccerlive_bracket_{competition_name}", competition_code, "bracket",
                             base_scan_interval + timedelta(minutes=10) + timedelta(seconds=random.randint(0, 30)),
                             config_entry_id=entry.entry_id,
                             start_date=start_date, end_date=end_date, team_id=team_id
@@ -160,7 +160,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         raise
 
 
-class CalcioLiveSensor(Entity):
+class SoccerLiveSensor(Entity):
     _cache = {}
 
     def __init__(self, hass, name, code, sensor_type=None, scan_interval=timedelta(minutes=5),
@@ -217,7 +217,7 @@ class CalcioLiveSensor(Entity):
     async def async_added_to_hass(self):
         """Carica i match_finished già dispatchati dal disco, così al riavvio di HA
         non vengono rilanciati eventi per partite già terminate in precedenza."""
-        store_key = f"calcio_live_{self._name}_finished"
+        store_key = f"soccer_live_{self._name}_finished"
         self._store = Store(self.hass, 1, store_key)
         stored = await self._store.async_load()
         if stored and "dispatched" in stored:
@@ -288,15 +288,15 @@ class CalcioLiveSensor(Entity):
 
         # Prune cache entries older than 5 minutes to prevent unbounded growth
         _now = datetime.now()
-        CalcioLiveSensor._cache = {
-            k: v for k, v in CalcioLiveSensor._cache.items()
+        SoccerLiveSensor._cache = {
+            k: v for k, v in SoccerLiveSensor._cache.items()
             if (_now - v["time"]).total_seconds() < 300
         }
 
         cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
-        if cache_key in CalcioLiveSensor._cache and (datetime.now() - CalcioLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
+        if cache_key in SoccerLiveSensor._cache and (datetime.now() - SoccerLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
             await self.hass.async_add_executor_job(
-                self._process_data, CalcioLiveSensor._cache[cache_key]["data"]
+                self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
             )
             await self._flush_pending_events()
             _LOGGER.info(f"Using cached data for {self._name}")
@@ -320,7 +320,7 @@ class CalcioLiveSensor(Entity):
                             raw = await response.read()
                             data = await self.hass.async_add_executor_job(json.loads, raw)
                             _LOGGER.debug(f"Data received for {self._name}")
-                            CalcioLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
+                            SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
                             await self.hass.async_add_executor_job(self._process_data, data)
                             await self._enrich_with_summary()
                             await self._flush_pending_events()
@@ -658,7 +658,7 @@ class CalcioLiveSensor(Entity):
                 "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self._pending_events.append(("calcio_live_goal", event_data))
+            self._pending_events.append(("soccer_live_goal", event_data))
             _LOGGER.info(f"Doelpunt gedetecteerd! {scoring_team} scoort {goals_count} doelpunt(en). Speler: {player_name} ({minute}). Stand: {home_score}-{away_score}")
         except Exception as e:
             _LOGGER.error(f"Errore nel dispatch dell'evento goal: {e}")
@@ -703,7 +703,7 @@ class CalcioLiveSensor(Entity):
             team_match = re.search(r'\[([^\]]+)\]', detail_str)
             team = team_match.group(1) if team_match else "N/A"
 
-            event_type = f"calcio_live_{card_type}_card"
+            event_type = f"soccer_live_{card_type}_card"
             event_data = {
                 "card_type": card_type.upper(),
                 "player": player,
@@ -745,7 +745,7 @@ class CalcioLiveSensor(Entity):
                 "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self._pending_events.append(("calcio_live_substitution", event_data))
+            self._pending_events.append(("soccer_live_substitution", event_data))
             _LOGGER.info(f"Wissel: {player} ({team}) op {minute}")
         except Exception as e:
             _LOGGER.error(f"Fout bij dispatchen wissel-event: {e}")
@@ -768,7 +768,7 @@ class CalcioLiveSensor(Entity):
                     "competition_code": self._code,
                     "sensor_name": self._name,
                 }
-                self._pending_events.append(("calcio_live_match_started", event_data))
+                self._pending_events.append(("soccer_live_match_started", event_data))
                 _LOGGER.info(f"Wedstrijd gestart: {match.get('home_team', 'N/A')} vs {match.get('away_team', 'N/A')}")
             if current_state:
                 self._previous_match_states[match_id] = current_state
@@ -810,7 +810,7 @@ class CalcioLiveSensor(Entity):
                 "goal_scorers_str": ", ".join(goal_scorers) if goal_scorers else "N/A",
                 "sensor_name": self._name,
             }
-            self._pending_events.append(("calcio_live_match_finished", event_data))
+            self._pending_events.append(("soccer_live_match_finished", event_data))
             _LOGGER.info(f"Wedstrijd afgelopen! {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Doelpuntenmakers: {', '.join(goal_scorers)}")
         except Exception as e:
             _LOGGER.error(f"Errore nel dispatch dell'evento fine partita: {e}")
@@ -1028,8 +1028,8 @@ class CalcioLiveSensor(Entity):
             
             
             if self._sensor_type in ["team_matches", "team_matches_mixed", "all_matches_today"]:
-                #sensor.calciolive_all_ita_1_internazionale - team_matches
-                #sensor.calciolive_all_mixed_internazionale - team_matches_mixed
+                #sensor.soccerlive_all_ita_1_internazionale - team_matches
+                #sensor.soccerlive_all_mixed_internazionale - team_matches_mixed
                 match_data = get_team_match_data()
                 matches = match_data.get("matches", []) or []
                 next_match = match_data.get("next_match")
@@ -1070,7 +1070,7 @@ class CalcioLiveSensor(Entity):
                 }
 
             elif self._sensor_type == "team_match":
-                # sensor.calciolive_next_ita_1_internazionale
+                # sensor.soccerlive_next_ita_1_internazionale
                 # Verwerk alle wedstrijden één keer en leid next_match er uit af
                 all_data = get_team_match_data()
                 all_matches = all_data.get("matches", []) or []

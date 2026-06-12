@@ -16,7 +16,7 @@ OPTION_ALL_TODAY = "Tutte le partite del giorno"
 OPTION_NEWS = "Notizie"
 
 @config_entries.HANDLERS.register(DOMAIN)
-class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self):
@@ -95,7 +95,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Calendar dates are now resolved dynamically by the sensor on each
             # update via _get_calendar_data, so the user is no longer prompted.
             return self.async_create_entry(
-                title=self._data.get("name", "Calcio Live"),
+                title=self._data.get("name", "Soccer Live"),
                 data=self._data,
             )
 
@@ -144,7 +144,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Date stagione gestite dinamicamente dal sensor: niente prompt.
             return self.async_create_entry(
-                title=self._data.get("name", "Calcio Live"),
+                title=self._data.get("name", "Soccer Live"),
                 data=self._data,
             )
 
@@ -173,7 +173,7 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Date stagione gestite dinamicamente dal sensor: niente prompt.
             return self.async_create_entry(
-                title=self._data.get("name", "Calcio Live"),
+                title=self._data.get("name", "Soccer Live"),
                 data=self._data,
             )
 
@@ -229,10 +229,10 @@ class CalcioLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return CalcioLiveOptionsFlow()
+        return SoccerLiveOptionsFlow()
 
 
-class CalcioLiveOptionsFlow(config_entries.OptionsFlow):
+class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:

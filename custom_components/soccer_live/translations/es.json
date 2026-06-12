@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Configuración de Calcio Live",
-                "description": "Bienvenido al asistente de configuración de Calcio Live.\n\nElige qué quieres seguir:\n\n- **Liga**: todos los partidos de una liga específica (para las copas se crea automáticamente un sensor de cuadro eliminatorio).\n- **Equipo**: partidos de un equipo específico.\n- **Todos los partidos de hoy**: todos los partidos del mundo jugados hoy.\n- **Noticias**: feed de noticias de una competición.\n- **Ingreso manual**: introduce el ID del equipo manualmente.",
+                "title": "Configuración de Soccer Live",
+                "description": "Bienvenido al asistente de configuración de Soccer Live.\n\nElige qué quieres seguir:\n\n- **Liga**: todos los partidos de una liga específica (para las copas se crea automáticamente un sensor de cuadro eliminatorio).\n- **Equipo**: partidos de un equipo específico.\n- **Todos los partidos de hoy**: todos los partidos del mundo jugados hoy.\n- **Noticias**: feed de noticias de una competición.\n- **Ingreso manual**: introduce el ID del equipo manualmente.",
                 "data": {
                     "selection": "¿Qué quieres seguir?"
                 }
@@ -57,7 +57,7 @@
     "options": {
         "step": {
             "init": {
-                "title": "Opciones Calcio Live",
+                "title": "Opciones Soccer Live",
                 "description": "Configura el polling y cuánto tiempo mantener visible el último partido finalizado en la Team card antes de pasar al próximo.",
                 "data": {
                     "scan_interval": "Intervalo de actualización (minutos)",

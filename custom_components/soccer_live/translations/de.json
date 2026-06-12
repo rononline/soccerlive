@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Calcio Live Konfiguration",
-                "description": "Willkommen zum Konfigurationsassistenten von Calcio Live.\n\nWählen Sie aus, was Sie verfolgen möchten:\n\n- **Liga**: alle Spiele einer bestimmten Liga (für Pokalwettbewerbe wird automatisch ein K.O.-Bracket-Sensor erstellt).\n- **Team**: Spiele eines bestimmten Teams.\n- **Alle Spiele heute**: alle heute weltweit gespielten Spiele.\n- **News**: News-Feed eines Wettbewerbs.\n- **Manuelle Eingabe**: Team-ID manuell eingeben.",
+                "title": "Soccer Live Konfiguration",
+                "description": "Willkommen zum Konfigurationsassistenten von Soccer Live.\n\nWählen Sie aus, was Sie verfolgen möchten:\n\n- **Liga**: alle Spiele einer bestimmten Liga (für Pokalwettbewerbe wird automatisch ein K.O.-Bracket-Sensor erstellt).\n- **Team**: Spiele eines bestimmten Teams.\n- **Alle Spiele heute**: alle heute weltweit gespielten Spiele.\n- **News**: News-Feed eines Wettbewerbs.\n- **Manuelle Eingabe**: Team-ID manuell eingeben.",
                 "data": {
                     "selection": "Was möchten Sie verfolgen?"
                 }
@@ -57,7 +57,7 @@
     "options": {
         "step": {
             "init": {
-                "title": "Calcio Live Optionen",
+                "title": "Soccer Live Optionen",
                 "description": "Polling und Dauer, wie lange das letzte beendete Spiel auf der Team-Karte sichtbar bleibt, bevor zum nächsten Spiel gewechselt wird.",
                 "data": {
                     "scan_interval": "Aktualisierungsintervall (Minuten)",

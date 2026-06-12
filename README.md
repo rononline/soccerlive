@@ -1,4 +1,4 @@
-# ⚽ Football Live — Home Assistant Integration
+# ⚽ Soccer Live — Home Assistant Integration
 
 Real-time football data in Home Assistant via the ESPN API.  
 Originally based on [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @Bobsilvio — extended with multi-language support, new sensor types, HA events, device grouping and various improvements.
@@ -8,12 +8,12 @@ Originally based on [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @
 ## 📦 Installation via HACS
 
 1. Add the repository as a **custom repository** in HACS:  
-   `https://github.com/rononline/voetbal-live` — category: **Integration**
-2. Install **Voetbal Live** via HACS
+   `https://github.com/rononline/soccerlive` — category: **Integration**
+2. Install **Soccer Live** via HACS
 3. Restart Home Assistant
-4. Go to **Settings → Integrations → Add Integration** and search for `Voetbal Live`
+4. Go to **Settings → Integrations → Add Integration** and search for `Soccer Live`
 
-> Also install the companion cards: [Football Live Card](https://github.com/rononline/voetbal-live-card)
+> Also install the companion cards: [Soccer Live Card](https://github.com/rononline/soccerlive-card)
 
 ---
 
@@ -23,15 +23,15 @@ Sensors are created automatically depending on your selection:
 
 | Sensor type | Name | Description |
 |---|---|---|
-| `team_match` | `calciolive_next_*` | Next / current match for a team |
-| `team_matches` | `calciolive_all_*` | All matches for a team (competition-specific) |
-| `team_matches_mixed` | `calciolive_all_mixed_*` | All matches for a team (all competitions) |
-| `match_day` | `calciolive_all_*` | All matches in a competition |
-| `standings` | `calciolive_classifica_*` | League standings |
-| `top_scorers` | `calciolive_cannonieri_*` | Top scorers for a competition (auto-created) |
-| `bracket` | `calciolive_bracket_*` | Knockout bracket (auto-created for cup competitions) |
-| `all_matches_today` | `calciolive_all_today` | All matches worldwide today |
-| `news` | `calciolive_news_*` | News feed for a competition |
+| `team_match` | `soccerlive_next_*` | Next / current match for a team |
+| `team_matches` | `soccerlive_all_*` | All matches for a team (competition-specific) |
+| `team_matches_mixed` | `soccerlive_all_mixed_*` | All matches for a team (all competitions) |
+| `match_day` | `soccerlive_all_*` | All matches in a competition |
+| `standings` | `soccerlive_classifica_*` | League standings |
+| `top_scorers` | `soccerlive_cannonieri_*` | Top scorers for a competition (auto-created) |
+| `bracket` | `soccerlive_bracket_*` | Knockout bracket (auto-created for cup competitions) |
+| `all_matches_today` | `soccerlive_all_today` | All matches worldwide today |
+| `news` | `soccerlive_news_*` | News feed for a competition |
 
 ---
 
@@ -43,7 +43,7 @@ Add this to `configuration.yaml` to avoid database warnings:
 recorder:
   exclude:
     entity_globs:
-      - sensor.calciolive_*
+      - sensor.soccerlive_*
 ```
 
 ---
@@ -68,18 +68,18 @@ alias: Football - Match starting soon
 trigger:
   - platform: template
     value_template: >
-      {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_minutes_until') == 15 }}
+      {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_minutes_until') == 15 }}
 condition:
   - condition: template
     value_template: >
-      {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_status') == 'pre' }}
+      {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_status') == 'pre' }}
 action:
   - service: notify.mobile_app_my_phone
     data:
       title: "⚽ Match starts in 15 min!"
       message: >
-        {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_home_team') }}
-        vs {{ state_attr('sensor.calciolive_next_ned_1_feyenoord_rotterdam', 'next_match_away_team') }}
+        {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_home_team') }}
+        vs {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_away_team') }}
 mode: single
 ```
 
@@ -89,7 +89,7 @@ mode: single
 alias: Football - Match started
 trigger:
   - platform: event
-    event_type: calcio_live_match_started
+    event_type: soccer_live_match_started
 condition:
   - condition: template
     value_template: >
@@ -111,7 +111,7 @@ mode: single
 alias: Football - Goal notification
 trigger:
   - platform: event
-    event_type: calcio_live_goal
+    event_type: soccer_live_goal
     event_data:
       team: Feyenoord Rotterdam   # omit to receive for all teams
 action:
@@ -132,14 +132,14 @@ mode: queued
 alias: Football - Card notification
 trigger:
   - platform: event
-    event_type: calcio_live_yellow_card
+    event_type: soccer_live_yellow_card
   - platform: event
-    event_type: calcio_live_red_card
+    event_type: soccer_live_red_card
 action:
   - service: notify.mobile_app_my_phone
     data:
       title: >
-        {{ '🟥 RED CARD!' if trigger.event_type == 'calcio_live_red_card' else '🟨 Yellow card' }}
+        {{ '🟥 RED CARD!' if trigger.event_type == 'soccer_live_red_card' else '🟨 Yellow card' }}
       message: >
         {{ trigger.event.data.player }} ({{ trigger.event.data.minute }}')
         — {{ trigger.event.data.home_team }} vs {{ trigger.event.data.away_team }}
@@ -152,7 +152,7 @@ mode: queued
 alias: Football - Substitution
 trigger:
   - platform: event
-    event_type: calcio_live_substitution
+    event_type: soccer_live_substitution
 action:
   - service: notify.mobile_app_my_phone
     data:
@@ -170,7 +170,7 @@ mode: queued
 alias: Football - Final score
 trigger:
   - platform: event
-    event_type: calcio_live_match_finished
+    event_type: soccer_live_match_finished
 condition:
   - condition: or
     conditions:
@@ -226,12 +226,12 @@ condition:
 
 | Event | Fired when | Key fields |
 |---|---|---|
-| `calcio_live_match_started` | Kick-off (pre → in) | `home_team`, `away_team`, `venue`, `date`, `league_name`, `competition_code` |
-| `calcio_live_goal` | Goal scored | `team`, `player`, `minute`, `home_score`, `away_score`, `league_name`, `competition_code` |
-| `calcio_live_yellow_card` | Yellow card | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_red_card` | Red card | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_substitution` | Substitution | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
-| `calcio_live_match_finished` | Full time | `home_score`, `away_score`, `goal_scorers`, `goal_scorers_str`, `league_name` |
+| `soccer_live_match_started` | Kick-off (pre → in) | `home_team`, `away_team`, `venue`, `date`, `league_name`, `competition_code` |
+| `soccer_live_goal` | Goal scored | `team`, `player`, `minute`, `home_score`, `away_score`, `league_name`, `competition_code` |
+| `soccer_live_yellow_card` | Yellow card | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `soccer_live_red_card` | Red card | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `soccer_live_substitution` | Substitution | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
+| `soccer_live_match_finished` | Full time | `home_score`, `away_score`, `goal_scorers`, `goal_scorers_str`, `league_name` |
 
 ---
 

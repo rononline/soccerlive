@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Calcio Live instellen",
-                "description": "Welkom bij de Calcio Live configuratiewizard.\n\nKies wat je wilt volgen:\n\n- **Competitie**: alle wedstrijden van een specifieke competitie (voor bekertoernooien wordt automatisch een bracket-sensor aangemaakt).\n- **Team**: wedstrijden van een specifiek team.\n- **Alle wedstrijden vandaag**: alle wedstrijden ter wereld die vandaag gespeeld worden.\n- **Nieuws**: nieuwsfeed van een competitie.\n- **Handmatige invoer**: voer het team-ID handmatig in.",
+                "title": "Soccer Live instellen",
+                "description": "Welkom bij de Soccer Live configuratiewizard.\n\nKies wat je wilt volgen:\n\n- **Competitie**: alle wedstrijden van een specifieke competitie (voor bekertoernooien wordt automatisch een bracket-sensor aangemaakt).\n- **Team**: wedstrijden van een specifiek team.\n- **Alle wedstrijden vandaag**: alle wedstrijden ter wereld die vandaag gespeeld worden.\n- **Nieuws**: nieuwsfeed van een competitie.\n- **Handmatige invoer**: voer het team-ID handmatig in.",
                 "data": {
                     "selection": "Wat wil je volgen?"
                 }
@@ -57,7 +57,7 @@
     "options": {
         "step": {
             "init": {
-                "title": "Calcio Live opties",
+                "title": "Soccer Live opties",
                 "description": "Stel het polling-interval in en hoe lang de laatste afgelopen wedstrijd zichtbaar blijft op de teamkaart voordat overgeschakeld wordt naar de volgende wedstrijd.",
                 "data": {
                     "scan_interval": "Polling-interval (minuten)",
