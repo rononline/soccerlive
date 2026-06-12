@@ -319,14 +319,21 @@ class CalcioLiveSensor(Entity):
                             self._last_request_time = datetime.now().isoformat()
                             _LOGGER.info(f"Finished update for {self._name}")
                             break
+                        elif response.status < 500:
+                            # 4xx: endpoint bestaat niet of geen toegang — niet opnieuw proberen
+                            _LOGGER.debug(f"HTTP {response.status} voor {self._name} — geen retry")
+                            if self._sensor_type == "top_scorers" and response.status == 404:
+                                self._state = "Niet beschikbaar"
+                            break
                         else:
-                            await asyncio.sleep(5)
+                            # 5xx: tijdelijke serverfout — kort wachten en opnieuw proberen
+                            await asyncio.sleep(2)
                             retries += 1
             except aiohttp.ClientError as error:
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
                 retries += 1
             except asyncio.TimeoutError:
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
                 retries += 1
         else:
             _LOGGER.warning(f"Alle pogingen mislukt voor {self._name} — geen data ontvangen van ESPN")
