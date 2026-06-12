@@ -976,7 +976,7 @@ class CalcioLiveSensor(Entity):
                         "away_color": m.get("away_color"),
                         "away_score": m.get("away_score"),
                     }
-                    for m in list(reversed(finished_matches))[:3]
+                    for m in list(reversed(finished_matches))[:10]
                 ]
                 # Sla de eerste (= next_match) over; neem de volgende 4
                 # Inclusief live wedstrijden voor live score in de lijst
