@@ -206,6 +206,108 @@ condition:
     value_template: "{{ trigger.event.data.league_name == 'Dutch Eredivisie' }}"
 ```
 
+### Big score alert (4+ goals in match)
+
+```yaml
+alias: Football - High scoring match
+trigger:
+  - platform: event
+    event_type: soccer_live_goal
+condition:
+  - condition: template
+    value_template: >
+      {{ (trigger.event.data.home_score | int(0)) + (trigger.event.data.away_score | int(0)) >= 4 }}
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "🔥 High-scoring match!"
+      message: >
+        {{ trigger.event.data.home_team }} {{ trigger.event.data.home_score }}
+        - {{ trigger.event.data.away_score }} {{ trigger.event.data.away_team }}
+mode: queued
+```
+
+### Draw alert
+
+```yaml
+alias: Football - Match ended in draw
+trigger:
+  - platform: event
+    event_type: soccer_live_match_finished
+condition:
+  - condition: template
+    value_template: "{{ trigger.event.data.home_score == trigger.event.data.away_score }}"
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "⚽ Draw!"
+      message: >
+        {{ trigger.event.data.home_team }} {{ trigger.event.data.home_score }}
+        - {{ trigger.event.data.away_score }} {{ trigger.event.data.away_team }}
+mode: single
+```
+
+### Daily upcoming fixtures
+
+```yaml
+alias: Football - Today's fixtures
+trigger:
+  - platform: time
+    at: "10:00:00"
+condition:
+  - condition: template
+    value_template: "{{ state_attr('sensor.soccerlive_all_today', 'upcoming_matches_count') | int(0) > 0 }}"
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "⚽ Today's matches"
+      message: >
+        {{ (state_attr('sensor.soccerlive_all_today', 'matches') or [])[0:3] | map(attribute='home_team') | list | join(', ') }}
+mode: single
+```
+
+### Goal by specific player
+
+```yaml
+alias: Football - Feyenoord goal by Giménez
+trigger:
+  - platform: event
+    event_type: soccer_live_goal
+    event_data:
+      team: Feyenoord Rotterdam
+condition:
+  - condition: template
+    value_template: "{{ 'Gimenez' in trigger.event.data.player }}"
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "⚽ GIMÉNEZ SCORES!"
+      message: >
+        {{ trigger.event.data.player }} ({{ trigger.event.data.minute }}')
+        — {{ trigger.event.data.home_team }} {{ trigger.event.data.home_score }}
+        - {{ trigger.event.data.away_score }} {{ trigger.event.data.away_team }}
+mode: queued
+```
+
+### Red card alert (any team)
+
+```yaml
+alias: Football - Red card alert
+trigger:
+  - platform: event
+    event_type: soccer_live_red_card
+action:
+  - service: notify.mobile_app_my_phone
+    data:
+      title: "🟥 RED CARD!"
+      message: >
+        {{ trigger.event.data.team }} down to 10 men
+        {{ trigger.event.data.player }} sent off ({{ trigger.event.data.minute }}')
+        {{ trigger.event.data.home_team }} {{ trigger.event.data.home_score }}
+        - {{ trigger.event.data.away_score }} {{ trigger.event.data.away_team }}
+mode: queued
+```
+
 ---
 
 ## 📊 Available sensor attributes
