@@ -410,7 +410,7 @@ class SoccerLiveSensor(Entity):
         if self._sensor_type != "commentary":
             return
         matches = self._attributes.get("matches") or []
-        live = next((m for m in matches if m.get("status") in ("live", "in")), None)
+        live = next((m for m in matches if m.get("state") in ("live", "in")), None)
         target = live or (matches[0] if matches else None)
         if not target:
             return
