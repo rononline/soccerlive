@@ -14,6 +14,7 @@ OPTION_SELECT_TEAM = "Team"
 OPTION_MANUAL_TEAM = "Manual entry"
 OPTION_ALL_TODAY = "All matches today"
 OPTION_NEWS = "News"
+OPTION_COMMENTARY = "Live Commentary"
 
 @config_entries.HANDLERS.register(DOMAIN)
 class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -54,10 +55,14 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._data.update(user_input)
                 return await self.async_step_manual_team()
 
+            elif selection == OPTION_COMMENTARY:
+                self._data.update(user_input)
+                return await self.async_step_commentary()
+
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM]),
+                vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM, OPTION_COMMENTARY]),
             }),
             errors=self._errors,
         )
@@ -158,6 +163,29 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
+    async def async_step_commentary(self, user_input=None):
+        if user_input is not None:
+            competition_code = user_input.get("competition_code")
+            competition_name = await self._get_competition_name(competition_code)
+            self._data.update({
+                "competition_code": competition_code,
+                "name": f"Commentary {competition_name}",
+                "selection": "Live Commentary",
+            })
+            return self.async_create_entry(
+                title=f"Commentary {competition_name}",
+                data=self._data,
+            )
+        competitions = await self._get_competitions()
+        sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
+        return self.async_show_form(
+            step_id="commentary",
+            data_schema=vol.Schema({
+                vol.Required("competition_code"): vol.In(sorted_competitions),
+            }),
+            errors=self._errors,
+        )
+
     async def async_step_manual_team(self, user_input=None):
         if user_input is not None:
             team_id = user_input["manual_team_id"]
@@ -249,6 +277,7 @@ class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
         )
         recent_match_hours = self.config_entry.options.get("recent_match_hours", 24)
         scan_interval = self.config_entry.options.get("scan_interval", 3)
+        notify_service = self.config_entry.options.get("notify_service", "")
 
         return self.async_show_form(
             step_id="init",
@@ -257,6 +286,7 @@ class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("recent_match_hours", default=recent_match_hours): vol.In([6, 12, 24, 48]),
                 vol.Optional("start_date", default=start_date): str,
                 vol.Optional("end_date", default=end_date): str,
+                vol.Optional("notify_service", default=notify_service): str,
             }),
         )
         

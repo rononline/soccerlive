@@ -71,6 +71,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         
         _LOGGER.debug(f"Soccer Live Config Entry: {entry.data}")  # Log per capire cosa c'è nell'entry
     
+        if selection == "Live Commentary":
+            comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
+            sensors += [
+                SoccerLiveSensor(
+                    hass, f"soccerlive_commentary_{comp_norm}", competition_code, "commentary",
+                    base_scan_interval + timedelta(seconds=30),
+                    config_entry_id=entry.entry_id,
+                    start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                )
+            ]
+            async_add_entities(sensors, True)
+            return
+
         if selection == "News":
             comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
             sensors += [
@@ -323,6 +336,7 @@ class SoccerLiveSensor(Entity):
                             SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
                             await self.hass.async_add_executor_job(self._process_data, data)
                             await self._enrich_with_summary()
+                            await self._enrich_with_commentary()
                             await self._flush_pending_events()
                             self._request_count += 1
                             self._last_request_time = datetime.now().isoformat()
@@ -359,10 +373,71 @@ class SoccerLiveSensor(Entity):
         """Fire events collected during executor processing on the event loop (thread-safe)."""
         for event_type, event_data in self._pending_events:
             self.hass.bus.fire(event_type, event_data)
+            await self._send_notification(event_type, event_data)
         self._pending_events = []
         if self._save_store_needed:
             self._save_store_needed = False
             await self._save_match_finished_store()
+
+    async def _send_notification(self, event_type, event_data):
+        """Send HA notification when a goal or card event fires, if notify_service is configured."""
+        try:
+            config_entry = self.hass.config_entries.async_get_entry(self._config_entry_id)
+            notify_service = (config_entry.options if config_entry else {}).get("notify_service", "")
+            if not notify_service:
+                return
+            if event_type == "soccer_live_goal":
+                title = f"⚽ Goal! {event_data.get('home_team','')} {event_data.get('home_score','')} - {event_data.get('away_score','')} {event_data.get('away_team','')}"
+                message = f"{event_data.get('player','Unknown')} · {event_data.get('clock','')}"
+            elif event_type == "soccer_live_yellow_card":
+                title = f"🟨 Yellow card · {event_data.get('home_team','')} vs {event_data.get('away_team','')}"
+                message = f"{event_data.get('player','Unknown')} · {event_data.get('clock','')}"
+            elif event_type == "soccer_live_red_card":
+                title = f"🟥 Red card · {event_data.get('home_team','')} vs {event_data.get('away_team','')}"
+                message = f"{event_data.get('player','Unknown')} · {event_data.get('clock','')}"
+            elif event_type == "soccer_live_match_finished":
+                title = f"🏁 Full time · {event_data.get('home_team','')} {event_data.get('home_score','')} - {event_data.get('away_score','')} {event_data.get('away_team','')}"
+                message = event_data.get('competition_name','')
+            else:
+                return
+            domain, service = notify_service.split(".", 1) if "." in notify_service else ("notify", notify_service)
+            await self.hass.services.async_call(domain, service, {"title": title, "message": message}, blocking=False)
+        except Exception as e:
+            _LOGGER.debug(f"Notification error: {e}")
+
+    async def _enrich_with_commentary(self):
+        """Fetch live play-by-play commentary for commentary sensor type."""
+        if self._sensor_type != "commentary":
+            return
+        matches = self._attributes.get("matches") or []
+        live = next((m for m in matches if m.get("status") in ("live", "in")), None)
+        target = live or (matches[0] if matches else None)
+        if not target:
+            return
+        event_id = target.get("event_id")
+        if not event_id:
+            return
+        summary = await self._fetch_match_summary(event_id)
+        if not summary:
+            return
+        plays = summary.get("plays", [])
+        self._attributes["commentary"] = [
+            {
+                "clock": p.get("clock", {}).get("displayValue", "") if isinstance(p.get("clock"), dict) else str(p.get("clock", "")),
+                "text": p.get("text", ""),
+                "type": p.get("type", {}).get("text", "") if isinstance(p.get("type"), dict) else str(p.get("type", "")),
+                "home_score": p.get("homeScore", 0),
+                "away_score": p.get("awayScore", 0),
+            }
+            for p in reversed(plays[-50:])
+        ]
+        self._attributes["home_team"] = target.get("home_team", "")
+        self._attributes["away_team"] = target.get("away_team", "")
+        self._attributes["home_score"] = target.get("home_score", 0)
+        self._attributes["away_score"] = target.get("away_score", 0)
+        self._attributes["match_status"] = target.get("status", "")
+        self._attributes["event_id"] = event_id
+        self._state = f"{target.get('home_team','')} {target.get('home_score',0)}-{target.get('away_score',0)} {target.get('away_team','')}"
 
     async def _enrich_with_summary(self):
         """Per il sensor team_match, aggiunge lineup/formazione/keyEvents/h2h
@@ -447,7 +522,7 @@ class SoccerLiveSensor(Entity):
         if self._sensor_type == "standings":
             return f"{self.base_url}/{self._code}/standings?"
 
-        elif self._sensor_type in ("match_day", "team_match", "team_matches"):
+        elif self._sensor_type in ("match_day", "team_match", "team_matches", "commentary"):
             return f"{self.base_url_3}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
 
         elif self._sensor_type == "team_matches_mixed" and self._team_name:
