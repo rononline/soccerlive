@@ -69,7 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
         
-        _LOGGER.debug(f"Calcio Live Config Entry: {entry.data}")  # Log per capire cosa c'è nell'entry
+        _LOGGER.debug(f"Soccer Live Config Entry: {entry.data}")  # Log per capire cosa c'è nell'entry
     
         if selection == "News":
             comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
@@ -271,7 +271,7 @@ class SoccerLiveSensor(Entity):
         display = self._code if self._code and self._code not in ("N/A", "") else (self._team_name or self._name)
         return {
             "identifiers": {(DOMAIN, self._config_entry_id)},
-            "name": f"Calcio Live · {display}",
+            "name": f"Soccer Live · {display}",
             "manufacturer": "ESPN",
             "entry_type": "service",
         }
