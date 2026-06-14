@@ -60,7 +60,34 @@ Usually **not needed**: the ID is filled in automatically when you select a comp
 
 ---
 
-## 🔔 Automations
+## 📲 Push Notifications
+
+The integration can automatically send push notifications when goals, cards, or match events occur. Configure this in the integration options:
+
+1. Go to **Settings → Devices & Services → Soccer Live**
+2. Click **Options** (gear icon)
+3. Set **Notify Service** to your desired notification service:
+   - `notify.mobile_app_yourphone` — iOS/Android Home Assistant app
+   - `notify.telegram` — Telegram (requires notify.telegram service)
+   - `notify.pushbullet` — PushBullet (requires notify.pushbullet service)
+4. Save
+
+**Notifications sent for:**
+- ⚽ Goal scored
+- 🟨 Yellow card issued
+- 🟥 Red card issued
+- 🔄 Substitution made
+- 🏁 Match finished
+
+Example notification: `"⚽ GOAL! Kramer (34') — Feyenoord 1 - 0 Sparta Rotterdam"`
+
+### Alternative: Automations with Events
+
+If you prefer more control, use Home Assistant automations with the exposed events instead:
+
+---
+
+## 🔔 Automations with Events
 
 ### Notification 15 minutes before kick-off
 
