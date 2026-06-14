@@ -1088,8 +1088,21 @@ class SoccerLiveSensor(Entity):
                 "league_info": match_data.get("league_info", "N/A"),
                 "matches": match_data.get("matches", [])
             }
+
+        elif self._sensor_type == "commentary":
+            match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
+            matches = match_data.get("matches", []) or []
+            live_match = next((m for m in matches if m.get("state") == "in"), None)
+            if live_match:
+                self._state = f"{live_match.get('home_team','?')} {live_match.get('home_score','?')} - {live_match.get('away_score','?')} {live_match.get('away_team','?')}"
+            else:
+                self._state = "Geen live wedstrijd"
+            self._attributes = {
+                "league_info": match_data.get("league_info", "N/A"),
+                "matches": matches
+            }
         
-        elif self._sensor_type in ["team_matches", "team_match", "team_matches_mixed", "all_matches_today"]:
+        elif self._sensor_type in ["team_matches", "team_match", "team_matches_mixed", "all_matches_today", "commentary"]:
             def get_team_match_data(next_match_only=False):
                 return process_match_data(
                     data,
