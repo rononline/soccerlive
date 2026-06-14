@@ -42,7 +42,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._data.update(user_input)
                 self._data["competition_code"] = "99999"  # Assegna un valore fittizio per creare il sensore
                 return self.async_create_entry(
-                    title="Tutte le partite di oggi",
+                    title="All matches today",
                     data=self._data,
                 )
 
@@ -197,13 +197,13 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     competitions_data = await response.json()
                     return {league['slug']: league['name'] for league in competitions_data.get("leagues", [])}
         except aiohttp.ClientError as e:
-            _LOGGER.error(f"Errore nel caricamento delle competizioni: {e}")
+            _LOGGER.error(f"Error loading competitions: {e}")
             return {}
 
     async def _get_competition_name(self, competition_code):
         """Recupera il nome della competizione dato il suo codice."""
         competitions = await self._get_competitions()
-        return competitions.get(competition_code, "Nome Sconosciuto")
+        return competitions.get(competition_code, "Unknown competition")
 
     async def _get_teams(self, competition_code):
         url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/teams"
@@ -223,7 +223,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         for league in leagues for team in league.get("teams", [])
                     ]
         except aiohttp.ClientError as e:
-            _LOGGER.error(f"Errore nel caricamento delle squadre per {competition_code}: {e}")
+            _LOGGER.error(f"Error loading teams for {competition_code}: {e}")
             self._teams = []
 
     @staticmethod

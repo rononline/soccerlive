@@ -156,7 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         async_add_entities(sensors, True)
 
     except Exception as e:
-        _LOGGER.error(f"Errore durante la configurazione dei sensori: {e}")
+        _LOGGER.error(f"Error during sensor setup: {e}")
         raise
 
 
@@ -473,7 +473,7 @@ class SoccerLiveSensor(Entity):
                         raw = await response.read()
                         return await self.hass.async_add_executor_job(json.loads, raw)
         except Exception as e:
-            _LOGGER.debug(f"Errore nel recupero summary per {event_id}: {e}")
+            _LOGGER.debug(f"Error fetching summary for {event_id}: {e}")
         return None
     
     
@@ -514,7 +514,7 @@ class SoccerLiveSensor(Entity):
                         calendar_end_date = (now + timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
                     return calendar_start_date, calendar_end_date
         except Exception as e:
-            _LOGGER.error(f"Errore nel recupero del calendario: {e}")
+            _LOGGER.error(f"Error fetching calendar: {e}")
             return None, None
 
 
@@ -617,7 +617,7 @@ class SoccerLiveSensor(Entity):
                         minute = parts[0].split(" - ")[-1].strip() if " - " in parts[0] else "N/A"
                         new_goals.append({"player": player_name, "minute": minute})
                 except Exception as e:
-                    _LOGGER.debug(f"Errore nell'estrazione nome giocatore: {e}")
+                    _LOGGER.debug(f"Error extracting player name: {e}")
 
         # Ritorna solo i goal estratti, fino al numero di goal segnati
         return new_goals[:goals_count]
@@ -661,7 +661,7 @@ class SoccerLiveSensor(Entity):
             self._pending_events.append(("soccer_live_goal", event_data))
             _LOGGER.info(f"Doelpunt gedetecteerd! {scoring_team} scoort {goals_count} doelpunt(en). Speler: {player_name} ({minute}). Stand: {home_score}-{away_score}")
         except Exception as e:
-            _LOGGER.error(f"Errore nel dispatch dell'evento goal: {e}")
+            _LOGGER.error(f"Error dispatching goal event: {e}")
 
     def _detect_and_dispatch_cards(self, matches):
         """Rileva i cartellini gialli e rossi e dispatcha eventi"""
@@ -723,7 +723,7 @@ class SoccerLiveSensor(Entity):
             self._pending_events.append((event_type, event_data))
             _LOGGER.info(f"Kaart gedetecteerd! {card_type.upper()} op {minute} | {player}")
         except Exception as e:
-            _LOGGER.error(f"Errore nel dispatch dell'evento cartellino: {e}")
+            _LOGGER.error(f"Error dispatching card event: {e}")
 
     def _dispatch_substitution_event(self, detail_str, match):
         """Dispatcha een wissel-event."""
@@ -813,7 +813,7 @@ class SoccerLiveSensor(Entity):
             self._pending_events.append(("soccer_live_match_finished", event_data))
             _LOGGER.info(f"Wedstrijd afgelopen! {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Doelpuntenmakers: {', '.join(goal_scorers)}")
         except Exception as e:
-            _LOGGER.error(f"Errore nel dispatch dell'evento fine partita: {e}")
+            _LOGGER.error(f"Error dispatching match finished event: {e}")
 
     def _extract_all_goal_scorers(self, match_details):
         """Estrae tutti i nomi dei giocatori che hanno segnato dalla lista di dettagli della partita"""
@@ -828,7 +828,7 @@ class SoccerLiveSensor(Entity):
                         player_name = parts[1].strip()
                         goal_scorers.append(player_name)
                 except Exception as e:
-                    _LOGGER.debug(f"Errore nell'estrazione nome giocatore: {e}")
+                    _LOGGER.debug(f"Error extracting player name: {e}")
         
         return goal_scorers
 
@@ -845,7 +845,7 @@ class SoccerLiveSensor(Entity):
             minutes = int(delta.total_seconds() / 60)
             return minutes
         except Exception as e:
-            _LOGGER.debug(f"Errore nel calcolo minuti: {e}")
+            _LOGGER.debug(f"Error calculating minutes: {e}")
             return None
 
     def _compute_next_match_attributes(self, match):
