@@ -33,7 +33,7 @@
                 "title": "Selecteer het team",
                 "description": "Kies het team dat je wilt volgen.\n\nAlleen wedstrijden van het geselecteerde team worden getoond.",
                 "data": {
-                    "team_id": "Team"
+                    "team_name": "Team"
                 }
             },
             "manual_team": {

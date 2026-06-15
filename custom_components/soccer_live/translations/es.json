@@ -33,7 +33,7 @@
                 "title": "Seleccionar el equipo",
                 "description": "Elige el equipo que quieres seguir.\n\nSe mostrarán solo los partidos del equipo seleccionado.",
                 "data": {
-                    "team_id": "Equipo"
+                    "team_name": "Equipo"
                 }
             },
             "manual_team": {
