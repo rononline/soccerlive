@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.4.1 (2026-06-15)
+- `_get_links()`: compact `{summary, commentary, stats, video}` URL dict per match from `competition.links`
+- `manifest.json` version synced to 3.4.1
+
+## v3.4.0 (2026-06-15)
+- Standings: `zone_color`, `zone_label`, `zone_abbrev` from `entry.note` per team
+- Scoreboard: `home/away_record_summary`, `home/away_standing_summary` from competitors
+- Scoreboard: `broadcasts` (full list), `neutral_site`, `tickets_available` per match
+- Scoreboard: `has_stats` (boxscoreAvailable), `has_commentary` (playByPlayAvailable)
+- Summary: `last_five_home`/`last_five_away` from `boxscore.players[].statistics`
+- News: `byline`, `last_modified`, `image_caption`, `image_credit`, `tags`, `premium`
+- Top scorers 404: clear INFO log (not an error, ESPN doesn't support all competitions)
+
+## v3.3.0 (2026-06-15)
+- `async_step_campionato` → `async_step_league`, `step_id="campionato"` → `"league"` (all 7 translation files)
+- `nome_squadra` / `nome_squadra_normalizzato` → `display_name_input` / `display_name_normalized`
+- Italian error messages and comments in `parsers/scoreboard.py` → English
+- All `CalcioLive*` class names in card code → `SoccerLive*`
+- Releases consolidated: removed 30+ micro-releases
+
+## v3.2.0 (2026-06-15)
+
 ## v3.1.2 (2026-06-15)
 - Event tracking now uses `event_id` as primary key (fallback to team names)
 - Prevents false deduplication on rematches, friendlies or team name changes
