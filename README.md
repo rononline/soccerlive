@@ -28,8 +28,8 @@ Sensors are created automatically depending on your selection:
 | `team_matches` | `soccerlive_all_*` | All matches for a team (competition-specific) |
 | `team_matches_mixed` | `soccerlive_all_mixed_*` | All matches for a team (all competitions) |
 | `match_day` | `soccerlive_all_*` | All matches in a competition |
-| `standings` | `soccerlive_classifica_*` | League standings |
-| `top_scorers` | `soccerlive_cannonieri_*` | Top scorers for a competition (auto-created) |
+| `standings` | `soccerlive_standings_*` | League standings |
+| `top_scorers` | `soccerlive_scorers_*` | Top scorers for a competition (auto-created) |
 | `bracket` | `soccerlive_bracket_*` | Knockout bracket (auto-created for cup competitions) |
 | `all_matches_today` | `soccerlive_all_today` | All matches worldwide today |
 | `news` | `soccerlive_news_*` | News feed for a competition |
