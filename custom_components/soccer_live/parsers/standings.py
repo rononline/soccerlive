@@ -3,7 +3,7 @@ _LOGGER = logging.getLogger(__name__)
 from dateutil import parser
 from datetime import datetime
 
-def classifica_data(data):
+def standings_data(data):
     try:
         standings_list = []
 
@@ -66,7 +66,7 @@ def classifica_data(data):
             "standings_groups": standings_list
         }
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare i dati della classifica: {e}")
+        _LOGGER.error(f"Errore nel processare i dati della standings: {e}")
         return {}
 
 
