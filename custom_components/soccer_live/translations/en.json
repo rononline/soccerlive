@@ -15,7 +15,7 @@
                     "competition_code": "Competition"
                 }
             },
-            "campionato": {
+            "league": {
                 "title": "Select the league",
                 "description": "Pick the league you want to follow.\n\nMatches of every team in the selected league will be displayed. For cup competitions (Champions League, Europa League, Coppa Italia, etc.) the knockout bracket sensor will be created automatically.",
                 "data": {

@@ -15,7 +15,7 @@
                     "competition_code": "Compétition"
                 }
             },
-            "campionato": {
+            "league": {
                 "title": "Sélectionnez le championnat",
                 "description": "Choisissez le championnat à suivre.\n\nLes matchs de toutes les équipes du championnat sélectionné seront affichés. Pour les coupes (Ligue des Champions, Ligue Europa, Coupe d'Italie, etc.) un capteur tableau de la phase à élimination directe est créé automatiquement.",
                 "data": {

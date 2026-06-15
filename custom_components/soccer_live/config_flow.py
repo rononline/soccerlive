@@ -9,7 +9,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-OPTION_SELECT_CAMPIONATO = "League"
+OPTION_SELECT_LEAGUE = "League"
 OPTION_SELECT_TEAM = "Team"
 OPTION_MANUAL_TEAM = "Manual entry"
 OPTION_ALL_TODAY = "All matches today"
@@ -31,9 +31,9 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             selection = user_input.get("selection")
 
-            if selection == OPTION_SELECT_CAMPIONATO:
+            if selection == OPTION_SELECT_LEAGUE:
                 self._data.update(user_input)
-                return await self.async_step_campionato()
+                return await self.async_step_league()
 
             elif selection == OPTION_SELECT_TEAM:
                 self._data.update(user_input)
@@ -41,7 +41,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             
             elif selection == OPTION_ALL_TODAY:
                 self._data.update(user_input)
-                self._data["competition_code"] = "99999"  # Assegna un valore fittizio per creare il sensore
+                self._data["competition_code"] = "99999"  # Dummy code for the "all matches today" sensor
                 return self.async_create_entry(
                     title="All matches today",
                     data=self._data,
@@ -62,7 +62,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("selection", default=OPTION_SELECT_CAMPIONATO): vol.In([OPTION_SELECT_CAMPIONATO, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM, OPTION_COMMENTARY]),
+                vol.Required("selection", default=OPTION_SELECT_LEAGUE): vol.In([OPTION_SELECT_LEAGUE, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM, OPTION_COMMENTARY]),
             }),
             errors=self._errors,
         )
@@ -91,7 +91,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
-    async def async_step_campionato(self, user_input=None):
+    async def async_step_league(self, user_input=None):
         if user_input is not None:
             competition_code = user_input.get("competition_code")
             competition_name = await self._get_competition_name(competition_code)
@@ -108,7 +108,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
 
         return self.async_show_form(
-            step_id="campionato",
+            step_id="league",
             data_schema=vol.Schema({
                 vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
@@ -194,14 +194,14 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 competition_name = await self._get_competition_name(competition_code)
             else:
                 competition_name = "Vrije invoer"
-            nome_squadra = user_input.get("name", "Teamnaam (naar keuze)")
-            nome_squadra_normalizzato = nome_squadra.replace(" ", "_").lower()
+            display_name_input = user_input.get("name", "")
+            display_name_normalized = display_name_input.replace(" ", "_").lower()
 
-            display_name = nome_squadra if nome_squadra and nome_squadra != "Teamnaam (naar keuze)" else team_id
+            display_name = display_name_input if display_name_input else team_id
             self._data.update({
                 "team_id": team_id,
                 "team_name": display_name,
-                "name": f"Team {competition_name} {team_id} {nome_squadra_normalizzato}",
+                "name": f"Team {competition_name} {team_id} {display_name_normalized}",
             })
 
             # Season dates are resolved dynamically by the sensor — no prompt needed.

@@ -15,7 +15,7 @@
                     "competition_code": "Competizione"
                 }
             },
-            "campionato": {
+            "league": {
                 "title": "Seleziona il campionato",
                 "description": "Scegli il campionato che desideri monitorare.\n\nVerranno mostrate le partite di tutte le squadre del campionato selezionato. Per le coppe (Champions League, Europa League, Coppa Italia, ecc.) viene creato anche un sensore tabellone della fase a eliminazione diretta.",
                 "data": {

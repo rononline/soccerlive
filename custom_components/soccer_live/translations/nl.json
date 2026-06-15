@@ -15,7 +15,7 @@
                     "competition_code": "Competitie"
                 }
             },
-            "campionato": {
+            "league": {
                 "title": "Selecteer de competitie",
                 "description": "Kies de competitie die je wilt volgen.\n\nAlle wedstrijden van alle teams in de geselecteerde competitie worden getoond. Voor bekertoernooien (Champions League, Europa League, KNVB Beker, etc.) wordt automatisch ook een bracket-sensor aangemaakt.",
                 "data": {

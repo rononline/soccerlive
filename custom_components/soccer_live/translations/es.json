@@ -15,7 +15,7 @@
                     "competition_code": "Competición"
                 }
             },
-            "campionato": {
+            "league": {
                 "title": "Seleccionar la liga",
                 "description": "Elige la liga que deseas seguir.\n\nSe mostrarán los partidos de todos los equipos de la liga seleccionada. Para las copas (Champions League, Europa League, Coppa Italia, etc.) se crea automáticamente un sensor del cuadro eliminatorio.",
                 "data": {
