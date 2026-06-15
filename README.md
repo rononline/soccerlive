@@ -1,7 +1,8 @@
 # ⚽ Soccer Live — Home Assistant Integration
 
-Real-time football data in Home Assistant via the ESPN API.  
-Originally based on [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @Bobsilvio — extended with multi-language support, new sensor types, HA events, device grouping and various improvements.
+Real-time football data in Home Assistant via the ESPN API with multi-language support, extensive sensor types, HA events, device grouping and performance optimizations.
+
+> Built on ideas from [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @Bobsilvio
 
 ---
 
