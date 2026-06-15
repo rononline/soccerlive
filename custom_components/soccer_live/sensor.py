@@ -1202,6 +1202,7 @@ class SoccerLiveSensor(Entity):
                         "away_logo": m.get("away_logo"),
                         "away_color": m.get("away_color"),
                         "away_score": m.get("away_score"),
+                        "state": m.get("state"),
                     }
                     for m in list(reversed(finished_matches))[:10]
                 ]
