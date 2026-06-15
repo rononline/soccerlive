@@ -620,7 +620,7 @@ class SoccerLiveSensor(Entity):
     def _detect_and_dispatch_goals(self, matches, events: list):
         live_matches = [m for m in matches if m.get("state") == "in"]
         for match in live_matches:
-            match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
+            match_id = match.get("event_id") or f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             home_score = match.get("home_score", 0)
             away_score = match.get("away_score", 0)
             try:
@@ -718,7 +718,7 @@ class SoccerLiveSensor(Entity):
     def _detect_and_dispatch_cards(self, matches, events: list):
         live_matches = [m for m in matches if m.get("state") == "in"]
         for match in live_matches:
-            match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
+            match_id = match.get("event_id") or f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             match_details = match.get("match_details", [])
             if match_id not in self._previous_match_details:
                 self._previous_match_details[match_id] = match_details.copy()
@@ -797,7 +797,7 @@ class SoccerLiveSensor(Entity):
     def _detect_and_dispatch_match_started(self, matches, events: list):
         """Dispatcha een event wanneer een wedstrijd van 'pre' naar 'in' gaat."""
         for match in matches:
-            match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
+            match_id = match.get("event_id") or f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             current_state = match.get("state")
             prev_state = self._previous_match_states.get(match_id)
             if current_state == "in" and prev_state == "pre":
@@ -820,7 +820,7 @@ class SoccerLiveSensor(Entity):
     def _detect_and_dispatch_match_finished(self, matches, events: list):
         finished_matches = [m for m in matches if m.get("state") == "post"]
         for match in finished_matches:
-            match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
+            match_id = match.get("event_id") or f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             if match_id not in self._match_finished_dispatched:
                 self._dispatch_match_finished_event(match, events)
                 self._match_finished_dispatched.add(match_id)
