@@ -124,14 +124,20 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             home_color = home_team_data.get("color", "N/A")
             home_record = _get_record(competitors[0])
             home_top_scorer = _get_top_scorer(competitors[0])
+            home_record_summary = competitors[0].get("recordSummary", "")
+            home_standing_summary = competitors[0].get("standingSummary", "")
 
             away_abbrev = away_team_data.get("abbreviation", "N/A")
             away_color = away_team_data.get("color", "N/A")
             away_record = _get_record(competitors[1])
             away_top_scorer = _get_top_scorer(competitors[1])
+            away_record_summary = competitors[1].get("recordSummary", "")
+            away_standing_summary = competitors[1].get("standingSummary", "")
 
             broadcast = _get_broadcast(competitions[0])
             attendance = competitions[0].get("attendance", 0)
+            has_stats = competitions[0].get("boxscoreAvailable", False)
+            has_commentary = competitions[0].get("playByPlayAvailable", False)
 
             match_details = _get_details(competitions[0].get("details", []))
 
@@ -152,6 +158,8 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "home_statistics": home_statistics,
                 "home_record": home_record,
                 "home_top_scorer": home_top_scorer,
+                "home_record_summary": home_record_summary,
+                "home_standing_summary": home_standing_summary,
                 "away_team": away_team,
                 "away_abbrev": away_abbrev,
                 "away_color": away_color,
@@ -161,6 +169,8 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "away_statistics": away_statistics,
                 "away_record": away_record,
                 "away_top_scorer": away_top_scorer,
+                "away_record_summary": away_record_summary,
+                "away_standing_summary": away_standing_summary,
                 "state": match_state,
                 "status": match_status,
                 "status_detail": status_detail,
@@ -171,6 +181,8 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "venue_country": venue_country,
                 "broadcast": broadcast,
                 "attendance": attendance,
+                "has_stats": has_stats,
+                "has_commentary": has_commentary,
                 "match_details": match_details,
             }
             matches.append(match_data)

@@ -15,7 +15,11 @@ def standings_data(data):
                 team = entry.get("team", {})
                 stats = {stat['name']: stat['displayValue'] for stat in entry.get("stats", [])}
 
-                rank = entry.get("note", {}).get("rank", index)
+                note = entry.get("note") or {}
+                rank = note.get("rank", index)
+                zone_color = note.get("color", "")        # ESPN hex color, e.g. "007AC0"
+                zone_label = note.get("description", "")  # e.g. "UEFA Champions League"
+                zone_abbrev = note.get("abbreviation", "") # e.g. "UCL"
 
                 team_data = {
                     "rank": rank,
@@ -29,7 +33,10 @@ def standings_data(data):
                     "losses": stats.get("losses", "N/A"),
                     "goals_for": stats.get("pointsFor", "N/A"),
                     "goals_against": stats.get("pointsAgainst", "N/A"),
-                    "goal_difference": stats.get("pointDifferential", "N/A")
+                    "goal_difference": stats.get("pointDifferential", "N/A"),
+                    "zone_color": f"#{zone_color}" if zone_color else "",
+                    "zone_label": zone_label,
+                    "zone_abbrev": zone_abbrev,
                 }
                 standings.append(team_data)
 
