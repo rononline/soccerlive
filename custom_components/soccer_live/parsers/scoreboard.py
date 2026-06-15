@@ -27,18 +27,18 @@ def process_league_data(data, hass=None):
         return league_info
 
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare i dati della lega: {e}")
+        _LOGGER.error(f"Error processing league data: {e}")
         return []
 
 def get_season_slug_or_displayname(match):
     season_data = match.get("season", {})
     
-    # Controlla prima per 'slug', se esiste
+    # Check for 'slug' first
     slug = season_data.get("slug")
     if slug:
         return slug
     
-    # Se non trova 'slug', prova a prendere 'displayName'
+    # Fall back to 'displayName' if no slug
     display_name = season_data.get("displayName")
     return display_name
     
@@ -80,7 +80,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             season_info = get_season_slug_or_displayname(match)
 
             competitions = match.get("competitions", [])
-            # Estrai il nome della lega/competizione: prima dalla competition stessa, poi dal top-level
+            # Extract league/competition name: from the competition first, then from the top-level
             league_name = competitions[0].get("league", {}).get("displayName", "N/A") if competitions else "N/A"
             if league_name == "N/A":
                 league_name = top_league_name
@@ -142,7 +142,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "event_id": match.get("id"),
                 "date": _parse_date(hass, match.get("date")),
                 "season_info": season_info, #per il mixed
-                "league_name": league_name,  # ← NUOVO: Nome della competizione
+                "league_name": league_name,
                 "home_team": home_team,
                 "home_abbrev": home_abbrev,
                 "home_color": home_color,
@@ -176,7 +176,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             matches.append(match_data)
 
         if next_match_only:
-            # Priorità 1: Partite in corso
+            # Priority 1: Live matches
             live_matches = [m for m in matches if m["state"] == "in"]
             if live_matches:
                 return {
@@ -186,7 +186,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                     "matches": [live_matches[0]]
                 }
 
-            # Priorità 2: Partite terminate entro la finestra configurata (default 48h)
+            # Priority 2: Recently finished matches (within the configured window, default 48h)
             # ESPN returns events in chronological order, so [-1] is the most recent.
             recent_finished_matches = [m for m in matches
                 if m["state"] == "post" and is_within_recent_window(m["date"], recent_match_hours)
@@ -200,7 +200,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                     "matches": [recent_finished_matches[-1]]
                 }
 
-            # Priorità 3: Prossime partite
+            # Priority 3: Upcoming matches
             upcoming_matches = [m for m in matches if m["state"] == "pre"]
             if upcoming_matches:
                 return {
@@ -345,9 +345,9 @@ def process_summary_data(data):
                 "scoring_play": ev.get("scoringPlay", False),
             })
 
-        # La card Team mostra al massimo 8 partite h2h e non usa i loghi:
-        # limitiamo a 10 voci e omettiamo home_logo/away_logo per restare
-        # ampiamente sotto il limite di 16384 byte del recorder.
+        # The Team card shows at most 8 h2h matches and does not use logos;
+        # limit to 10 entries and omit home_logo/away_logo to stay well
+        # under the 16384-byte recorder payload limit.
         H2H_MAX = 10
         h2h = data.get("headToHeadGames", []) or []
         for game in h2h:
@@ -450,5 +450,5 @@ def _parse_date(hass, date_str, show_time=True):
         else:
             return local_date.strftime("%d-%m-%Y")
     except (ValueError, TypeError) as e:
-        #_LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
+
         return "N/A"

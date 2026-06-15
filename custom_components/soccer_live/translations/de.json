@@ -15,7 +15,7 @@
                     "competition_code": "Wettbewerb"
                 }
             },
-            "campionato": {
+            "league": {
                 "title": "Liga auswählen",
                 "description": "Wählen Sie die Liga, die Sie verfolgen möchten.\n\nEs werden alle Spiele der Teams der ausgewählten Liga angezeigt. Für Pokalwettbewerbe (Champions League, Europa League, Coppa Italia usw.) wird automatisch ein K.O.-Bracket-Sensor erstellt.",
                 "data": {
