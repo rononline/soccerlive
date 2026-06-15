@@ -43,14 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         team_name = entry.data.get("team_name")
         selection = entry.data.get("selection")
         team_id = entry.data.get("team_id")
-        #{'competition_code': 'uefa.champions', 'end_date': '2025-07-26', 'name': 'Team UEFA Champions League Internazionale', 'selection': 'Team', 'start_date': '2024-11-27', 'team_name': 'Internazionale'}
-        
-#        _LOGGER.error(f"Entry data completo: {entry.data}")
-#        _LOGGER.error(f"Entry options completo: {entry.options}")
-                
-        start_date_1 = entry.data.get("start_date")
-        end_date_1 = entry.data.get("end_date")
-        
+
         # Season dates are resolved dynamically via _get_calendar_data each update.
         # Use a wide rolling fallback (±1 year) so process_match_data never
         # discards valid matches on first run before the calendar is available.
@@ -59,16 +52,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         _default_end = (_today + timedelta(days=365)).strftime("%Y-%m-%d")
         start_date = entry.options.get("start_date", entry.data.get("start_date", _default_start))
         end_date = entry.options.get("end_date", entry.data.get("end_date", _default_end))
-        
-        
+
         base_scan_interval = timedelta(minutes=entry.options.get("scan_interval", 3))
         recent_match_hours = entry.options.get("recent_match_hours", 24)
         sensors = []
 
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
-        
-        _LOGGER.debug(f"Soccer Live Config Entry: {entry.data}")  # Log per capire cosa c'è nell'entry
     
         if selection == "Live Commentary":
             comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
