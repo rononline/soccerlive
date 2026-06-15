@@ -78,6 +78,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
 
             #Solo per il mixed
             season_info = get_season_slug_or_displayname(match)
+            week_number = (match.get("week") or {}).get("number")
 
             competitions = match.get("competitions", [])
             # Extract league/competition name: from the competition first, then from the top-level
@@ -151,7 +152,8 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             match_data = {
                 "event_id": match.get("id"),
                 "date": _parse_date(hass, match.get("date")),
-                "season_info": season_info, #per il mixed
+                "season_info": season_info,
+                "week_number": week_number,
                 "league_name": league_name,
                 "home_team": home_team,
                 "home_abbrev": home_abbrev,
