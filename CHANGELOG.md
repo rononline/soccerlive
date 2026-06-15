@@ -1,15 +1,16 @@
 # Changelog
 
-## v3.4.1 (2026-06-15)
-- `_get_links()`: compact `{summary, commentary, stats, video}` URL dict per match from `competition.links`
-- `manifest.json` version synced to 3.4.1
-
-## v3.4.0 (2026-06-15)
+## v3.5.0 (2026-06-15)
 - Standings: `zone_color`, `zone_label`, `zone_abbrev` from `entry.note` per team
 - Scoreboard: `home/away_record_summary`, `home/away_standing_summary` from competitors
 - Scoreboard: `broadcasts` (full list), `neutral_site`, `tickets_available` per match
 - Scoreboard: `has_stats` (boxscoreAvailable), `has_commentary` (playByPlayAvailable)
+- Scoreboard: `match_links` compact dict `{summary, commentary, stats, video}`
+- Scoreboard: `week_number` from `events[].week.number`
 - Summary: `last_five_home`/`last_five_away` from `boxscore.players[].statistics`
+- News: `byline`, `last_modified`, `image_caption`, `image_credit`, `tags`, `premium`
+- Top scorers 404: clear INFO log
+- `manifest.json` version synced to 3.4.2
 - News: `byline`, `last_modified`, `image_caption`, `image_credit`, `tags`, `premium`
 - Top scorers 404: clear INFO log (not an error, ESPN doesn't support all competitions)
 
