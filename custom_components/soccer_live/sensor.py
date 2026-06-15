@@ -311,9 +311,11 @@ class SoccerLiveSensor(Entity):
         cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
         if cache_key in SoccerLiveSensor._cache and (datetime.now() - SoccerLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
             try:
-                await self.hass.async_add_executor_job(
+                result = await self.hass.async_add_executor_job(
                     self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
                 )
+                self._state = result["state"]
+                self._attributes = result["attributes"]
                 await self._enrich_with_summary()
                 await self._enrich_with_commentary()
                 await self._flush_pending_events()
@@ -342,7 +344,9 @@ class SoccerLiveSensor(Entity):
                             _LOGGER.debug(f"Data received for {self._name}")
                             SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
                             try:
-                                await self.hass.async_add_executor_job(self._process_data, data)
+                                result = await self.hass.async_add_executor_job(self._process_data, data)
+                                self._state = result["state"]
+                                self._attributes = result["attributes"]
                                 await self._enrich_with_summary()
                                 await self._enrich_with_commentary()
                                 await self._flush_pending_events()
@@ -1041,17 +1045,22 @@ class SoccerLiveSensor(Entity):
         
         return computed
 
-    def _process_data(self, data):
+    def _process_data(self, data) -> dict:
+        """Parse ESPN data and return {"state": ..., "attributes": {...}}.
+        Pure function: no self._state / self._attributes mutations.
+        self._pending_events is still populated by _detect_and_dispatch_* helpers.
+        """
         from .sensori.scoreboard import process_match_data, process_news_data
 
         if self._sensor_type == "news":
             articles = process_news_data(data)
-            self._state = f"{len(articles)} artikelen" if articles else "Geen artikelen"
-            self._attributes = {
-                "articles": articles,
-                "competition_code": self._code,
+            return {
+                "state": f"{len(articles)} artikelen" if articles else "Geen artikelen",
+                "attributes": {
+                    "articles": articles,
+                    "competition_code": self._code,
+                },
             }
-            return
 
         if self._sensor_type == "top_scorers":
             from .sensori.scoreboard import process_scorers_data
@@ -1059,14 +1068,15 @@ class SoccerLiveSensor(Entity):
             top_leagues = data.get("sports", [{}])[0].get("leagues", [{}]) if data.get("sports") else []
             league_name = top_leagues[0].get("name", "") if top_leagues else ""
             league_logo = (top_leagues[0].get("logos", [{}])[0].get("href", "") if top_leagues and top_leagues[0].get("logos") else "")
-            self._state = str(len(scorers))
-            self._attributes = {
-                "scorers": scorers,
-                "league_name": league_name,
-                "league_logo": league_logo,
-                "competition_code": self._code,
+            return {
+                "state": str(len(scorers)),
+                "attributes": {
+                    "scorers": scorers,
+                    "league_name": league_name,
+                    "league_logo": league_logo,
+                    "competition_code": self._code,
+                },
             }
-            return
 
         if self._sensor_type == "bracket":
             from .sensori.bracket import process_bracket_data
@@ -1074,44 +1084,49 @@ class SoccerLiveSensor(Entity):
             rounds = bracket.get("rounds", [])
             if rounds:
                 last = rounds[-1]
-                self._state = f"{last.get('name_nl', last.get('name'))} ({last.get('size')} ploegen)"
+                state = f"{last.get('name_nl', last.get('name'))} ({last.get('size')} ploegen)"
             else:
-                self._state = "Bracket niet beschikbaar"
-            self._attributes = {
-                "rounds": rounds,
-                "ties_count": bracket.get("ties_count", 0),
-                "competition_code": self._code,
+                state = "Bracket niet beschikbaar"
+            return {
+                "state": state,
+                "attributes": {
+                    "rounds": rounds,
+                    "ties_count": bracket.get("ties_count", 0),
+                    "competition_code": self._code,
+                },
             }
-            return
 
         if self._sensor_type == "standings":
             from .sensori.classifica import classifica_data
-            processed_data = classifica_data(data)
-            self._state = "Stand"
-            self._attributes = processed_data
+            return {"state": "Stand", "attributes": classifica_data(data)}
 
-        elif self._sensor_type == "match_day":
+        if self._sensor_type == "match_day":
             match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
-            self._state = "Speelronde"
-            self._attributes = {
-                "league_info": match_data.get("league_info", "N/A"),
-                "matches": match_data.get("matches", [])
+            return {
+                "state": "Speelronde",
+                "attributes": {
+                    "league_info": match_data.get("league_info", "N/A"),
+                    "matches": match_data.get("matches", []),
+                },
             }
 
-        elif self._sensor_type == "commentary":
+        if self._sensor_type == "commentary":
             match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
             matches = match_data.get("matches", []) or []
             live_match = next((m for m in matches if m.get("state") == "in"), None)
             if live_match:
-                self._state = f"{live_match.get('home_team','?')} {live_match.get('home_score','?')} - {live_match.get('away_score','?')} {live_match.get('away_team','?')}"
+                state = f"{live_match.get('home_team','?')} {live_match.get('home_score','?')} - {live_match.get('away_score','?')} {live_match.get('away_team','?')}"
             else:
-                self._state = "Geen live wedstrijd"
-            self._attributes = {
-                "league_info": match_data.get("league_info", "N/A"),
-                "matches": matches
+                state = "Geen live wedstrijd"
+            return {
+                "state": state,
+                "attributes": {
+                    "league_info": match_data.get("league_info", "N/A"),
+                    "matches": matches,
+                },
             }
-        
-        elif self._sensor_type in ["team_matches", "team_match", "team_matches_mixed", "all_matches_today", "commentary"]:
+
+        if self._sensor_type in ["team_matches", "team_match", "team_matches_mixed", "all_matches_today"]:
             def get_team_match_data(next_match_only=False):
                 return process_match_data(
                     data,
@@ -1122,131 +1137,121 @@ class SoccerLiveSensor(Entity):
                     end_date=self._filter_end_str(),
                     recent_match_hours=self._recent_match_hours,
                 )
-            
-            
+
             if self._sensor_type in ["team_matches", "team_matches_mixed", "all_matches_today"]:
-                #sensor.soccerlive_all_ita_1_internazionale - team_matches
-                #sensor.soccerlive_all_mixed_internazionale - team_matches_mixed
                 match_data = get_team_match_data()
                 matches = match_data.get("matches", []) or []
                 next_match = match_data.get("next_match")
 
-                if matches:
-                    # Priorità 1: Partita in corso
-                    live_matches = [m for m in matches if m.get("state") == "in"]
-                    if live_matches:
-                        lm = live_matches[0]
-                        self._state = f"🔴 {lm.get('home_team','?')} {lm.get('home_score','?')} - {lm.get('away_score','?')} {lm.get('away_team','?')} ({lm.get('clock','')})"
+                live_matches = [m for m in matches if m.get("state") == "in"]
+                if live_matches:
+                    lm = live_matches[0]
+                    state = f"🔴 {lm.get('home_team','?')} {lm.get('home_score','?')} - {lm.get('away_score','?')} {lm.get('away_team','?')} ({lm.get('clock','')})"
+                elif matches:
+                    finished_matches = [m for m in matches if m.get("state") == "post"]
+                    if finished_matches:
+                        fm = finished_matches[-1]
+                        state = f"✅ {fm.get('home_team','?')} {fm.get('home_score','?')} - {fm.get('away_score','?')} {fm.get('away_team','?')}"
                     else:
-                        # Priorità 2: Ultima partita terminata (più recente)
-                        finished_matches = [m for m in matches if m.get("state") == "post"]
-                        if finished_matches:
-                            fm = finished_matches[-1]  # ESPN returns chronologically: [-1] is most recent
-                            self._state = f"✅ {fm.get('home_team','?')} {fm.get('home_score','?')} - {fm.get('away_score','?')} {fm.get('away_team','?')}"
+                        upcoming_matches = [m for m in matches if m.get("state") == "pre"]
+                        if upcoming_matches:
+                            um = upcoming_matches[0]
+                            state = f"⏳ {um.get('home_team','?')} tegen {um.get('away_team','?')} ({um.get('date','?')})"
                         else:
-                            # Priorità 3: Prossima partita in programma
-                            upcoming_matches = [m for m in matches if m.get("state") == "pre"]
-                            if upcoming_matches:
-                                um = upcoming_matches[0]
-                                self._state = f"⏳ {um.get('home_team','?')} tegen {um.get('away_team','?')} ({um.get('date','?')})"
-                            else:
-                                self._state = f"📊 {len(matches)} wedstrijden beschikbaar"
+                            state = f"📊 {len(matches)} wedstrijden beschikbaar"
                 else:
-                    self._state = "Geen wedstrijden beschikbaar"
+                    state = "Geen wedstrijden beschikbaar"
 
-                # Computa attributi per tutte le partite
                 computed_attrs = self._compute_all_matches_attributes(matches)
-
-                self._attributes = {
-                    "league_info": match_data.get("league_info", "N/A"),
-                    "team_name": match_data.get("team_name", "N/A"),
-                    "team_logo": match_data.get("team_logo", "N/A"),
-                    "matches": matches,
-                    "next_match": next_match,  # comodo per le template
-                    **computed_attrs,  # Aggiungi gli attributi computati
+                return {
+                    "state": state,
+                    "attributes": {
+                        "league_info": match_data.get("league_info", "N/A"),
+                        "team_name": match_data.get("team_name", "N/A"),
+                        "team_logo": match_data.get("team_logo", "N/A"),
+                        "matches": matches,
+                        "next_match": next_match,
+                        **computed_attrs,
+                    },
                 }
 
-            elif self._sensor_type == "team_match":
-                # sensor.soccerlive_next_ita_1_internazionale
-                # Verwerk alle wedstrijden één keer en leid next_match er uit af
-                all_data = get_team_match_data()
-                all_matches = all_data.get("matches", []) or []
+            # team_match
+            all_data = get_team_match_data()
+            all_matches = all_data.get("matches", []) or []
 
-                from .sensori.scoreboard import is_within_recent_window
-                _live = [m for m in all_matches if m.get("state") == "in"]
-                _recent_post = [m for m in all_matches
-                    if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)]
-                _upcoming = [m for m in all_matches if m.get("state") == "pre"]
+            from .sensori.scoreboard import is_within_recent_window
+            _live = [m for m in all_matches if m.get("state") == "in"]
+            _recent_post = [m for m in all_matches
+                if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)]
+            _upcoming = [m for m in all_matches if m.get("state") == "pre"]
 
-                if _live:
-                    next_match = _live[0]
-                elif _recent_post:
-                    next_match = _recent_post[-1]
-                elif _upcoming:
-                    next_match = _upcoming[0]
+            if _live:
+                next_match = _live[0]
+            elif _recent_post:
+                next_match = _recent_post[-1]
+            elif _upcoming:
+                next_match = _upcoming[0]
+            else:
+                next_match = None
+
+            if next_match:
+                if next_match.get("state") == "in":
+                    state = f"{next_match.get('home_score','?')} - {next_match.get('away_score','?')} ({next_match.get('clock','')})"
                 else:
-                    next_match = None
+                    state = f"Volgende wedstrijd: {next_match.get('home_team','N/A')} tegen {next_match.get('away_team','N/A')}"
+            else:
+                state = "Geen wedstrijden beschikbaar"
 
-                matches = [next_match] if next_match else []
-
-                if next_match:
-                    if next_match.get("state") == "in":
-                        self._state = f"{next_match.get('home_score','?')} - {next_match.get('away_score','?')} ({next_match.get('clock','')})"
-                    else:
-                        self._state = f"Volgende wedstrijd: {next_match.get('home_team','N/A')} tegen {next_match.get('away_team','N/A')}"
-                else:
-                    self._state = "Geen wedstrijden beschikbaar"
-
-                finished_matches = [m for m in all_matches if m.get("state") == "post"]
-                previous_matches = [
-                    {
-                        "date": m.get("date"),
-                        "home_team": m.get("home_team"),
-                        "home_abbrev": m.get("home_abbrev"),
-                        "home_logo": m.get("home_logo"),
-                        "home_color": m.get("home_color"),
-                        "home_score": m.get("home_score"),
-                        "away_team": m.get("away_team"),
-                        "away_abbrev": m.get("away_abbrev"),
-                        "away_logo": m.get("away_logo"),
-                        "away_color": m.get("away_color"),
-                        "away_score": m.get("away_score"),
-                        "state": m.get("state"),
-                    }
-                    for m in list(reversed(finished_matches))[:10]
-                ]
-                # Sla de eerste (= next_match) over; neem de volgende 4
-                # Inclusief live wedstrijden voor live score in de lijst
-                upcoming_candidates = [m for m in all_matches if m.get("state") in ("pre", "in")][1:5]
-                upcoming_matches = [
-                    {
-                        "date": m.get("date"),
-                        "state": m.get("state"),
-                        "home_team": m.get("home_team"),
-                        "home_abbrev": m.get("home_abbrev"),
-                        "home_logo": m.get("home_logo"),
-                        "home_color": m.get("home_color"),
-                        "home_score": m.get("home_score"),
-                        "away_team": m.get("away_team"),
-                        "away_abbrev": m.get("away_abbrev"),
-                        "away_logo": m.get("away_logo"),
-                        "away_color": m.get("away_color"),
-                        "away_score": m.get("away_score"),
-                        "clock": m.get("clock"),
-                        "head_to_head": (m.get("head_to_head") or [])[:3],
-                        "event_id": m.get("event_id"),
-                    }
-                    for m in upcoming_candidates
-                ]
-
-                # Computa attributi della prossima partita
-                computed_attrs = self._compute_next_match_attributes(next_match) if next_match else {}
-
-                self._attributes = {
+            finished_matches = [m for m in all_matches if m.get("state") == "post"]
+            previous_matches = [
+                {
+                    "date": m.get("date"),
+                    "home_team": m.get("home_team"),
+                    "home_abbrev": m.get("home_abbrev"),
+                    "home_logo": m.get("home_logo"),
+                    "home_color": m.get("home_color"),
+                    "home_score": m.get("home_score"),
+                    "away_team": m.get("away_team"),
+                    "away_abbrev": m.get("away_abbrev"),
+                    "away_logo": m.get("away_logo"),
+                    "away_color": m.get("away_color"),
+                    "away_score": m.get("away_score"),
+                    "state": m.get("state"),
+                }
+                for m in list(reversed(finished_matches))[:10]
+            ]
+            upcoming_candidates = [m for m in all_matches if m.get("state") in ("pre", "in")][1:5]
+            upcoming_matches = [
+                {
+                    "date": m.get("date"),
+                    "state": m.get("state"),
+                    "home_team": m.get("home_team"),
+                    "home_abbrev": m.get("home_abbrev"),
+                    "home_logo": m.get("home_logo"),
+                    "home_color": m.get("home_color"),
+                    "home_score": m.get("home_score"),
+                    "away_team": m.get("away_team"),
+                    "away_abbrev": m.get("away_abbrev"),
+                    "away_logo": m.get("away_logo"),
+                    "away_color": m.get("away_color"),
+                    "away_score": m.get("away_score"),
+                    "clock": m.get("clock"),
+                    "head_to_head": (m.get("head_to_head") or [])[:3],
+                    "event_id": m.get("event_id"),
+                }
+                for m in upcoming_candidates
+            ]
+            computed_attrs = self._compute_next_match_attributes(next_match) if next_match else {}
+            return {
+                "state": state,
+                "attributes": {
                     **all_data,
-                    "matches": matches,
+                    "matches": [next_match] if next_match else [],
                     "next_match": next_match,
                     "upcoming_matches": upcoming_matches,
                     "previous_matches": previous_matches,
                     **computed_attrs,
-                }
+                },
+            }
+
+        return {"state": self._state, "attributes": self._attributes}
