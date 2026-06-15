@@ -141,6 +141,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             attendance = competitions[0].get("attendance", 0)
             has_stats = competitions[0].get("boxscoreAvailable", False)
             has_commentary = competitions[0].get("playByPlayAvailable", False)
+            match_links = _get_links(competitions[0])
 
             match_details = _get_details(competitions[0].get("details", []))
 
@@ -189,6 +190,7 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "attendance": attendance,
                 "has_stats": has_stats,
                 "has_commentary": has_commentary,
+                "links": match_links,
                 "match_details": match_details,
             }
             matches.append(match_data)
@@ -316,6 +318,26 @@ def _get_broadcasts(competition):
         if name and name not in channels:
             channels.append(name)
     return channels
+
+def _get_links(competition):
+    """Extract compact links dict from competition.links for stats/commentary/video."""
+    links_raw = competition.get("links", []) or []
+    result = {}
+    key_map = {
+        "summary":     ["summary", "gamecenter"],
+        "commentary":  ["commentary", "playbyplay"],
+        "stats":       ["boxscore", "stats"],
+        "video":       ["video", "highlights"],
+    }
+    for link in links_raw:
+        rel = [r.lower() for r in (link.get("rel") or [])]
+        href = link.get("href", "")
+        if not href:
+            continue
+        for key, patterns in key_map.items():
+            if key not in result and any(p in rel for p in patterns):
+                result[key] = href
+    return result
 
 def process_summary_data(data):
     """Estrae lineup, formazioni, key events e head-to-head dal summary endpoint.
