@@ -527,25 +527,40 @@ class SoccerLiveSensor(Entity):
             self._summary_cache[event_id] = summary_data
 
     async def _enrich_with_venue_coordinates(self):
-        """Geocode venue names to coordinates and add to match attributes."""
+        """Apply cached coordinates to matches; schedule background geocoding for unknowns."""
         matches = self._attributes.get("matches") or []
         if not matches:
             return
 
+        venues_to_geocode = []
         for match in matches:
             if "venue_lat" in match and "venue_lon" in match:
-                continue  # Already geocoded
+                continue
 
             venue_name = match.get("venue", "")
             venue_city = match.get("venue_city", "")
-
             if not venue_name:
                 continue
 
-            coords = await _geocode_venue(venue_name, venue_city)
-            if coords:
-                match["venue_lat"] = coords["lat"]
-                match["venue_lon"] = coords["lon"]
+            cache_key = f"{venue_name}_{venue_city or ''}".lower()
+            cached = _VENUE_CACHE.get(cache_key)
+            if cached and (datetime.now() - cached["time"]).total_seconds() < _VENUE_CACHE_TTL.total_seconds():
+                match["venue_lat"] = cached["lat"]
+                match["venue_lon"] = cached["lon"]
+            else:
+                venues_to_geocode.append((venue_name, venue_city))
+
+        if venues_to_geocode:
+            self.hass.async_create_task(self._geocode_venues_background(venues_to_geocode))
+
+    async def _geocode_venues_background(self, venues):
+        """Geocode venues in background with rate limiting; does not block sensor updates."""
+        for venue_name, venue_city in venues:
+            cache_key = f"{venue_name}_{venue_city or ''}".lower()
+            if cache_key in _VENUE_CACHE:
+                continue
+            await _geocode_venue(venue_name, venue_city)
+            await asyncio.sleep(1.1)  # Nominatim rate limit: max 1 req/sec
 
 
     async def _build_url(self):
