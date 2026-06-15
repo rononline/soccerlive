@@ -24,16 +24,16 @@ Sensors are created automatically depending on your selection:
 
 | Sensor type | Name | Description |
 |---|---|---|
-| `team_match` | `soccerlive_next_*` | Next / current match for a team |
-| `team_matches` | `soccerlive_all_*` | All matches for a team (competition-specific) |
-| `team_matches_mixed` | `soccerlive_all_mixed_*` | All matches for a team (all competitions) |
-| `match_day` | `soccerlive_all_*` | All matches in a competition |
-| `standings` | `soccerlive_standings_*` | League standings |
-| `top_scorers` | `soccerlive_scorers_*` | Top scorers for a competition (auto-created) |
-| `bracket` | `soccerlive_bracket_*` | Knockout bracket (auto-created for cup competitions) |
-| `all_matches_today` | `soccerlive_all_today` | All matches worldwide today |
-| `news` | `soccerlive_news_*` | News feed for a competition |
-| `commentary` | `soccerlive_commentary_*` | Live play-by-play commentary for a match |
+| `team_match` | `soccer_live_next_*` | Next / current match for a team |
+| `team_matches` | `soccer_live_all_*` | All matches for a team (competition-specific) |
+| `team_matches_mixed` | `soccer_live_all_mixed_*` | All matches for a team (all competitions) |
+| `match_day` | `soccer_live_all_*` | All matches in a competition |
+| `standings` | `soccer_live_standings_*` | League standings |
+| `top_scorers` | `soccer_live_scorers_*` | Top scorers for a competition (auto-created) |
+| `bracket` | `soccer_live_bracket_*` | Knockout bracket (auto-created for cup competitions) |
+| `all_matches_today` | `soccer_live_all_today` | All matches worldwide today |
+| `news` | `soccer_live_news_*` | News feed for a competition |
+| `commentary` | `soccer_live_commentary_*` | Live play-by-play commentary for a match |
 
 ---
 
@@ -45,7 +45,7 @@ Add this to `configuration.yaml` to avoid database warnings:
 recorder:
   exclude:
     entity_globs:
-      - sensor.soccerlive_*
+      - sensor.soccer_live_*
 ```
 
 ---
@@ -97,18 +97,18 @@ alias: Football - Match starting soon
 trigger:
   - platform: template
     value_template: >
-      {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_minutes_until') == 15 }}
+      {{ state_attr('sensor.soccer_live_next_ned_1_feyenoord_rotterdam', 'next_match_minutes_until') == 15 }}
 condition:
   - condition: template
     value_template: >
-      {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_status') == 'pre' }}
+      {{ state_attr('sensor.soccer_live_next_ned_1_feyenoord_rotterdam', 'next_match_status') == 'pre' }}
 action:
   - service: notify.mobile_app_my_phone
     data:
       title: "⚽ Match starts in 15 min!"
       message: >
-        {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_home_team') }}
-        vs {{ state_attr('sensor.soccerlive_next_ned_1_feyenoord_rotterdam', 'next_match_away_team') }}
+        {{ state_attr('sensor.soccer_live_next_ned_1_feyenoord_rotterdam', 'next_match_home_team') }}
+        vs {{ state_attr('sensor.soccer_live_next_ned_1_feyenoord_rotterdam', 'next_match_away_team') }}
 mode: single
 ```
 
@@ -284,13 +284,13 @@ trigger:
     at: "10:00:00"
 condition:
   - condition: template
-    value_template: "{{ state_attr('sensor.soccerlive_all_today', 'upcoming_matches_count') | int(0) > 0 }}"
+    value_template: "{{ state_attr('sensor.soccer_live_all_today', 'upcoming_matches_count') | int(0) > 0 }}"
 action:
   - service: notify.mobile_app_my_phone
     data:
       title: "⚽ Today's matches"
       message: >
-        {{ (state_attr('sensor.soccerlive_all_today', 'matches') or [])[0:3] | map(attribute='home_team') | list | join(', ') }}
+        {{ (state_attr('sensor.soccer_live_all_today', 'matches') or [])[0:3] | map(attribute='home_team') | list | join(', ') }}
 mode: single
 ```
 
