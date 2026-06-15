@@ -316,6 +316,8 @@ class SoccerLiveSensor(Entity):
                 )
                 self._state = result["state"]
                 self._attributes = result["attributes"]
+                self._pending_events = result.get("events", [])
+                self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
                 await self._enrich_with_summary()
                 await self._enrich_with_commentary()
                 await self._flush_pending_events()
@@ -347,6 +349,8 @@ class SoccerLiveSensor(Entity):
                                 result = await self.hass.async_add_executor_job(self._process_data, data)
                                 self._state = result["state"]
                                 self._attributes = result["attributes"]
+                                self._pending_events = result.get("events", [])
+                                self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
                                 await self._enrich_with_summary()
                                 await self._enrich_with_commentary()
                                 await self._flush_pending_events()
@@ -620,23 +624,18 @@ class SoccerLiveSensor(Entity):
         except (ValueError, TypeError):
             return None
 
-    def _detect_and_dispatch_goals(self, matches):
-        """Rileva i goal segnati e dispatcha eventi"""
+    def _detect_and_dispatch_goals(self, matches, events: list):
         live_matches = [m for m in matches if m.get("state") == "in"]
-        
         for match in live_matches:
             match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             home_score = match.get("home_score", 0)
             away_score = match.get("away_score", 0)
-            
             try:
                 home_score = int(home_score) if home_score != "N/A" else 0
                 away_score = int(away_score) if away_score != "N/A" else 0
             except (ValueError, TypeError):
                 home_score = 0
                 away_score = 0
-            
-            # Se è la prima volta che vediamo questa partita, salva i punteggi
             if match_id not in self._previous_scores:
                 self._previous_scores[match_id] = {
                     "home": home_score,
@@ -644,47 +643,18 @@ class SoccerLiveSensor(Entity):
                     "match_details": match.get("match_details", []).copy()
                 }
                 continue
-            
             prev_home = self._previous_scores[match_id]["home"]
             prev_away = self._previous_scores[match_id]["away"]
             prev_details = self._previous_scores[match_id].get("match_details", [])
             curr_details = match.get("match_details", [])
-            
-            # Rileva goal della squadra casa
             if home_score > prev_home:
                 goals_scored = home_score - prev_home
-                # Estrai i nomi dei giocatori dai nuovi match_details
-                goal_scorers = self._extract_goal_scorers_from_details(
-                    prev_details, curr_details, goals_scored, is_home_team=True
-                )
-                self._dispatch_goal_event(
-                    match.get("home_team", "N/A"),
-                    match.get("away_team", "N/A"),
-                    goals_scored,
-                    home_score,
-                    away_score,
-                    match,
-                    goal_scorers
-                )
-            
-            # Rileva goal della squadra ospite
+                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=True)
+                self._dispatch_goal_event(match.get("home_team", "N/A"), match.get("away_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
             if away_score > prev_away:
                 goals_scored = away_score - prev_away
-                # Estrai i nomi dei giocatori dai nuovi match_details
-                goal_scorers = self._extract_goal_scorers_from_details(
-                    prev_details, curr_details, goals_scored, is_home_team=False
-                )
-                self._dispatch_goal_event(
-                    match.get("away_team", "N/A"),
-                    match.get("home_team", "N/A"),
-                    goals_scored,
-                    home_score,
-                    away_score,
-                    match,
-                    goal_scorers
-                )
-            
-            # Aggiorna i punteggi e i dettagli
+                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=False)
+                self._dispatch_goal_event(match.get("away_team", "N/A"), match.get("home_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
             self._previous_scores[match_id]["home"] = home_score
             self._previous_scores[match_id]["away"] = away_score
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
@@ -710,7 +680,7 @@ class SoccerLiveSensor(Entity):
         # Ritorna solo i goal estratti, fino al numero di goal segnati
         return new_goals[:goals_count]
 
-    def _dispatch_goal_event(self, scoring_team, opponent_team, goals_count, home_score, away_score, match, goal_scorers=None):
+    def _dispatch_goal_event(self, scoring_team, opponent_team, goals_count, home_score, away_score, match, goal_scorers=None, events: list = None):
         """Dispatcha un evento di goal a Home Assistant"""
         try:
             # goal_scorers è una lista di dict {player, minute}. Retro-compatibile
@@ -746,41 +716,32 @@ class SoccerLiveSensor(Entity):
                 "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self._pending_events.append(("soccer_live_goal", event_data))
+            if events is not None:
+                events.append(("soccer_live_goal", event_data))
             _LOGGER.info(f"Doelpunt gedetecteerd! {scoring_team} scoort {goals_count} doelpunt(en). Speler: {player_name} ({minute}). Stand: {home_score}-{away_score}")
         except Exception as e:
             _LOGGER.error(f"Error dispatching goal event: {e}")
 
-    def _detect_and_dispatch_cards(self, matches):
-        """Rileva i cartellini gialli e rossi e dispatcha eventi"""
+    def _detect_and_dispatch_cards(self, matches, events: list):
         live_matches = [m for m in matches if m.get("state") == "in"]
-        
         for match in live_matches:
             match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             match_details = match.get("match_details", [])
-            
-            # Se è la prima volta che vediamo questa partita, salva i dettagli
             if match_id not in self._previous_match_details:
                 self._previous_match_details[match_id] = match_details.copy()
                 continue
-            
             prev_details = self._previous_match_details[match_id]
-            
-            # Controlla i nuovi dettagli
             for detail in match_details:
                 if detail not in prev_details:
-                    # È un nuovo evento
                     if "Yellow Card" in detail:
-                        self._dispatch_card_event("yellow", detail, match)
+                        self._dispatch_card_event("yellow", detail, match, events)
                     elif "Red Card" in detail:
-                        self._dispatch_card_event("red", detail, match)
+                        self._dispatch_card_event("red", detail, match, events)
                     elif "Substitution" in detail:
-                        self._dispatch_substitution_event(detail, match)
-            
-            # Aggiorna i dettagli
+                        self._dispatch_substitution_event(detail, match, events)
             self._previous_match_details[match_id] = match_details.copy()
 
-    def _dispatch_card_event(self, card_type, detail_str, match):
+    def _dispatch_card_event(self, card_type, detail_str, match, events: list = None):
         """Dispatcha un evento di cartellino"""
         try:
             # Parse: "Yellow Card [TOT] - 27': Destiny Udogie" o "Red Card - 29': Cristian Romero"
@@ -808,12 +769,13 @@ class SoccerLiveSensor(Entity):
                 "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self._pending_events.append((event_type, event_data))
+            if events is not None:
+                events.append((event_type, event_data))
             _LOGGER.info(f"Kaart gedetecteerd! {card_type.upper()} op {minute} | {player}")
         except Exception as e:
             _LOGGER.error(f"Error dispatching card event: {e}")
 
-    def _dispatch_substitution_event(self, detail_str, match):
+    def _dispatch_substitution_event(self, detail_str, match, events: list = None):
         """Dispatcha een wissel-event."""
         try:
             parts = detail_str.split("': ")
@@ -833,12 +795,13 @@ class SoccerLiveSensor(Entity):
                 "competition_code": self._code,
                 "sensor_name": self._name,
             }
-            self._pending_events.append(("soccer_live_substitution", event_data))
+            if events is not None:
+                events.append(("soccer_live_substitution", event_data))
             _LOGGER.info(f"Wissel: {player} ({team}) op {minute}")
         except Exception as e:
             _LOGGER.error(f"Fout bij dispatchen wissel-event: {e}")
 
-    def _detect_and_dispatch_match_started(self, matches):
+    def _detect_and_dispatch_match_started(self, matches, events: list):
         """Dispatcha een event wanneer een wedstrijd van 'pre' naar 'in' gaat."""
         for match in matches:
             match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
@@ -856,27 +819,22 @@ class SoccerLiveSensor(Entity):
                     "competition_code": self._code,
                     "sensor_name": self._name,
                 }
-                self._pending_events.append(("soccer_live_match_started", event_data))
+                events.append(("soccer_live_match_started", event_data))
                 _LOGGER.info(f"Wedstrijd gestart: {match.get('home_team', 'N/A')} vs {match.get('away_team', 'N/A')}")
             if current_state:
                 self._previous_match_states[match_id] = current_state
 
-    def _detect_and_dispatch_match_finished(self, matches):
-        """Rileva quando una partita finisce e dispatcha un evento"""
+    def _detect_and_dispatch_match_finished(self, matches, events: list):
         finished_matches = [m for m in matches if m.get("state") == "post"]
-        
         for match in finished_matches:
             match_id = f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
-            
-            # Dispatcha l'evento solo una volta per partita
             if match_id not in self._match_finished_dispatched:
-                self._dispatch_match_finished_event(match)
+                self._dispatch_match_finished_event(match, events)
                 self._match_finished_dispatched.add(match_id)
                 self._match_finished_list.append(match_id)
-                self._save_store_needed = True
                 _LOGGER.info(f"Wedstrijd-eindevent verzameld voor: {match_id}")
 
-    def _dispatch_match_finished_event(self, match):
+    def _dispatch_match_finished_event(self, match, events: list = None):
         """Dispatcha un evento di fine partita"""
         try:
             # Estrai i giocatori che hanno segnato
@@ -898,7 +856,8 @@ class SoccerLiveSensor(Entity):
                 "goal_scorers_str": ", ".join(goal_scorers) if goal_scorers else "N/A",
                 "sensor_name": self._name,
             }
-            self._pending_events.append(("soccer_live_match_finished", event_data))
+            if events is not None:
+                events.append(("soccer_live_match_finished", event_data))
             _LOGGER.info(f"Wedstrijd afgelopen! {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Doelpuntenmakers: {', '.join(goal_scorers)}")
         except Exception as e:
             _LOGGER.error(f"Error dispatching match finished event: {e}")
@@ -987,16 +946,14 @@ class SoccerLiveSensor(Entity):
             "live_match_away_form": match.get("away_form", "N/A"),
         }
 
-    def _compute_all_matches_attributes(self, matches):
-        """Computa attributi per tutte le partite"""
-        # Dispatch eventi solo per i sensori principali.
-        # team_matches_mixed coprirebbe le stesse partite già gestite da team_matches,
-        # causando eventi duplicati per ogni cartellino/goal/fine partita.
+    def _compute_all_matches_attributes(self, matches, events: list = None):
+        if events is None:
+            events = []
         if self._sensor_type != "team_matches_mixed":
-            self._detect_and_dispatch_goals(matches)
-            self._detect_and_dispatch_cards(matches)
-            self._detect_and_dispatch_match_finished(matches)
-            self._detect_and_dispatch_match_started(matches)
+            self._detect_and_dispatch_goals(matches, events)
+            self._detect_and_dispatch_cards(matches, events)
+            self._detect_and_dispatch_match_finished(matches, events)
+            self._detect_and_dispatch_match_started(matches, events)
         
         computed = {}
         
@@ -1046,10 +1003,11 @@ class SoccerLiveSensor(Entity):
         return computed
 
     def _process_data(self, data) -> dict:
-        """Parse ESPN data and return {"state": ..., "attributes": {...}}.
-        Pure function: no self._state / self._attributes mutations.
-        self._pending_events is still populated by _detect_and_dispatch_* helpers.
+        """Parse ESPN data and return {"state": ..., "attributes": {...}, "events": [...]}.
+        No mutations to self._state, self._attributes, or self._pending_events.
+        The caller applies all returned values on the event loop.
         """
+        events: list = []
         from .parsers.scoreboard import process_match_data, process_news_data
 
         if self._sensor_type == "news":
@@ -1162,7 +1120,7 @@ class SoccerLiveSensor(Entity):
                 else:
                     state = "Geen wedstrijden beschikbaar"
 
-                computed_attrs = self._compute_all_matches_attributes(matches)
+                computed_attrs = self._compute_all_matches_attributes(matches, events)
                 return {
                     "state": state,
                     "attributes": {
@@ -1173,6 +1131,7 @@ class SoccerLiveSensor(Entity):
                         "next_match": next_match,
                         **computed_attrs,
                     },
+                    "events": events,
                 }
 
             # team_match
@@ -1254,4 +1213,4 @@ class SoccerLiveSensor(Entity):
                 },
             }
 
-        return {"state": self._state, "attributes": self._attributes}
+        return {"state": "", "attributes": {}, "events": events}
