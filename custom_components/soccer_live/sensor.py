@@ -277,7 +277,7 @@ class SoccerLiveSensor(Entity):
 
     @property
     def unique_id(self):
-        return f"{self._name}_{self._sensor_type}"
+        return f"{self._config_entry_id}_{self._name}_{self._sensor_type}"
 
     @property
     def device_info(self):
