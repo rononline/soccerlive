@@ -14,56 +14,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Stadium geocoding cache: {venue_name: {"lat": lat, "lon": lon, "time": datetime}}
-_VENUE_CACHE = {}
-_VENUE_CACHE_TTL = timedelta(days=1)  # 24 hours
-
-async def _geocode_venue(venue_name: str, city: str = None) -> dict:
-  """Geocode stadium name to coordinates using Nominatim (server-side to avoid CORS)."""
-  if not venue_name:
-    return None
-
-  # Check cache first
-  cache_key = f"{venue_name}_{city or ''}".lower()
-  if cache_key in _VENUE_CACHE:
-    cached = _VENUE_CACHE[cache_key]
-    if (datetime.now() - cached["time"]).total_seconds() < _VENUE_CACHE_TTL.total_seconds():
-      return {"lat": cached["lat"], "lon": cached["lon"]}
-
-  # Build search query
-  query = f"{venue_name}"
-  if city:
-    query += f" {city}"
-  query += " stadium"
-
-  try:
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-      url = "https://nominatim.openstreetmap.org/search"
-      params = {
-        "q": query,
-        "format": "json",
-        "limit": 1
-      }
-      headers = {"User-Agent": "HomeAssistant-SoccerLive"}
-
-      async with session.get(url, params=params, headers=headers) as response:
-        if response.status == 200:
-          results = await response.json()
-          if results and len(results) > 0:
-            result = results[0]
-            coords = {"lat": float(result["lat"]), "lon": float(result["lon"])}
-            # Cache the result
-            _VENUE_CACHE[cache_key] = {
-              "lat": coords["lat"],
-              "lon": coords["lon"],
-              "time": datetime.now()
-            }
-            return coords
-  except Exception as e:
-    _LOGGER.debug(f"Geocoding failed for {venue_name}: {e}")
-
-  return None
-
 # Competizioni con fase a eliminazione diretta (knockout bracket)
 KNOCKOUT_LEAGUES = {
     "uefa.champions",
@@ -361,7 +311,6 @@ class SoccerLiveSensor(Entity):
             await self.hass.async_add_executor_job(
                 self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
             )
-            await self._enrich_with_venue_coordinates()
             await self._flush_pending_events()
             _LOGGER.info(f"Using cached data for {self._name}")
             return
@@ -388,7 +337,6 @@ class SoccerLiveSensor(Entity):
                             await self.hass.async_add_executor_job(self._process_data, data)
                             await self._enrich_with_summary()
                             await self._enrich_with_commentary()
-                            await self._enrich_with_venue_coordinates()
                             await self._flush_pending_events()
                             self._request_count += 1
                             self._last_request_time = datetime.now().isoformat()
@@ -525,43 +473,6 @@ class SoccerLiveSensor(Entity):
             if len(self._summary_cache) >= 20:
                 self._summary_cache.pop(next(iter(self._summary_cache)))
             self._summary_cache[event_id] = summary_data
-
-    async def _enrich_with_venue_coordinates(self):
-        """Apply cached coordinates to matches; schedule background geocoding for unknowns."""
-        matches = self._attributes.get("matches") or []
-        if not matches:
-            return
-
-        venues_to_geocode = []
-        for match in matches:
-            if "venue_lat" in match and "venue_lon" in match:
-                continue
-
-            venue_name = match.get("venue", "")
-            venue_city = match.get("venue_city", "")
-            if not venue_name:
-                continue
-
-            cache_key = f"{venue_name}_{venue_city or ''}".lower()
-            cached = _VENUE_CACHE.get(cache_key)
-            if cached and (datetime.now() - cached["time"]).total_seconds() < _VENUE_CACHE_TTL.total_seconds():
-                match["venue_lat"] = cached["lat"]
-                match["venue_lon"] = cached["lon"]
-            else:
-                venues_to_geocode.append((venue_name, venue_city))
-
-        if venues_to_geocode:
-            self.hass.async_create_task(self._geocode_venues_background(venues_to_geocode))
-
-    async def _geocode_venues_background(self, venues):
-        """Geocode venues in background with rate limiting; does not block sensor updates."""
-        for venue_name, venue_city in venues:
-            cache_key = f"{venue_name}_{venue_city or ''}".lower()
-            if cache_key in _VENUE_CACHE:
-                continue
-            await _geocode_venue(venue_name, venue_city)
-            await asyncio.sleep(1.1)  # Nominatim rate limit: max 1 req/sec
-
 
     async def _build_url(self):
         season_start = ""
