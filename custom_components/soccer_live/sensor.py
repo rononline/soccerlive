@@ -308,10 +308,13 @@ class SoccerLiveSensor(Entity):
 
         cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
         if cache_key in SoccerLiveSensor._cache and (datetime.now() - SoccerLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
-            await self.hass.async_add_executor_job(
-                self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
-            )
-            await self._flush_pending_events()
+            try:
+                await self.hass.async_add_executor_job(
+                    self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
+                )
+                await self._flush_pending_events()
+            except Exception as proc_err:
+                _LOGGER.error(f"Error processing cached data for {self._name}: {proc_err}")
             _LOGGER.info(f"Using cached data for {self._name}")
             return
 
@@ -334,10 +337,13 @@ class SoccerLiveSensor(Entity):
                             data = await self.hass.async_add_executor_job(json.loads, raw)
                             _LOGGER.debug(f"Data received for {self._name}")
                             SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
-                            await self.hass.async_add_executor_job(self._process_data, data)
-                            await self._enrich_with_summary()
-                            await self._enrich_with_commentary()
-                            await self._flush_pending_events()
+                            try:
+                                await self.hass.async_add_executor_job(self._process_data, data)
+                                await self._enrich_with_summary()
+                                await self._enrich_with_commentary()
+                                await self._flush_pending_events()
+                            except Exception as proc_err:
+                                _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
                             self._request_count += 1
                             self._last_request_time = datetime.now().isoformat()
                             _LOGGER.info(f"Finished update for {self._name}")
