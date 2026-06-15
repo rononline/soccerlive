@@ -140,14 +140,14 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             competition_code = self._data.get("competition_code", "N/A")
             competition_name = await self._get_competition_name(competition_code)
 
-            # Trova l'ID della squadra selezionata
+            # Find the team ID for the selected team name
             selected_team = next((team for team in self._teams if team["displayName"] == team_name), None)
             team_id = selected_team["id"] if selected_team else None
 
-            # Aggiorna self._data con il team_id
+            # Store team_id and team_name
             self._data.update({"team_name": team_name, "team_id": team_id, "name": f"Team {competition_name} {team_name}"})
 
-            # Date stagione gestite dinamicamente dal sensor: niente prompt.
+            # Season dates are resolved dynamically by the sensor — no prompt needed.
             return self.async_create_entry(
                 title=self._data.get("name", "Soccer Live"),
                 data=self._data,
@@ -204,7 +204,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "name": f"Team {competition_name} {team_id} {nome_squadra_normalizzato}",
             })
 
-            # Date stagione gestite dinamicamente dal sensor: niente prompt.
+            # Season dates are resolved dynamically by the sensor — no prompt needed.
             return self.async_create_entry(
                 title=self._data.get("name", "Soccer Live"),
                 data=self._data,
@@ -234,7 +234,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return {}
 
     async def _get_competition_name(self, competition_code):
-        """Recupera il nome della competizione dato il suo codice."""
+        """Return the competition display name for the given competition code."""
         competitions = await self._get_competitions()
         return competitions.get(competition_code, "Unknown competition")
 

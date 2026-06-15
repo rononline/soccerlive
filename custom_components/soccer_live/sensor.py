@@ -51,12 +51,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         start_date_1 = entry.data.get("start_date")
         end_date_1 = entry.data.get("end_date")
         
-        # Le date stagionali non sono più richieste in config_flow: vengono
-        # risolte dinamicamente dal sensor via _get_calendar_data ad ogni
-        # update. Qui usiamo solo un fallback rolling molto largo (1 anno
-        # indietro / 1 anno avanti) per evitare che il filtro di
-        # process_match_data scarti partite valide in caso di prima
-        # esecuzione senza calendar disponibile.
+        # Season dates are resolved dynamically via _get_calendar_data each update.
+        # Use a wide rolling fallback (±1 year) so process_match_data never
+        # discards valid matches on first run before the calendar is available.
         _today = datetime.now()
         _default_start = (_today - timedelta(days=365)).strftime("%Y-%m-%d")
         _default_end = (_today + timedelta(days=365)).strftime("%Y-%m-%d")
@@ -125,7 +122,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 )
             ]
         elif competition_code:
-            if competition_code == "99999":  # Se il competition_code è fittizio, crea il sensore per tutte le partite
+            if competition_code == "99999":  # Dummy code for the "all matches today" sensor
                 sensors += [
                     SoccerLiveSensor(
                         hass, "soccerlive_all_today", competition_code, "all_matches_today",
@@ -157,7 +154,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                         start_date=start_date, end_date=end_date, team_id=team_id
                     )
                 )
-                # Auto-aggiungi il sensor bracket per competizioni con fase KO
+                # Auto-add bracket sensor for knockout competitions
                 if competition_code in KNOCKOUT_LEAGUES:
                     sensors.append(
                         SoccerLiveSensor(
@@ -191,21 +188,18 @@ class SoccerLiveSensor(Entity):
         self._attributes = {}
         self._config_entry_id = config_entry_id
         self._team_name = team_name
-        # Usa le date fornite dal config_entry
-        self._start_date = start_date  # (start_date o valore di default)
-        self._end_date = end_date      # (end_date o valore di default)
-        # Finestra in ore per mostrare la partita appena terminata prima di passare alla successiva
+        self._start_date = start_date
+        self._end_date = end_date
+        # Hours to keep showing a finished match before switching to the next upcoming one
         self._recent_match_hours = recent_match_hours
         
         # Conversione delle date in oggetti datetime
         self._start_date = datetime.strptime(self._start_date, "%Y-%m-%d")
         self._end_date = datetime.strptime(self._end_date, "%Y-%m-%d")
 
-        # Date stagione risolte dinamicamente da ESPN ad ogni update.
-        # Quando disponibili sostituiscono i fallback statici sia nella
-        # costruzione dell'URL sia nel filtro di process_match_data, così
-        # l'integrazione segue automaticamente la stagione corrente senza
-        # richiedere edit manuali ad ogni nuova stagione.
+        # Dynamic season dates fetched from ESPN each update.
+        # When available, these override the static fallbacks in URL building
+        # and match filtering so the integration follows the current season automatically.
         self._dyn_start_date = None
         self._dyn_end_date = None
         
@@ -230,8 +224,8 @@ class SoccerLiveSensor(Entity):
         self.base_url_3 = "https://site.web.api.espn.com/apis/site/v2/sports/soccer"
 
     async def async_added_to_hass(self):
-        """Carica i match_finished già dispatchati dal disco, così al riavvio di HA
-        non vengono rilanciati eventi per partite già terminate in precedenza."""
+        """Load previously dispatched match_finished keys from disk so HA restarts
+        do not re-fire events for matches that already ended."""
         store_key = f"soccer_live_{self._name}_finished"
         self._store = Store(self.hass, 1, store_key)
         stored = await self._store.async_load()
@@ -247,7 +241,7 @@ class SoccerLiveSensor(Entity):
             )
 
     async def _save_match_finished_store(self):
-        """Salva il set dei match_finished nel file .storage di HA."""
+        """Persist the match_finished set to HA .storage."""
         if self._store:
             await self._store.async_save({"dispatched": self._match_finished_list[-500:]})
 
@@ -481,9 +475,9 @@ class SoccerLiveSensor(Entity):
         from .parsers.scoreboard import process_summary_data
         # Sync processing offloaded to executor to keep event loop free
         summary_data = await self.hass.async_add_executor_job(process_summary_data, summary)
-        # Inietta SOLO dentro matches[0]: le card (Lineup/Timeline/Team) leggono
-        # lineup/key_events/h2h da matches[0]. Niente copia a livello top per non
-        # raddoppiare il payload e sforare il limite di 16384 byte del recorder.
+        # Inject only into matches[0]: cards (Lineup/Timeline/Team) read
+        # lineup/key_events/h2h from matches[0]. No top-level copy to avoid
+        # doubling the payload and exceeding the 16384-byte recorder limit.
         first.update(summary_data)
 
         # Cache only finished matches — live matches must keep refreshing
@@ -504,9 +498,9 @@ class SoccerLiveSensor(Entity):
             return f"{self.base_url_2}/{self._code}/leaders"
 
         if self._sensor_type == "bracket":
-            # Per il bracket prendo date che coprono l'intera fase KO (Feb→Lug)
-            # Determinazione anno: se siamo nella seconda parte della stagione (Feb-Lug) usa anno corrente,
-            # altrimenti anno successivo (la fase KO è sempre nella seconda parte)
+            # Bracket covers the full KO phase (Feb-Jul).
+            # If we are in the second half of the season (Feb-Jul) use current year,
+            # otherwise use next year (the KO phase always falls in the second half).
             from datetime import datetime as _dt
             now = _dt.now()
             if now.month >= 8:
@@ -518,9 +512,8 @@ class SoccerLiveSensor(Entity):
         if self._code:
             season_start, season_end = await self._get_calendar_data()
 
-        # Memorizza le date dinamiche per uso in _process_data: il filtro
-        # delle partite usa queste date così segue automaticamente la stagione
-        # corrente senza richiedere update manuali al cambio anno.
+        # Store dynamic dates for use in _process_data so match filtering
+        # follows the current season automatically without manual yearly updates.
         if season_start and season_end:
             try:
                 self._dyn_start_date = datetime.strptime(season_start[:10], "%Y-%m-%d")
@@ -528,7 +521,7 @@ class SoccerLiveSensor(Entity):
             except (ValueError, TypeError):
                 pass
 
-        # Se le date non sono state recuperate, utilizza quelle di default
+        # Fall back to static dates if ESPN did not return calendar dates
         if not season_start or not season_end:
             season_start = self._start_date.strftime("%Y-%m-%d")
             season_end = self._end_date.strftime("%Y-%m-%d")
@@ -554,7 +547,7 @@ class SoccerLiveSensor(Entity):
         return None
 
     async def _fetch_match_summary(self, event_id):
-        """Recupera il summary completo (lineup, formation, key events) per una partita."""
+        """Fetch full match summary (lineup, formation, key events) for the current match."""
         if not event_id or not self._code:
             return None
         url = f"{self.base_url_2}/{self._code}/summary?event={event_id}"
@@ -583,10 +576,10 @@ class SoccerLiveSensor(Entity):
                     response.raise_for_status()
                     raw = await response.read()
                     data = await self.hass.async_add_executor_job(json.loads, raw)
-                    # Estrai le date di inizio e fine dal calendario.
-                    # ESPN NON espone più calendarStartDate/EndDate a livello top:
-                    # le date stagione vivono in leagues[0]. Leggiamo prima da lì,
-                    # poi dal top-level per retro-compatibilità.
+                    # Extract season start/end from the calendar response.
+                    # ESPN no longer exposes calendarStartDate/EndDate at top level;
+                    # season dates live in leagues[0]. Read from there first,
+                    # then fall back to the top-level for backwards compatibility.
                     leagues = data.get("leagues") or []
                     league0 = leagues[0] if leagues else {}
                     calendar_start_date = (
@@ -597,9 +590,9 @@ class SoccerLiveSensor(Entity):
                         data.get("calendarEndDate")
                         or league0.get("calendarEndDate")
                     )
-                    # Fallback rolling (±240 giorni) se ESPN non fornisce le date:
-                    # evita finestre hardcoded scadute che tagliano la stagione (es.
-                    # MLS che corre fino a novembre) facendo sparire le partite future.
+                    # Rolling fallback (±240 days) when ESPN provides no dates:
+                    # avoids hard-coded windows that would cut off future matches
+                    # (e.g. MLS running through November).
                     if not calendar_start_date or not calendar_end_date:
                         now = datetime.now()
                         calendar_start_date = (now - timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
@@ -671,20 +664,20 @@ class SoccerLiveSensor(Entity):
                     parts = detail.split("': ")
                     if len(parts) == 2:
                         player_name = parts[1].strip()
-                        # Minuto: dalla parte prima di "': " -> "Goal - 38" -> "38"
+                        # Minute: extracted from the part before "': " -> "Goal - 38" -> "38"
                         minute = parts[0].split(" - ")[-1].strip() if " - " in parts[0] else "N/A"
                         new_goals.append({"player": player_name, "minute": minute})
                 except Exception as e:
                     _LOGGER.debug(f"Error extracting player name: {e}")
 
-        # Ritorna solo i goal estratti, fino al numero di goal segnati
+        # Return only extracted goals, up to the number of goals scored
         return new_goals[:goals_count]
 
     def _dispatch_goal_event(self, scoring_team, opponent_team, goals_count, home_score, away_score, match, goal_scorers=None, events: list = None):
-        """Dispatcha un evento di goal a Home Assistant"""
+        """Build and collect a goal event."""
         try:
-            # goal_scorers è una lista di dict {player, minute}. Retro-compatibile
-            # anche se arrivano semplici stringhe.
+            # goal_scorers is a list of {player, minute} dicts.
+            # Also accepts plain strings for backwards compatibility.
             first = goal_scorers[0] if goal_scorers and len(goal_scorers) > 0 else None
             if isinstance(first, dict):
                 player_name = first.get("player", "N/A")
@@ -742,7 +735,7 @@ class SoccerLiveSensor(Entity):
             self._previous_match_details[match_id] = match_details.copy()
 
     def _dispatch_card_event(self, card_type, detail_str, match, events: list = None):
-        """Dispatcha un evento di cartellino"""
+        """Build and collect a card event."""
         try:
             # Parse: "Yellow Card [TOT] - 27': Destiny Udogie" o "Red Card - 29': Cristian Romero"
             parts = detail_str.split("': ")
@@ -835,9 +828,9 @@ class SoccerLiveSensor(Entity):
                 _LOGGER.info(f"Wedstrijd-eindevent verzameld voor: {match_id}")
 
     def _dispatch_match_finished_event(self, match, events: list = None):
-        """Dispatcha un evento di fine partita"""
+        """Build and collect a match finished event."""
         try:
-            # Estrai i giocatori che hanno segnato
+            # Extract goal scorers from match details
             goal_scorers = self._extract_all_goal_scorers(match.get("match_details", []))
             
             event_data = {
@@ -863,7 +856,7 @@ class SoccerLiveSensor(Entity):
             _LOGGER.error(f"Error dispatching match finished event: {e}")
 
     def _extract_all_goal_scorers(self, match_details):
-        """Estrae tutti i nomi dei giocatori che hanno segnato dalla lista di dettagli della partita"""
+        """Extract all goal scorer names from match_details."""
         goal_scorers = []
         
         for detail in match_details:
@@ -880,7 +873,7 @@ class SoccerLiveSensor(Entity):
         return goal_scorers
 
     def _get_minutes_until(self, match_datetime):
-        """Calcola i minuti mancanti fino alla partita"""
+        """Calculate minutes remaining until the match."""
         try:
             if not match_datetime:
                 return None
@@ -896,7 +889,7 @@ class SoccerLiveSensor(Entity):
             return None
 
     def _compute_next_match_attributes(self, match):
-        """Computa attributi della prossima partita"""
+        """Compute attributes for the next/current match."""
         if not match:
             return {}
         
@@ -923,7 +916,7 @@ class SoccerLiveSensor(Entity):
         }
 
     def _compute_live_match_attributes(self, matches):
-        """Computa attributi della partita in corso se esiste"""
+        """Compute attributes for the live match, if one exists."""
         live_matches = [m for m in matches if m.get("state") == "in"]
         if not live_matches:
             return {}
@@ -965,7 +958,7 @@ class SoccerLiveSensor(Entity):
         else:
             computed["has_live_match"] = False
         
-        # Info prossima partita
+        # Upcoming match info
         upcoming_matches = [m for m in matches if m.get("state") == "pre"]
         if upcoming_matches:
             computed.update(self._compute_next_match_attributes(upcoming_matches[0]))
@@ -973,7 +966,7 @@ class SoccerLiveSensor(Entity):
         else:
             computed["has_upcoming_match"] = False
         
-        # Info ultima partita terminata (ultimi 48 ore)
+        # Most recent finished match (within recent_match_hours window)
         from .parsers.scoreboard import is_within_recent_window
         recent_finished_matches = [m for m in matches
             if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)
