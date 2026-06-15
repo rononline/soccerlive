@@ -135,6 +135,9 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
             away_standing_summary = competitors[1].get("standingSummary", "")
 
             broadcast = _get_broadcast(competitions[0])
+            broadcasts = _get_broadcasts(competitions[0])
+            neutral_site = competitions[0].get("neutralSite", False)
+            tickets_available = competitions[0].get("ticketsAvailable", False)
             attendance = competitions[0].get("attendance", 0)
             has_stats = competitions[0].get("boxscoreAvailable", False)
             has_commentary = competitions[0].get("playByPlayAvailable", False)
@@ -180,6 +183,9 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 "venue_city": venue_city,
                 "venue_country": venue_country,
                 "broadcast": broadcast,
+                "broadcasts": broadcasts,
+                "neutral_site": neutral_site,
+                "tickets_available": tickets_available,
                 "attendance": attendance,
                 "has_stats": has_stats,
                 "has_commentary": has_commentary,
@@ -294,12 +300,22 @@ def _get_top_scorer(competitor):
     return None
 
 def _get_broadcast(competition):
-    """Restituisce il primo canale TV/streaming disponibile."""
+    """Returns the first broadcast channel name (backwards-compatible)."""
     gbs = competition.get("geoBroadcasts", []) or []
     if gbs:
         media = gbs[0].get("media", {}) or {}
         return media.get("shortName", "")
     return ""
+
+def _get_broadcasts(competition):
+    """Returns all broadcast channel names from geoBroadcasts."""
+    gbs = competition.get("geoBroadcasts", []) or []
+    channels = []
+    for gb in gbs:
+        name = (gb.get("media", {}) or {}).get("shortName", "")
+        if name and name not in channels:
+            channels.append(name)
+    return channels
 
 def process_summary_data(data):
     """Estrae lineup, formazioni, key events e head-to-head dal summary endpoint.
@@ -382,35 +398,66 @@ def process_summary_data(data):
                     "away_team": (away_c.get("team", {}) or {}).get("displayName", ""),
                     "away_score": away_c.get("score", ""),
                 })
+        # Recent form: boxscore.participants[].statistics contains lastFiveGames
+        for participant in (data.get("boxscore", {}) or {}).get("players", []) or []:
+            home_away = participant.get("homeAway", "")
+            stats = participant.get("statistics", []) or []
+            form_key = "last_five_home" if home_away == "home" else "last_five_away"
+            for stat_group in stats:
+                for stat in (stat_group.get("stats", []) or []):
+                    if stat.get("name") == "lastFiveGames":
+                        out[form_key] = stat.get("displayValue", "")
+                        break
+
     except Exception as e:
         _LOGGER.error(f"Errore nel processare summary: {e}")
     return out
 
 def process_news_data(data):
-    """Estrae lista articoli dal news endpoint."""
     articles = []
     try:
         items = data.get("articles", []) or []
         for a in items:
             images = a.get("images", []) or []
-            img = images[0].get("url", "") if images else ""
+            img_obj = images[0] if images else {}
+            img = img_obj.get("url", "")
+            img_caption = img_obj.get("caption", "")
+            img_credit = img_obj.get("credit", "")
+
             categories = a.get("categories", []) or []
-            cat_name = ""
+            tags = []
+            league_name = ""
             for c in categories:
-                if c.get("type") == "league":
-                    cat_name = c.get("description", "") or (c.get("league", {}) or {}).get("description", "")
+                desc = c.get("description", "") or ""
+                if c.get("type") == "league" and not league_name:
+                    league_name = desc or (c.get("league", {}) or {}).get("description", "")
+                if desc and desc not in tags:
+                    tags.append(desc)
+
+            byline = ""
+            for contributor in (a.get("contributors", []) or []):
+                name = contributor.get("name", "") or (contributor.get("athlete", {}) or {}).get("displayName", "")
+                if name:
+                    byline = name
                     break
+
             articles.append({
                 "headline": a.get("headline", ""),
                 "description": a.get("description", ""),
+                "byline": byline,
                 "published": a.get("published", ""),
+                "last_modified": a.get("lastModified", ""),
                 "image": img,
+                "image_caption": img_caption,
+                "image_credit": img_credit,
                 "link": (a.get("links", {}) or {}).get("web", {}).get("href", "") or a.get("link", ""),
-                "category": cat_name,
+                "category": league_name,
+                "tags": tags[:5],
                 "type": a.get("type", ""),
+                "premium": a.get("premium", False),
             })
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare news: {e}")
+        _LOGGER.error(f"Error processing news: {e}")
     return articles
 
 def _get_details(details):

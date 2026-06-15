@@ -349,6 +349,7 @@ class SoccerLiveSensor(Entity):
                             _LOGGER.debug(f"HTTP {response.status} voor {self._name} — geen retry")
                             if self._sensor_type == "top_scorers" and response.status == 404:
                                 self._state = "Niet beschikbaar"
+                                _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
                             break
                         else:
                             # 5xx: tijdelijke serverfout — kort wachten en opnieuw proberen
