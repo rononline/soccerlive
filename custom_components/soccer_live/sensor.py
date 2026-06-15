@@ -58,8 +58,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         # process_match_data scarti partite valide in caso di prima
         # esecuzione senza calendar disponibile.
         _today = datetime.now()
-        start_date = entry.data.get("start_date", (_today - timedelta(days=365)).strftime("%Y-%m-%d"))
-        end_date = entry.data.get("end_date", (_today + timedelta(days=365)).strftime("%Y-%m-%d"))
+        _default_start = (_today - timedelta(days=365)).strftime("%Y-%m-%d")
+        _default_end = (_today + timedelta(days=365)).strftime("%Y-%m-%d")
+        start_date = entry.options.get("start_date", entry.data.get("start_date", _default_start))
+        end_date = entry.options.get("end_date", entry.data.get("end_date", _default_end))
         
         
         base_scan_interval = timedelta(minutes=entry.options.get("scan_interval", 3))
@@ -312,6 +314,8 @@ class SoccerLiveSensor(Entity):
                 await self.hass.async_add_executor_job(
                     self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
                 )
+                await self._enrich_with_summary()
+                await self._enrich_with_commentary()
                 await self._flush_pending_events()
             except Exception as proc_err:
                 _LOGGER.error(f"Error processing cached data for {self._name}: {proc_err}")

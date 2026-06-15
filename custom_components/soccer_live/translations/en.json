@@ -33,7 +33,7 @@
                 "title": "Select the team",
                 "description": "Pick the team you want to follow.\n\nOnly matches of the selected team will be shown.",
                 "data": {
-                    "team_id": "Team"
+                    "team_name": "Team"
                 }
             },
             "manual_team": {

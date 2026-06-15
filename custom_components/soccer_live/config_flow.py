@@ -197,7 +197,12 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             nome_squadra = user_input.get("name", "Teamnaam (naar keuze)")
             nome_squadra_normalizzato = nome_squadra.replace(" ", "_").lower()
 
-            self._data.update({"team_id": team_id, "name": f"Team {competition_name} {team_id} {nome_squadra_normalizzato}"})
+            display_name = nome_squadra if nome_squadra and nome_squadra != "Teamnaam (naar keuze)" else team_id
+            self._data.update({
+                "team_id": team_id,
+                "team_name": display_name,
+                "name": f"Team {competition_name} {team_id} {nome_squadra_normalizzato}",
+            })
 
             # Date stagione gestite dinamicamente dal sensor: niente prompt.
             return self.async_create_entry(
