@@ -138,7 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
                 sensors += [
                     SoccerLiveSensor(
-                        hass, f"soccerlive_classifica_{competition_name}", competition_code, "standings",
+                        hass, f"soccerlive_standings_{competition_name}", competition_code, "standings",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
                         start_date=start_date, end_date=end_date, team_id=team_id
                     ),
@@ -151,7 +151,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 # Top scorers sensor
                 sensors.append(
                     SoccerLiveSensor(
-                        hass, f"soccerlive_cannonieri_{competition_name}", competition_code, "top_scorers",
+                        hass, f"soccerlive_scorers_{competition_name}", competition_code, "top_scorers",
                         base_scan_interval + timedelta(minutes=5) + timedelta(seconds=random.randint(0, 30)),
                         config_entry_id=entry.entry_id,
                         start_date=start_date, end_date=end_date, team_id=team_id
@@ -474,7 +474,7 @@ class SoccerLiveSensor(Entity):
         summary = await self._fetch_match_summary(event_id)
         if not summary:
             return
-        from .sensori.scoreboard import process_summary_data
+        from .parsers.scoreboard import process_summary_data
         # Sync processing offloaded to executor to keep event loop free
         summary_data = await self.hass.async_add_executor_job(process_summary_data, summary)
         # Inietta SOLO dentro matches[0]: le card (Lineup/Timeline/Team) leggono
@@ -1017,7 +1017,7 @@ class SoccerLiveSensor(Entity):
             computed["has_upcoming_match"] = False
         
         # Info ultima partita terminata (ultimi 48 ore)
-        from .sensori.scoreboard import is_within_recent_window
+        from .parsers.scoreboard import is_within_recent_window
         recent_finished_matches = [m for m in matches
             if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)
         ]
@@ -1050,7 +1050,7 @@ class SoccerLiveSensor(Entity):
         Pure function: no self._state / self._attributes mutations.
         self._pending_events is still populated by _detect_and_dispatch_* helpers.
         """
-        from .sensori.scoreboard import process_match_data, process_news_data
+        from .parsers.scoreboard import process_match_data, process_news_data
 
         if self._sensor_type == "news":
             articles = process_news_data(data)
@@ -1063,7 +1063,7 @@ class SoccerLiveSensor(Entity):
             }
 
         if self._sensor_type == "top_scorers":
-            from .sensori.scoreboard import process_scorers_data
+            from .parsers.scoreboard import process_scorers_data
             scorers = process_scorers_data(data)
             top_leagues = data.get("sports", [{}])[0].get("leagues", [{}]) if data.get("sports") else []
             league_name = top_leagues[0].get("name", "") if top_leagues else ""
@@ -1079,7 +1079,7 @@ class SoccerLiveSensor(Entity):
             }
 
         if self._sensor_type == "bracket":
-            from .sensori.bracket import process_bracket_data
+            from .parsers.bracket import process_bracket_data
             bracket = process_bracket_data(data)
             rounds = bracket.get("rounds", [])
             if rounds:
@@ -1097,8 +1097,8 @@ class SoccerLiveSensor(Entity):
             }
 
         if self._sensor_type == "standings":
-            from .sensori.classifica import classifica_data
-            return {"state": "Stand", "attributes": classifica_data(data)}
+            from .parsers.standings import standings_data
+            return {"state": "Stand", "attributes": standings_data(data)}
 
         if self._sensor_type == "match_day":
             match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
@@ -1179,7 +1179,7 @@ class SoccerLiveSensor(Entity):
             all_data = get_team_match_data()
             all_matches = all_data.get("matches", []) or []
 
-            from .sensori.scoreboard import is_within_recent_window
+            from .parsers.scoreboard import is_within_recent_window
             _live = [m for m in all_matches if m.get("state") == "in"]
             _recent_post = [m for m in all_matches
                 if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)]
