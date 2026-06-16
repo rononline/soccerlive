@@ -7,10 +7,13 @@ from homeassistant.helpers.storage import Store
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 import logging
 import random
 import re
 from .const import DOMAIN
+
+_LIVE_POLL_TYPES = {"team_match", "team_matches", "team_matches_mixed", "match_day", "all_matches_today", "commentary"}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -209,9 +212,36 @@ class SoccerLiveSensor(Entity):
         self._pending_events: list = []
         self._save_store_needed: bool = False
 
+        # Handle for the extra live-mode refresh timer (cancelled on removal)
+        self._live_unsub = None
+
         self.base_url = "https://site.web.api.espn.com/apis/v2/sports/soccer"
         self.base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
         self.base_url_3 = "https://site.web.api.espn.com/apis/site/v2/sports/soccer"
+
+    async def async_will_remove_from_hass(self):
+        if self._live_unsub:
+            self._live_unsub()
+            self._live_unsub = None
+
+    def _is_live(self):
+        """Return True if any tracked match is currently in progress."""
+        if self._sensor_type not in _LIVE_POLL_TYPES:
+            return False
+        matches = self._attributes.get("matches", []) or []
+        return any(m.get("state") in ("in", "live") for m in matches)
+
+    def _schedule_live_refresh(self):
+        """Schedule an extra refresh in 60 s when a match is live, replacing any pending timer."""
+        if self._live_unsub:
+            self._live_unsub()
+            self._live_unsub = None
+        if self._is_live():
+            self._live_unsub = async_call_later(
+                self.hass, 60,
+                lambda _: self.async_schedule_update_ha_state(force_refresh=True),
+            )
+            _LOGGER.debug(f"Live match active for {self._name} — refresh scheduled in 60 s")
 
     async def async_added_to_hass(self):
         """Load previously dispatched match_finished keys from disk so HA restarts
@@ -308,6 +338,7 @@ class SoccerLiveSensor(Entity):
             except Exception as proc_err:
                 _LOGGER.error(f"Error processing cached data for {self._name}: {proc_err}")
             _LOGGER.info(f"Using cached data for {self._name}")
+            self._schedule_live_refresh()
             return
 
         if self._scorers_unavailable:
@@ -340,6 +371,7 @@ class SoccerLiveSensor(Entity):
                                 await self._flush_pending_events()
                             except Exception as proc_err:
                                 _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
+                            self._schedule_live_refresh()
                             self._request_count += 1
                             self._last_request_time = datetime.now().isoformat()
                             _LOGGER.info(f"Finished update for {self._name}")
