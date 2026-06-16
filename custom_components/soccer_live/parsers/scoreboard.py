@@ -87,6 +87,9 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 league_name = top_league_name
             
             competitors = competitions[0].get("competitors", []) if competitions else []
+            if len(competitors) < 2:
+                _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
+                continue
 
             home_team_data = competitors[0].get("team", {})
             home_team = home_team_data.get("displayName", "N/A")
