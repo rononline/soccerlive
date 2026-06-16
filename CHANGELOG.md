@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.5.2 (2026-06-16)
+- Fix: `scoreboard.py` skips matches with `< 2 competitors` (postponed/incomplete ESPN events no longer crash the entire sensor update)
+
 ## v3.5.1 (2026-06-16)
 - Live polling: sensors with active matches refresh automatically every 60 s (in addition to base interval)
 - Live polling only applies to live-capable sensor types; standings/scorers/news/bracket unaffected
