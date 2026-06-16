@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.5.1 (2026-06-16)
+- Live polling: sensors with active matches refresh automatically every 60 s (in addition to base interval)
+- Live polling only applies to live-capable sensor types; standings/scorers/news/bracket unaffected
+- `manifest.json` version synced to `3.5.0` (was `3.4.2`)
+- `hacs.json`: description added
+
 ## v3.5.0 (2026-06-15)
 - Standings: `zone_color`, `zone_label`, `zone_abbrev` from `entry.note` per team
 - Scoreboard: `home/away_record_summary`, `home/away_standing_summary` from competitors
