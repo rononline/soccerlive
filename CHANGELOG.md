@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.5.6 (2026-06-17)
+- Normalise indentation in `_fetch_match_summary` and `_get_calendar_data` HTTP session blocks
+
 ## v3.5.5 (2026-06-17)
 - Fix indentation in HTTP session blocks in `sensor.py` and `config_flow.py` (normalised after aiohttp migration)
 
