@@ -57,9 +57,9 @@ jobs:
 
       - name: Build zip asset
         if: steps.check.outputs.exists == 'false'
+        working-directory: custom_components
         run: |
-          cd custom_components
-          zip -r ../soccer_live.zip soccer_live/ \
+          zip -r "$GITHUB_WORKSPACE/soccer_live.zip" soccer_live/ \
             --exclude "soccer_live/__pycache__/*" \
             --exclude "soccer_live/*.pyc" \
             --exclude "soccer_live/.claude/*"
