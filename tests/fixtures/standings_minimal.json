@@ -1,0 +1,33 @@
+{
+  "season": {"year": 2025, "displayName": "2025-26"},
+  "leagues": [{"name": "Dutch Eredivisie", "abbreviation": "NED 1"}],
+  "children": [
+    {
+      "id": "ned.1",
+      "name": "Dutch Eredivisie",
+      "standings": {
+        "entries": [
+          {
+            "team": {
+              "id": "84",
+              "displayName": "Ajax",
+              "abbreviation": "AJX",
+              "logos": [{"href": "https://example.com/ajax.png"}]
+            },
+            "note": {"rank": 1, "color": "007AC0", "description": "UEFA Champions League", "abbreviation": "UCL"},
+            "stats": [
+              {"name": "wins",              "displayValue": "20"},
+              {"name": "losses",            "displayValue": "5"},
+              {"name": "ties",              "displayValue": "5"},
+              {"name": "gamesPlayed",       "displayValue": "30"},
+              {"name": "pointDifferential", "displayValue": "25"},
+              {"name": "points",            "displayValue": "65"},
+              {"name": "pointsFor",         "displayValue": "60"},
+              {"name": "pointsAgainst",     "displayValue": "35"}
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

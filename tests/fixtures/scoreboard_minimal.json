@@ -1,0 +1,100 @@
+{
+  "leagues": [
+    {
+      "name": "Dutch Eredivisie",
+      "abbreviation": "NED 1",
+      "logos": [
+        {
+          "href": "https://example.com/ned1.png"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "700001",
+      "date": "2026-06-20T17:00Z",
+      "name": "Ajax vs PSV",
+      "competitions": [
+        {
+          "id": "700001",
+          "date": "2026-06-20T17:00Z",
+          "status": {
+            "type": {
+              "id": "1",
+              "name": "STATUS_SCHEDULED",
+              "completed": false,
+              "description": "Scheduled",
+              "state": "pre"
+            },
+            "displayClock": "0:00",
+            "period": 0
+          },
+          "venue": {
+            "fullName": "Johan Cruijff ArenA",
+            "address": {
+              "city": "Amsterdam"
+            }
+          },
+          "competitors": [
+            {
+              "id": "84",
+              "homeAway": "home",
+              "score": "0",
+              "team": {
+                "id": "84",
+                "displayName": "Ajax",
+                "abbreviation": "AJX",
+                "logos": [
+                  {
+                    "href": "https://example.com/ajax.png"
+                  }
+                ],
+                "color": "CC0000",
+                "alternateColor": "000000"
+              }
+            },
+            {
+              "id": "85",
+              "homeAway": "away",
+              "score": "0",
+              "team": {
+                "id": "85",
+                "displayName": "PSV",
+                "abbreviation": "PSV",
+                "logos": [
+                  {
+                    "href": "https://example.com/psv.png"
+                  }
+                ],
+                "color": "CC0000",
+                "alternateColor": "FFFFFF"
+              }
+            }
+          ],
+          "broadcasts": [
+            {
+              "names": [
+                "ESPN"
+              ]
+            }
+          ],
+          "neutralSite": false,
+          "boxscoreAvailable": false,
+          "playByPlayAvailable": false
+        }
+      ],
+      "status": {
+        "type": {
+          "id": "1",
+          "name": "STATUS_SCHEDULED",
+          "state": "pre",
+          "completed": false,
+          "description": "Scheduled"
+        },
+        "displayClock": "0:00",
+        "period": 0
+      }
+    }
+  ]
+}

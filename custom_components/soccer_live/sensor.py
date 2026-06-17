@@ -339,7 +339,11 @@ class SoccerLiveSensor(Entity):
             if (_now - v["time"]).total_seconds() < 300
         }
 
-        cache_key = f"{self._sensor_type}_{self._code}_{self._team_name}"
+        # Use the URL as cache key so sensors sharing the same ESPN endpoint share one fetch
+        url = await self._build_url()
+        if url is None:
+            return
+        cache_key = url
         if cache_key in SoccerLiveSensor._cache and (datetime.now() - SoccerLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
             try:
                 result = await self.hass.async_add_executor_job(
@@ -362,11 +366,6 @@ class SoccerLiveSensor(Entity):
             return
 
         if self._scorers_unavailable:
-            return
-
-        url = await self._build_url()
-
-        if url is None:
             return
 
         _ESPN_HEADERS = {"Accept-Language": "en"}
@@ -759,7 +758,7 @@ class SoccerLiveSensor(Entity):
             }
             if events is not None:
                 events.append(("soccer_live_goal", event_data))
-            _LOGGER.info(f"Doelpunt gedetecteerd! {scoring_team} scoort {goals_count} doelpunt(en). Speler: {player_name} ({minute}). Stand: {home_score}-{away_score}")
+            _LOGGER.info(f"Goal detected: {scoring_team} scores (total: {goals_count}). Player: {player_name} ({minute}). Score: {home_score}-{away_score}")
         except Exception as e:
             _LOGGER.error(f"Error dispatching goal event: {e}")
 
@@ -812,12 +811,12 @@ class SoccerLiveSensor(Entity):
             }
             if events is not None:
                 events.append((event_type, event_data))
-            _LOGGER.info(f"Kaart gedetecteerd! {card_type.upper()} op {minute} | {player}")
+            _LOGGER.info(f"Card detected: {card_type.upper()} at {minute} | {player}")
         except Exception as e:
             _LOGGER.error(f"Error dispatching card event: {e}")
 
     def _dispatch_substitution_event(self, detail_str, match, events: list = None):
-        """Dispatcha een wissel-event."""
+        """Dispatch a substitution event."""
         try:
             parts = detail_str.split("': ")
             minute = parts[0].split(" - ")[1] if " - " in parts[0] else "N/A"
@@ -838,12 +837,12 @@ class SoccerLiveSensor(Entity):
             }
             if events is not None:
                 events.append(("soccer_live_substitution", event_data))
-            _LOGGER.info(f"Wissel: {player} ({team}) op {minute}")
+            _LOGGER.info(f"Substitution: {player} ({team}) at {minute}")
         except Exception as e:
-            _LOGGER.error(f"Fout bij dispatchen wissel-event: {e}")
+            _LOGGER.error(f"Error dispatching substitution event: {e}")
 
     def _detect_and_dispatch_match_started(self, matches, events: list):
-        """Dispatcha een event wanneer een wedstrijd van 'pre' naar 'in' gaat."""
+        """Dispatch an event when a match transitions from pre to in."""
         for match in matches:
             match_id = match.get("event_id") or f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             current_state = match.get("state")
@@ -861,7 +860,7 @@ class SoccerLiveSensor(Entity):
                     "sensor_name": self._name,
                 }
                 events.append(("soccer_live_match_started", event_data))
-                _LOGGER.info(f"Wedstrijd gestart: {match.get('home_team', 'N/A')} vs {match.get('away_team', 'N/A')}")
+                _LOGGER.info(f"Match started: {match.get('home_team', 'N/A')} vs {match.get('away_team', 'N/A')}")
             if current_state:
                 self._previous_match_states[match_id] = current_state
 
@@ -899,7 +898,7 @@ class SoccerLiveSensor(Entity):
             }
             if events is not None:
                 events.append(("soccer_live_match_finished", event_data))
-            _LOGGER.info(f"Wedstrijd afgelopen! {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Doelpuntenmakers: {', '.join(goal_scorers)}")
+            _LOGGER.info(f"Match finished: {match.get('home_team', 'N/A')} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match.get('away_team', 'N/A')}. Scorers: {', '.join(goal_scorers)}")
         except Exception as e:
             _LOGGER.error(f"Error dispatching match finished event: {e}")
 
