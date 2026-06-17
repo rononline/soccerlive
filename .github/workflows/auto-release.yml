@@ -55,6 +55,15 @@ jobs:
             echo 'EOF_NOTES'
           } >> "$GITHUB_OUTPUT"
 
+      - name: Build zip asset
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cd custom_components
+          zip -r ../soccer_live.zip soccer_live/ \
+            --exclude "soccer_live/__pycache__/*" \
+            --exclude "soccer_live/*.pyc" \
+            --exclude "soccer_live/.claude/*"
+
       - name: Create tag and release
         if: steps.check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
@@ -62,5 +71,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           body: ${{ steps.notes.outputs.notes }}
+          files: soccer_live.zip
           draft: false
           prerelease: false
