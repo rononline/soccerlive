@@ -1,6 +1,5 @@
 {
     "name": "Soccer Live",
-    "description": "Home Assistant integration for live football scores, standings, lineup, news and push notifications via ESPN.",
     "homeassistant": "2025.1.0",
     "render_readme": true
 }
