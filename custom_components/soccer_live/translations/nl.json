@@ -1,71 +1,74 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "title": "Soccer Live instellen",
-                "description": "Welkom bij de Soccer Live configuratiewizard.\n\nKies wat je wilt volgen:\n\n- **Competitie**: alle wedstrijden van een specifieke competitie (voor bekertoernooien wordt automatisch een bracket-sensor aangemaakt).\n- **Team**: wedstrijden van een specifiek team.\n- **Alle wedstrijden vandaag**: alle wedstrijden ter wereld die vandaag gespeeld worden.\n- **Nieuws**: nieuwsfeed van een competitie.\n- **Handmatige invoer**: voer het team-ID handmatig in.",
-                "data": {
-                    "selection": "Wat wil je volgen?"
-                }
-            },
-            "news_competition": {
-                "title": "Nieuws · kies competitie",
-                "description": "Selecteer de competitie waarvan je het nieuws wilt ontvangen.",
-                "data": {
-                    "competition_code": "Competitie"
-                }
-            },
-            "league": {
-                "title": "Selecteer de competitie",
-                "description": "Kies de competitie die je wilt volgen.\n\nAlle wedstrijden van alle teams in de geselecteerde competitie worden getoond. Voor bekertoernooien (Champions League, Europa League, KNVB Beker, etc.) wordt automatisch ook een bracket-sensor aangemaakt.",
-                "data": {
-                    "competition_code": "Competitie"
-                }
-            },
-            "select_competition_for_team": {
-                "title": "Team · kies competitie",
-                "description": "Selecteer de competitie waarin het team speelt dat je wilt volgen.\n\nIn de volgende stap kies je het team uit de lijst.",
-                "data": {
-                    "competition_code": "Competitie"
-                }
-            },
-            "team": {
-                "title": "Selecteer het team",
-                "description": "Kies het team dat je wilt volgen.\n\nAlleen wedstrijden van het geselecteerde team worden getoond.",
-                "data": {
-                    "team_name": "Team"
-                }
-            },
-            "manual_team": {
-                "title": "Handmatige invoer",
-                "description": "Voer het team-ID handmatig in.\n\n**Hoe vind je het Team ID:** open de teampagina op espn.com — het ID is het getal in de URL: espn.com/soccer/team/_/id/**9723**/portland-timbers.\n\nJe kunt ook een aangepaste naam opgeven om het team gemakkelijk te herkennen.",
-                "data": {
-                    "manual_team_id": "Team ID",
-                    "name": "Aangepaste naam (optioneel)"
-                }
-            },
-            "dates": {
-                "title": "Monitoringperiode",
-                "description": "Geef de datumreeks op die je wilt monitoren.\n\n- **Begindatum**: vanaf wanneer te monitoren.\n- **Einddatum**: tot wanneer te monitoren.\n\nFormaat: **YYYY-MM-DD**.",
-                "data": {
-                    "start_date": "Begindatum (YYYY-MM-DD)",
-                    "end_date": "Einddatum (YYYY-MM-DD)"
-                }
-            }
+  "config": {
+    "step": {
+      "user": {
+        "title": "Soccer Live instellen",
+        "description": "Welkom bij de Soccer Live configuratiewizard.\n\nKies wat je wilt volgen:\n\n- **Competitie**: alle wedstrijden van een specifieke competitie (voor bekertoernooien wordt automatisch een bracket-sensor aangemaakt).\n- **Team**: wedstrijden van een specifiek team.\n- **Alle wedstrijden vandaag**: alle wedstrijden ter wereld die vandaag gespeeld worden.\n- **Nieuws**: nieuwsfeed van een competitie.\n- **Handmatige invoer**: voer het team-ID handmatig in.",
+        "data": {
+          "selection": "Wat wil je volgen?"
         }
-    },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Soccer Live opties",
-                "description": "Stel het polling-interval in en hoe lang de laatste afgelopen wedstrijd zichtbaar blijft op de teamkaart voordat overgeschakeld wordt naar de volgende wedstrijd.",
-                "data": {
-                    "scan_interval": "Polling-interval (minuten)",
-                    "start_date": "Begindatum (YYYY-MM-DD)",
-                    "end_date": "Einddatum (YYYY-MM-DD)",
-                    "recent_match_hours": "Afgelopen wedstrijd zichtbaar houden voor (uren)"
-                }
-            }
+      },
+      "news_competition": {
+        "title": "Nieuws · kies competitie",
+        "description": "Selecteer de competitie waarvan je het nieuws wilt ontvangen.",
+        "data": {
+          "competition_code": "Competitie"
         }
+      },
+      "league": {
+        "title": "Selecteer de competitie",
+        "description": "Kies de competitie die je wilt volgen.\n\nAlle wedstrijden van alle teams in de geselecteerde competitie worden getoond. Voor bekertoernooien (Champions League, Europa League, KNVB Beker, etc.) wordt automatisch ook een bracket-sensor aangemaakt.",
+        "data": {
+          "competition_code": "Competitie"
+        }
+      },
+      "select_competition_for_team": {
+        "title": "Team · kies competitie",
+        "description": "Selecteer de competitie waarin het team speelt dat je wilt volgen.\n\nIn de volgende stap kies je het team uit de lijst.",
+        "data": {
+          "competition_code": "Competitie"
+        }
+      },
+      "team": {
+        "title": "Selecteer het team",
+        "description": "Kies het team dat je wilt volgen.\n\nAlleen wedstrijden van het geselecteerde team worden getoond.",
+        "data": {
+          "team_name": "Team"
+        }
+      },
+      "manual_team": {
+        "title": "Handmatige invoer",
+        "description": "Voer het team-ID handmatig in.\n\n**Hoe vind je het Team ID:** open de teampagina op espn.com — het ID is het getal in de URL: espn.com/soccer/team/_/id/**9723**/portland-timbers.\n\nJe kunt ook een aangepaste naam opgeven om het team gemakkelijk te herkennen.",
+        "data": {
+          "manual_team_id": "Team ID",
+          "name": "Aangepaste naam (optioneel)"
+        }
+      },
+      "dates": {
+        "title": "Monitoringperiode",
+        "description": "Geef de datumreeks op die je wilt monitoren.\n\n- **Begindatum**: vanaf wanneer te monitoren.\n- **Einddatum**: tot wanneer te monitoren.\n\nFormaat: **YYYY-MM-DD**.",
+        "data": {
+          "start_date": "Begindatum (YYYY-MM-DD)",
+          "end_date": "Einddatum (YYYY-MM-DD)"
+        }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Soccer Live opties",
+        "description": "Stel het polling-interval in en hoe lang de laatste afgelopen wedstrijd zichtbaar blijft op de teamkaart voordat overgeschakeld wordt naar de volgende wedstrijd.",
+        "data": {
+          "scan_interval": "Polling-interval (minuten)",
+          "start_date": "Begindatum (YYYY-MM-DD)",
+          "end_date": "Einddatum (YYYY-MM-DD)",
+          "recent_match_hours": "Afgelopen wedstrijd zichtbaar houden voor (uren)",
+          "enable_summary_enrichment": "Ophalen opstellingen, events en H2H (summary)",
+          "max_matches": "Max wedstrijden in attributen (0 = onbeperkt)",
+          "notify_service": "Meldingsservice (bijv. notify.mobile_app)"
+        }
+      }
+    }
+  }
 }

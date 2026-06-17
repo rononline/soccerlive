@@ -31,7 +31,7 @@ async def async_get_config_entry_diagnostics(
             "entity_id": entity_entry.entity_id,
             "state": state.state,
             "competition_code": attrs.get("competition_code", "N/A"),
-            "sensor_type": entity_entry.unique_id.split("_")[-1] if entity_entry.unique_id else "N/A",
+            "sensor_type": attrs.get("sensor_type", "N/A"),
             "request_count": attrs.get("request_count", "N/A"),
             "last_request_time": attrs.get("last_request_time", "N/A"),
             "match_count": len(matches),

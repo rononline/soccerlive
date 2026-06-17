@@ -1,71 +1,74 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "title": "Configuración de Soccer Live",
-                "description": "Bienvenido al asistente de configuración de Soccer Live.\n\nElige qué quieres seguir:\n\n- **Liga**: todos los partidos de una liga específica (para las copas se crea automáticamente un sensor de cuadro eliminatorio).\n- **Equipo**: partidos de un equipo específico.\n- **Todos los partidos de hoy**: todos los partidos del mundo jugados hoy.\n- **Noticias**: feed de noticias de una competición.\n- **Ingreso manual**: introduce el ID del equipo manualmente.",
-                "data": {
-                    "selection": "¿Qué quieres seguir?"
-                }
-            },
-            "news_competition": {
-                "title": "Noticias · selección de competición",
-                "description": "Selecciona la competición de la que quieres recibir las noticias.",
-                "data": {
-                    "competition_code": "Competición"
-                }
-            },
-            "league": {
-                "title": "Seleccionar la liga",
-                "description": "Elige la liga que deseas seguir.\n\nSe mostrarán los partidos de todos los equipos de la liga seleccionada. Para las copas (Champions League, Europa League, Coppa Italia, etc.) se crea automáticamente un sensor del cuadro eliminatorio.",
-                "data": {
-                    "competition_code": "Competición"
-                }
-            },
-            "select_competition_for_team": {
-                "title": "Equipo · selección de liga",
-                "description": "Selecciona la liga en la que juega el equipo que quieres seguir.\n\nEn el siguiente paso elegirás el equipo de la lista.",
-                "data": {
-                    "competition_code": "Competición"
-                }
-            },
-            "team": {
-                "title": "Seleccionar el equipo",
-                "description": "Elige el equipo que quieres seguir.\n\nSe mostrarán solo los partidos del equipo seleccionado.",
-                "data": {
-                    "team_name": "Equipo"
-                }
-            },
-            "manual_team": {
-                "title": "Ingreso manual",
-                "description": "Introduce manualmente el ID del equipo que quieres seguir.\n\nTambién puedes proporcionar un nombre personalizado para identificarlo fácilmente.",
-                "data": {
-                    "manual_team_id": "ID del equipo",
-                    "name": "Nombre personalizado (opcional)"
-                }
-            },
-            "dates": {
-                "title": "Período de seguimiento",
-                "description": "Especifica el rango de fechas a monitorear.\n\n- **Fecha de inicio**: desde cuándo monitorear.\n- **Fecha de fin**: hasta cuándo monitorear.\n\nFormato: **AAAA-MM-DD**.",
-                "data": {
-                    "start_date": "Fecha de inicio (AAAA-MM-DD)",
-                    "end_date": "Fecha de fin (AAAA-MM-DD)"
-                }
-            }
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuración de Soccer Live",
+        "description": "Bienvenido al asistente de configuración de Soccer Live.\n\nElige qué quieres seguir:\n\n- **Liga**: todos los partidos de una liga específica (para las copas se crea automáticamente un sensor de cuadro eliminatorio).\n- **Equipo**: partidos de un equipo específico.\n- **Todos los partidos de hoy**: todos los partidos del mundo jugados hoy.\n- **Noticias**: feed de noticias de una competición.\n- **Ingreso manual**: introduce el ID del equipo manualmente.",
+        "data": {
+          "selection": "¿Qué quieres seguir?"
         }
-    },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Opciones Soccer Live",
-                "description": "Configura el polling y cuánto tiempo mantener visible el último partido finalizado en la Team card antes de pasar al próximo.",
-                "data": {
-                    "scan_interval": "Intervalo de actualización (minutos)",
-                    "start_date": "Fecha de inicio (AAAA-MM-DD)",
-                    "end_date": "Fecha de fin (AAAA-MM-DD)",
-                    "recent_match_hours": "Mantener partido finalizado visible (horas)"
-                }
-            }
+      },
+      "news_competition": {
+        "title": "Noticias · selección de competición",
+        "description": "Selecciona la competición de la que quieres recibir las noticias.",
+        "data": {
+          "competition_code": "Competición"
         }
+      },
+      "league": {
+        "title": "Seleccionar la liga",
+        "description": "Elige la liga que deseas seguir.\n\nSe mostrarán los partidos de todos los equipos de la liga seleccionada. Para las copas (Champions League, Europa League, Coppa Italia, etc.) se crea automáticamente un sensor del cuadro eliminatorio.",
+        "data": {
+          "competition_code": "Competición"
+        }
+      },
+      "select_competition_for_team": {
+        "title": "Equipo · selección de liga",
+        "description": "Selecciona la liga en la que juega el equipo que quieres seguir.\n\nEn el siguiente paso elegirás el equipo de la lista.",
+        "data": {
+          "competition_code": "Competición"
+        }
+      },
+      "team": {
+        "title": "Seleccionar el equipo",
+        "description": "Elige el equipo que quieres seguir.\n\nSe mostrarán solo los partidos del equipo seleccionado.",
+        "data": {
+          "team_name": "Equipo"
+        }
+      },
+      "manual_team": {
+        "title": "Ingreso manual",
+        "description": "Introduce manualmente el ID del equipo que quieres seguir.\n\nTambién puedes proporcionar un nombre personalizado para identificarlo fácilmente.",
+        "data": {
+          "manual_team_id": "ID del equipo",
+          "name": "Nombre personalizado (opcional)"
+        }
+      },
+      "dates": {
+        "title": "Período de seguimiento",
+        "description": "Especifica el rango de fechas a monitorear.\n\n- **Fecha de inicio**: desde cuándo monitorear.\n- **Fecha de fin**: hasta cuándo monitorear.\n\nFormato: **AAAA-MM-DD**.",
+        "data": {
+          "start_date": "Fecha de inicio (AAAA-MM-DD)",
+          "end_date": "Fecha de fin (AAAA-MM-DD)"
+        }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones Soccer Live",
+        "description": "Configura el polling y cuánto tiempo mantener visible el último partido finalizado en la Team card antes de pasar al próximo.",
+        "data": {
+          "scan_interval": "Intervalo de actualización (minutos)",
+          "start_date": "Fecha de inicio (AAAA-MM-DD)",
+          "end_date": "Fecha de fin (AAAA-MM-DD)",
+          "recent_match_hours": "Mantener partido finalizado visible (horas)",
+          "enable_summary_enrichment": "Obtener alineaciones, eventos y H2H",
+          "max_matches": "Máx. partidos en atributos (0 = ilimitado)",
+          "notify_service": "Servicio de notificación (ej. notify.mobile_app)"
+        }
+      }
+    }
+  }
 }

@@ -1,71 +1,74 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "title": "Configurazione Soccer Live",
-                "description": "Benvenuto nella configurazione di Soccer Live.\n\nScegli cosa vuoi monitorare:\n\n- **Campionato**: tutte le partite di un campionato (per le coppe viene creato anche il sensore tabellone KO).\n- **Squadra**: partite di una squadra specifica.\n- **Tutte le partite del giorno**: tutte le partite nel mondo giocate oggi.\n- **Notizie**: feed news di una competizione.\n- **Inserimento Manuale**: inserisci l'ID della squadra manualmente.",
-                "data": {
-                    "selection": "Cosa vuoi monitorare?"
-                }
-            },
-            "news_competition": {
-                "title": "Notizie · scelta competizione",
-                "description": "Seleziona la competizione da cui ricevere le notizie.",
-                "data": {
-                    "competition_code": "Competizione"
-                }
-            },
-            "league": {
-                "title": "Seleziona il campionato",
-                "description": "Scegli il campionato che desideri monitorare.\n\nVerranno mostrate le partite di tutte le squadre del campionato selezionato. Per le coppe (Champions League, Europa League, Coppa Italia, ecc.) viene creato anche un sensore tabellone della fase a eliminazione diretta.",
-                "data": {
-                    "competition_code": "Competizione"
-                }
-            },
-            "select_competition_for_team": {
-                "title": "Squadra · scelta campionato",
-                "description": "Seleziona il campionato in cui gioca la squadra che vuoi seguire.\n\nNel passo successivo sceglierai la squadra dall'elenco.",
-                "data": {
-                    "competition_code": "Competizione"
-                }
-            },
-            "team": {
-                "title": "Seleziona la squadra",
-                "description": "Scegli la squadra che desideri seguire.\n\nVerranno mostrate solo le partite della squadra selezionata.",
-                "data": {
-                    "team_name": "Squadra"
-                }
-            },
-            "manual_team": {
-                "title": "Inserimento manuale",
-                "description": "Inserisci manualmente l'ID della squadra che desideri seguire.\n\n**Come trovare il Team ID:** apri la pagina della squadra su espn.com — l'ID è il numero nell'URL: espn.com/soccer/team/_/id/**9723**/portland-timbers.\n\nPuoi anche fornire un nome personalizzato per identificarla facilmente.",
-                "data": {
-                    "manual_team_id": "ID squadra",
-                    "name": "Nome personalizzato (opzionale)"
-                }
-            },
-            "dates": {
-                "title": "Periodo di monitoraggio",
-                "description": "Specifica l'intervallo di date da monitorare.\n\n- **Data di inizio**: da quando monitorare.\n- **Data di fine**: fino a quando monitorare.\n\nFormato: **YYYY-MM-DD**.",
-                "data": {
-                    "start_date": "Data di inizio (YYYY-MM-DD)",
-                    "end_date": "Data di fine (YYYY-MM-DD)"
-                }
-            }
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurazione Soccer Live",
+        "description": "Benvenuto nella configurazione di Soccer Live.\n\nScegli cosa vuoi monitorare:\n\n- **Campionato**: tutte le partite di un campionato (per le coppe viene creato anche il sensore tabellone KO).\n- **Squadra**: partite di una squadra specifica.\n- **Tutte le partite del giorno**: tutte le partite nel mondo giocate oggi.\n- **Notizie**: feed news di una competizione.\n- **Inserimento Manuale**: inserisci l'ID della squadra manualmente.",
+        "data": {
+          "selection": "Cosa vuoi monitorare?"
         }
-    },
-    "options": {
-        "step": {
-            "init": {
-                "title": "Opzioni Soccer Live",
-                "description": "Configura il polling e per quanto tempo mantenere visibile la partita appena terminata sulla Team card prima di passare alla prossima.",
-                "data": {
-                    "scan_interval": "Intervallo di aggiornamento (minuti)",
-                    "start_date": "Data di inizio (YYYY-MM-DD)",
-                    "end_date": "Data di fine (YYYY-MM-DD)",
-                    "recent_match_hours": "Tieni visibile la partita finita per (ore)"
-                }
-            }
+      },
+      "news_competition": {
+        "title": "Notizie · scelta competizione",
+        "description": "Seleziona la competizione da cui ricevere le notizie.",
+        "data": {
+          "competition_code": "Competizione"
         }
+      },
+      "league": {
+        "title": "Seleziona il campionato",
+        "description": "Scegli il campionato che desideri monitorare.\n\nVerranno mostrate le partite di tutte le squadre del campionato selezionato. Per le coppe (Champions League, Europa League, Coppa Italia, ecc.) viene creato anche un sensore tabellone della fase a eliminazione diretta.",
+        "data": {
+          "competition_code": "Competizione"
+        }
+      },
+      "select_competition_for_team": {
+        "title": "Squadra · scelta campionato",
+        "description": "Seleziona il campionato in cui gioca la squadra che vuoi seguire.\n\nNel passo successivo sceglierai la squadra dall'elenco.",
+        "data": {
+          "competition_code": "Competizione"
+        }
+      },
+      "team": {
+        "title": "Seleziona la squadra",
+        "description": "Scegli la squadra che desideri seguire.\n\nVerranno mostrate solo le partite della squadra selezionata.",
+        "data": {
+          "team_name": "Squadra"
+        }
+      },
+      "manual_team": {
+        "title": "Inserimento manuale",
+        "description": "Inserisci manualmente l'ID della squadra che desideri seguire.\n\n**Come trovare il Team ID:** apri la pagina della squadra su espn.com — l'ID è il numero nell'URL: espn.com/soccer/team/_/id/**9723**/portland-timbers.\n\nPuoi anche fornire un nome personalizzato per identificarla facilmente.",
+        "data": {
+          "manual_team_id": "ID squadra",
+          "name": "Nome personalizzato (opzionale)"
+        }
+      },
+      "dates": {
+        "title": "Periodo di monitoraggio",
+        "description": "Specifica l'intervallo di date da monitorare.\n\n- **Data di inizio**: da quando monitorare.\n- **Data di fine**: fino a quando monitorare.\n\nFormato: **YYYY-MM-DD**.",
+        "data": {
+          "start_date": "Data di inizio (YYYY-MM-DD)",
+          "end_date": "Data di fine (YYYY-MM-DD)"
+        }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Soccer Live",
+        "description": "Configura il polling e per quanto tempo mantenere visibile la partita appena terminata sulla Team card prima di passare alla prossima.",
+        "data": {
+          "scan_interval": "Intervallo di aggiornamento (minuti)",
+          "start_date": "Data di inizio (YYYY-MM-DD)",
+          "end_date": "Data di fine (YYYY-MM-DD)",
+          "recent_match_hours": "Tieni visibile la partita finita per (ore)",
+          "enable_summary_enrichment": "Recupera formazioni, eventi e H2H",
+          "max_matches": "Max partite negli attributi (0 = illimitato)",
+          "notify_service": "Servizio notifiche (es. notify.mobile_app)"
+        }
+      }
+    }
+  }
 }

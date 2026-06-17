@@ -73,7 +73,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     hass, f"soccerlive_commentary_{comp_norm}", competition_code, "commentary",
                     base_scan_interval + timedelta(seconds=30),
                     config_entry_id=entry.entry_id,
-                    start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                    start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
+                    enable_summary_enrichment=enable_summary_enrichment,
+                    max_matches=max_matches
                 )
             ]
             async_add_entities(sensors, True)
@@ -86,7 +88,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     hass, f"soccerlive_news_{comp_norm}", competition_code, "news",
                     base_scan_interval + timedelta(minutes=10) + timedelta(seconds=random.randint(0, 30)),
                     config_entry_id=entry.entry_id,
-                    start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                    start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
+                    enable_summary_enrichment=enable_summary_enrichment,
+                    max_matches=max_matches
                 )
             ]
             async_add_entities(sensors, True)
@@ -102,19 +106,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     SoccerLiveSensor(
                         hass, f"soccerlive_next_{competition_name}_{team_name_normalized}", competition_code, "team_match",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name,
-                        config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                        config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
+                        enable_summary_enrichment=enable_summary_enrichment,
+                        max_matches=max_matches
                     ),
                     SoccerLiveSensor(
                         hass, f"soccerlive_all_{competition_name}_{team_name_normalized}", competition_code, "team_matches",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name,
-                        config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                        config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
+                        enable_summary_enrichment=enable_summary_enrichment,
+                        max_matches=max_matches
                     ),
                 ]
             sensors += [
                 SoccerLiveSensor(
                     hass, f"soccerlive_all_mixed_{team_name_normalized}", competition_code, "team_matches_mixed",
                     base_scan_interval + timedelta(seconds=random.randint(0, 30)), team_name=team_name,
-                    config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                    config_entry_id=entry.entry_id, start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
+                    enable_summary_enrichment=enable_summary_enrichment,
+                    max_matches=max_matches
                 )
             ]
         elif competition_code:
@@ -123,7 +133,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     SoccerLiveSensor(
                         hass, "soccerlive_all_today", competition_code, "all_matches_today",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
-                        start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours
+                        start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
+                        enable_summary_enrichment=enable_summary_enrichment,
+                        max_matches=max_matches
                     )
                 ]
             else:
@@ -133,12 +145,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     SoccerLiveSensor(
                         hass, f"soccerlive_standings_{competition_name}", competition_code, "standings",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
-                        start_date=start_date, end_date=end_date, team_id=team_id
+                        start_date=start_date, end_date=end_date, team_id=team_id, max_matches=max_matches
                     ),
                     SoccerLiveSensor(
                         hass, f"soccerlive_all_{competition_name}", competition_code, "match_day",
                         base_scan_interval + timedelta(seconds=random.randint(0, 30)), config_entry_id=entry.entry_id,
-                        start_date=start_date, end_date=end_date, team_id=team_id
+                        start_date=start_date, end_date=end_date, team_id=team_id, max_matches=max_matches
                     )
                 ]
                 # Top scorers sensor
@@ -157,7 +169,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                             hass, f"soccerlive_bracket_{competition_name}", competition_code, "bracket",
                             base_scan_interval + timedelta(minutes=10) + timedelta(seconds=random.randint(0, 30)),
                             config_entry_id=entry.entry_id,
-                            start_date=start_date, end_date=end_date, team_id=team_id
+                            start_date=start_date, end_date=end_date, team_id=team_id, max_matches=max_matches
                         )
                     )
 
@@ -285,6 +297,7 @@ class SoccerLiveSensor(Entity):
             "last_request_time": self._last_request_time,
             "start_date": self._filter_start_str(),
             "end_date": self._filter_end_str(),
+            "sensor_type": self._sensor_type,
         }
 
     @property
@@ -954,8 +967,8 @@ class SoccerLiveSensor(Entity):
             "next_match_broadcasts": broadcasts,
             "next_match_attendance": match.get("attendance", "N/A"),
             "next_match_neutral_site": match.get("neutral_site", False),
-            "next_match_has_stats": bool(match.get("home_statistics")),
-            "next_match_has_commentary": bool(match.get("key_events")),
+            "next_match_has_stats": bool(match.get("has_stats") or match.get("home_statistics")),
+            "next_match_has_commentary": bool(match.get("has_commentary") or match.get("key_events")),
             "next_match_links": match.get("links") or [],
             "next_match_week": match.get("week_number", "N/A"),
         }
