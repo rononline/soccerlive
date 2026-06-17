@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import logging
 import random
 import re
@@ -350,11 +351,12 @@ class SoccerLiveSensor(Entity):
             return
 
         _ESPN_HEADERS = {"Accept-Language": "en"}
+        _timeout = aiohttp.ClientTimeout(total=10)
+        session = async_get_clientsession(self.hass)
         retries = 0
         while retries < 3:
             try:
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                    async with session.get(url, headers=_ESPN_HEADERS) as response:
+                async with session.get(url, headers=_ESPN_HEADERS, timeout=_timeout) as response:
                         if response.status == 200:
                             raw = await response.read()
                             data = await self.hass.async_add_executor_job(json.loads, raw)
@@ -380,7 +382,8 @@ class SoccerLiveSensor(Entity):
                             # 4xx: endpoint bestaat niet of geen toegang — niet opnieuw proberen
                             _LOGGER.debug(f"HTTP {response.status} voor {self._name} — geen retry")
                             if self._sensor_type == "top_scorers" and response.status == 404:
-                                self._state = "Niet beschikbaar"
+                                self._state = "Not available"
+                                self._scorers_unavailable = True
                                 _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
                             break
                         else:
@@ -575,8 +578,8 @@ class SoccerLiveSensor(Entity):
             return None
         url = f"{self.base_url_2}/{self._code}/summary?event={event_id}"
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.get(url, headers={"Accept-Language": "en"}) as response:
+            session = async_get_clientsession(self.hass)
+            async with session.get(url, headers={"Accept-Language": "en"}, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status == 200:
                         raw = await response.read()
                         return await self.hass.async_add_executor_job(json.loads, raw)
@@ -594,8 +597,8 @@ class SoccerLiveSensor(Entity):
 
         calendar_url = f"{self.base_url_2}/{self._code}/scoreboard"
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.get(calendar_url, headers={"Accept-Language": "en"}) as response:
+            session = async_get_clientsession(self.hass)
+            async with session.get(calendar_url, headers={"Accept-Language": "en"}, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     response.raise_for_status()
                     raw = await response.read()
                     data = await self.hass.async_add_executor_job(json.loads, raw)

@@ -1,6 +1,7 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import logging
 import aiohttp
 from datetime import datetime, timedelta
@@ -224,8 +225,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _get_competitions(self):
         url = "https://site.api.espn.com/apis/site/v2/leagues/dropdown?lang=en&region=us&calendartype=whitelist&limit=200&sport=soccer"
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.get(url) as response:
+            session = async_get_clientsession(self.hass)
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     response.raise_for_status()
                     competitions_data = await response.json()
                     return {league['slug']: league['name'] for league in competitions_data.get("leagues", [])}
@@ -241,8 +242,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _get_teams(self, competition_code):
         url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition_code}/teams"
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.get(url) as response:
+            session = async_get_clientsession(self.hass)
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     response.raise_for_status()
                     teams_data = await response.json()
                 
