@@ -42,7 +42,7 @@ def get_season_slug_or_displayname(match):
     display_name = season_data.get("displayName")
     return display_name
     
-def process_match_data(data, hass, team_name=None, next_match_only=False, start_date=None, end_date=None, recent_match_hours=24):
+def process_match_data(data, hass, team_name=None, team_id=None, next_match_only=False, start_date=None, end_date=None, recent_match_hours=24):
     try:
         matches_data = data.get("events", [])
         league_info = process_league_data(data, hass)
@@ -58,10 +58,15 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
         if isinstance(end_date, str):
             end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
+        team_id_str = str(team_id) if team_id else None
+
         for match in matches_data:
-            match_name = match.get("name", "").lower()
-            if team_name and team_name.lower() not in match_name:
-                continue
+            # When team_id is available prefer ID matching (done after extracting competitors).
+            # Fall back to name pre-filter only when we have no ID.
+            if team_name and not team_id_str:
+                match_name = match.get("name", "").lower()
+                if team_name.lower() not in match_name:
+                    continue
 
             match_date_str = match.get("date", "")
 
@@ -92,6 +97,11 @@ def process_match_data(data, hass, team_name=None, next_match_only=False, start_
                 continue
 
             home_team_data = competitors[0].get("team", {})
+            if team_id_str:
+                _home_id = str(home_team_data.get("id", ""))
+                _away_id = str((competitors[1].get("team", {}) or {}).get("id", ""))
+                if _home_id != team_id_str and _away_id != team_id_str:
+                    continue
             home_team = home_team_data.get("displayName", "N/A")
             home_logo = home_team_data.get("logo", None)
             if not home_logo:

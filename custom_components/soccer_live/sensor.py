@@ -1106,6 +1106,7 @@ class SoccerLiveSensor(Entity):
                     data,
                     self.hass,
                     team_name=self._team_name,
+                    team_id=self._team_id,
                     next_match_only=next_match_only,
                     start_date=self._filter_start_str(),
                     end_date=self._filter_end_str(),
