@@ -73,7 +73,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             try:
                 match_date = parser.isoparse(match_date_str).astimezone(timezone.utc) if match_date_str else None
             except ValueError:
-                _LOGGER.error(f"Errore nel parsing della data della partita: {match_date_str}")
+                _LOGGER.error(f"Error parsing match date: {match_date_str}")
                 continue
 
             if start_date and match_date and match_date < start_date:
@@ -262,7 +262,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
         }
 
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare i dati delle partite: {e}")
+        _LOGGER.error(f"Error processing match data: {e}")
         return {}
 
 def is_within_recent_window(end_time, hours=24):
@@ -277,7 +277,7 @@ def is_within_recent_window(end_time, hours=24):
         current_time = datetime.now(timezone.utc)
         return current_time - end_time_dt <= timedelta(hours=hours)
     except Exception as e:
-        _LOGGER.error(f"Errore nel calcolo dell'intervallo recente ({hours}h): {e}")
+        _LOGGER.error(f"Error calculating recent interval ({hours}h): {e}")
         return False
 
 # Backwards-compat alias
@@ -447,7 +447,7 @@ def process_summary_data(data):
                         break
 
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare summary: {e}")
+        _LOGGER.error(f"Error processing summary data: {e}")
     return out
 
 def process_news_data(data):
@@ -530,7 +530,7 @@ def process_scorers_data(data):
                 })
             break
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare top scorers: {e}")
+        _LOGGER.error(f"Error processing top scorers data: {e}")
     return scorers
 
 

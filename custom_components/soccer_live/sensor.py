@@ -402,7 +402,7 @@ class SoccerLiveSensor(Entity):
                         break
                     elif response.status < 500:
                         # 4xx: endpoint bestaat niet of geen toegang — niet opnieuw proberen
-                        _LOGGER.debug(f"HTTP {response.status} voor {self._name} — geen retry")
+                        _LOGGER.debug(f"HTTP {response.status} for {self._name} — no retry")
                         if self._sensor_type == "top_scorers" and response.status == 404:
                             self._state = "Not available"
                             self._scorers_unavailable = True
@@ -419,7 +419,7 @@ class SoccerLiveSensor(Entity):
                 await asyncio.sleep(2)
                 retries += 1
         else:
-            _LOGGER.warning(f"Alle pogingen mislukt voor {self._name} — geen data ontvangen van ESPN")
+            _LOGGER.warning(f"All attempts failed for {self._name} — no data received from ESPN")
 
     def _filter_start_str(self):
         d = self._dyn_start_date or self._start_date
@@ -873,7 +873,7 @@ class SoccerLiveSensor(Entity):
                 self._dispatch_match_finished_event(match, events)
                 self._match_finished_dispatched.add(match_id)
                 self._match_finished_list.append(match_id)
-                _LOGGER.info(f"Wedstrijd-eindevent verzameld voor: {match_id}")
+                _LOGGER.info(f"Match-finished event collected for: {match_id}")
 
     def _dispatch_match_finished_event(self, match, events: list = None):
         """Build and collect a match finished event."""

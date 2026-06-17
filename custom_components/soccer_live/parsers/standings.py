@@ -73,7 +73,7 @@ def standings_data(data):
             "standings_groups": standings_list
         }
     except Exception as e:
-        _LOGGER.error(f"Errore nel processare i dati della standings: {e}")
+        _LOGGER.error(f"Error processing standings data: {e}")
         return {}
 
 
@@ -83,5 +83,5 @@ def _parse_date(date_str):
         parsed_date = parser.isoparse(date_str)
         return parsed_date.strftime("%d-%m-%Y")
     except (ValueError, TypeError) as e:
-        _LOGGER.error(f"Errore nel parsing della data {date_str}: {e}")
+        _LOGGER.error(f"Error parsing date {date_str}: {e}")
         return None

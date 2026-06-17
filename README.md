@@ -366,6 +366,49 @@ mode: queued
 
 ---
 
+## 🗂️ Sensor attribute data contract
+
+These attributes are guaranteed to be present when available. Card developers can rely on this structure.
+
+### Match object (inside `matches`, `previous_matches`, `upcoming_matches`)
+
+| Attribute | Type | Description |
+|---|---|---|
+| `home_team` / `away_team` | string | Team names |
+| `home_logo` / `away_logo` | string | Logo URLs |
+| `home_score` / `away_score` | int\|str | Score or `N/A` |
+| `state` | string | `pre` / `in` / `post` |
+| `date` | string | `DD-MM-YYYY HH:MM` |
+| `venue` / `venue_city` | string | Stadium info |
+| `competition_name` / `competition_logo` | string | Competition identity |
+| `broadcasts` | list | TV/streaming channels |
+| `neutral_site` | bool | Neutral venue |
+| `attendance` | int | Stadium attendance |
+| `links` | dict | ESPN links: `stats`, `commentary`, `video`, `summary` |
+| `has_stats` | bool | Boxscore available |
+| `has_commentary` | bool | Play-by-play available |
+| `clock` | string | Match clock (live) |
+
+### Enriched team_match sensor (via summary endpoint)
+
+Available after kick-off when `enable_summary_enrichment` is on:
+
+| Attribute | Type | Description |
+|---|---|---|
+| `home_statistics` / `away_statistics` | dict | Raw ESPN stat keys → values |
+| `key_events` | list | Goals, cards, subs with `clock`, `type`, `team`, `athletes` |
+| `lineup_home` / `lineup_away` | list | Players with `position`, `jersey`, `headshot` |
+| `head_to_head` | list | Recent H2H matches |
+| `home_standing_summary` / `away_standing_summary` | string | League position |
+| `home_record_summary` / `away_record_summary` | string | Season record |
+| `last_five_home` / `last_five_away` | string | Form string (e.g. `WDWLW`) |
+
+### Top-level computed attributes (next_match_* sensors)
+
+`next_match_home_team`, `next_match_away_team`, `next_match_date`, `next_match_datetime_iso`, `next_match_minutes_until`, `next_match_status`, `next_match_venue`, `next_match_broadcasts`, `next_match_has_stats`, `next_match_has_commentary`, `next_match_links`, `next_match_attendance`, `next_match_neutral_site`
+
+---
+
 ## 📜 License
 
 GPL-3.0 — data via ESPN public APIs.

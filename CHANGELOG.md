@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.1 (2026-06-17)
+- Pass `enable_summary_enrichment` and `max_matches` to all sensor constructors (were read from options but not forwarded)
+- Translation labels for `enable_summary_enrichment`, `max_matches`, `notify_service` added in all 7 languages
+- `next_match_has_stats`/`next_match_has_commentary` use parser flags with fallback to statistics/events presence
+- Diagnostics: `sensor_type` now read reliably from state attributes (works for `team_matches_mixed`, `all_matches_today`, etc.)
+- `sensor_type` added as explicit state attribute on every sensor
+
 ## v3.6.0 (2026-06-17)
 
 ### Bug fix (high priority)
