@@ -357,39 +357,39 @@ class SoccerLiveSensor(Entity):
         while retries < 3:
             try:
                 async with session.get(url, headers=_ESPN_HEADERS, timeout=_timeout) as response:
-                        if response.status == 200:
-                            raw = await response.read()
-                            data = await self.hass.async_add_executor_job(json.loads, raw)
-                            _LOGGER.debug(f"Data received for {self._name}")
-                            SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
-                            try:
-                                result = await self.hass.async_add_executor_job(self._process_data, data)
-                                self._state = result["state"]
-                                self._attributes = result["attributes"]
-                                self._pending_events = result.get("events", [])
-                                self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
-                                await self._enrich_with_summary()
-                                await self._enrich_with_commentary()
-                                await self._flush_pending_events()
-                            except Exception as proc_err:
-                                _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
-                            self._schedule_live_refresh()
-                            self._request_count += 1
-                            self._last_request_time = datetime.now().isoformat()
-                            _LOGGER.info(f"Finished update for {self._name}")
-                            break
-                        elif response.status < 500:
-                            # 4xx: endpoint bestaat niet of geen toegang — niet opnieuw proberen
-                            _LOGGER.debug(f"HTTP {response.status} voor {self._name} — geen retry")
-                            if self._sensor_type == "top_scorers" and response.status == 404:
-                                self._state = "Not available"
-                                self._scorers_unavailable = True
-                                _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
-                            break
-                        else:
-                            # 5xx: tijdelijke serverfout — kort wachten en opnieuw proberen
-                            await asyncio.sleep(2)
-                            retries += 1
+                    if response.status == 200:
+                        raw = await response.read()
+                        data = await self.hass.async_add_executor_job(json.loads, raw)
+                        _LOGGER.debug(f"Data received for {self._name}")
+                        SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
+                        try:
+                            result = await self.hass.async_add_executor_job(self._process_data, data)
+                            self._state = result["state"]
+                            self._attributes = result["attributes"]
+                            self._pending_events = result.get("events", [])
+                            self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
+                            await self._enrich_with_summary()
+                            await self._enrich_with_commentary()
+                            await self._flush_pending_events()
+                        except Exception as proc_err:
+                            _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
+                        self._schedule_live_refresh()
+                        self._request_count += 1
+                        self._last_request_time = datetime.now().isoformat()
+                        _LOGGER.info(f"Finished update for {self._name}")
+                        break
+                    elif response.status < 500:
+                        # 4xx: endpoint bestaat niet of geen toegang — niet opnieuw proberen
+                        _LOGGER.debug(f"HTTP {response.status} voor {self._name} — geen retry")
+                        if self._sensor_type == "top_scorers" and response.status == 404:
+                            self._state = "Not available"
+                            self._scorers_unavailable = True
+                            _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
+                        break
+                    else:
+                        # 5xx: tijdelijke serverfout — kort wachten en opnieuw proberen
+                        await asyncio.sleep(2)
+                        retries += 1
             except aiohttp.ClientError as error:
                 await asyncio.sleep(2)
                 retries += 1

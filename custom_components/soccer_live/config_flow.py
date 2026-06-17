@@ -227,9 +227,9 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    response.raise_for_status()
-                    competitions_data = await response.json()
-                    return {league['slug']: league['name'] for league in competitions_data.get("leagues", [])}
+                response.raise_for_status()
+                competitions_data = await response.json()
+                return {league['slug']: league['name'] for league in competitions_data.get("leagues", [])}
         except aiohttp.ClientError as e:
             _LOGGER.error(f"Error loading competitions: {e}")
             return {}
@@ -244,18 +244,16 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    response.raise_for_status()
-                    teams_data = await response.json()
-                
-                    leagues = teams_data.get("sports", [{}])[0].get("leagues", [{}])
-                    if not leagues:
-                        self._teams = []
-                        return
-
-                    self._teams = [
-                        {"id": team["team"]["id"], "displayName": team["team"]["displayName"]}
-                        for league in leagues for team in league.get("teams", [])
-                    ]
+                response.raise_for_status()
+                teams_data = await response.json()
+                leagues = teams_data.get("sports", [{}])[0].get("leagues", [{}])
+                if not leagues:
+                    self._teams = []
+                    return
+                self._teams = [
+                    {"id": team["team"]["id"], "displayName": team["team"]["displayName"]}
+                    for league in leagues for team in league.get("teams", [])
+                ]
         except aiohttp.ClientError as e:
             _LOGGER.error(f"Error loading teams for {competition_code}: {e}")
             self._teams = []
