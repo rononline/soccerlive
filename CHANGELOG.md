@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.5.5 (2026-06-17)
+- Fix indentation in HTTP session blocks in `sensor.py` and `config_flow.py` (normalised after aiohttp migration)
+
+## v3.5.4 (2026-06-17)
+- Use `async_get_clientsession(hass)` instead of bare `aiohttp.ClientSession()` in sensor + config_flow
+- `_scorers_unavailable` now correctly set to `True` on 404 — sensor skips subsequent requests
+
+## v3.5.3 (2026-06-17)
+- Team matching on ESPN `team_id` (competitor ID) when available; falls back to name matching
+- Parser: `process_match_data()` accepts `team_id` parameter
+
 ## v3.5.2 (2026-06-16)
 - Fix: `scoreboard.py` skips matches with `< 2 competitors` (postponed/incomplete ESPN events no longer crash the entire sensor update)
 

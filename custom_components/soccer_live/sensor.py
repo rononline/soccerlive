@@ -580,9 +580,9 @@ class SoccerLiveSensor(Entity):
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(url, headers={"Accept-Language": "en"}, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    if response.status == 200:
-                        raw = await response.read()
-                        return await self.hass.async_add_executor_job(json.loads, raw)
+                if response.status == 200:
+                    raw = await response.read()
+                    return await self.hass.async_add_executor_job(json.loads, raw)
         except Exception as e:
             _LOGGER.debug(f"Error fetching summary for {event_id}: {e}")
         return None
@@ -599,31 +599,31 @@ class SoccerLiveSensor(Entity):
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(calendar_url, headers={"Accept-Language": "en"}, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    response.raise_for_status()
-                    raw = await response.read()
-                    data = await self.hass.async_add_executor_job(json.loads, raw)
-                    # Extract season start/end from the calendar response.
-                    # ESPN no longer exposes calendarStartDate/EndDate at top level;
-                    # season dates live in leagues[0]. Read from there first,
-                    # then fall back to the top-level for backwards compatibility.
-                    leagues = data.get("leagues") or []
-                    league0 = leagues[0] if leagues else {}
-                    calendar_start_date = (
-                        data.get("calendarStartDate")
-                        or league0.get("calendarStartDate")
-                    )
-                    calendar_end_date = (
-                        data.get("calendarEndDate")
-                        or league0.get("calendarEndDate")
-                    )
-                    # Rolling fallback (±240 days) when ESPN provides no dates:
-                    # avoids hard-coded windows that would cut off future matches
-                    # (e.g. MLS running through November).
-                    if not calendar_start_date or not calendar_end_date:
-                        now = datetime.now()
-                        calendar_start_date = (now - timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
-                        calendar_end_date = (now + timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
-                    return calendar_start_date, calendar_end_date
+                response.raise_for_status()
+                raw = await response.read()
+                data = await self.hass.async_add_executor_job(json.loads, raw)
+                # Extract season start/end from the calendar response.
+                # ESPN no longer exposes calendarStartDate/EndDate at top level;
+                # season dates live in leagues[0]. Read from there first,
+                # then fall back to the top-level for backwards compatibility.
+                leagues = data.get("leagues") or []
+                league0 = leagues[0] if leagues else {}
+                calendar_start_date = (
+                    data.get("calendarStartDate")
+                    or league0.get("calendarStartDate")
+                )
+                calendar_end_date = (
+                    data.get("calendarEndDate")
+                    or league0.get("calendarEndDate")
+                )
+                # Rolling fallback (±240 days) when ESPN provides no dates:
+                # avoids hard-coded windows that would cut off future matches
+                # (e.g. MLS running through November).
+                if not calendar_start_date or not calendar_end_date:
+                    now = datetime.now()
+                    calendar_start_date = (now - timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
+                    calendar_end_date = (now + timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
+                return calendar_start_date, calendar_end_date
         except Exception as e:
             _LOGGER.error(f"Error fetching calendar: {e}")
             return None, None
