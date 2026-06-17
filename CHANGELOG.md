@@ -1,5 +1,21 @@
 # Changelog
 
+## v3.6.0 (2026-06-17)
+
+### Bug fix (high priority)
+- `_parse_match_datetime()` now tries both `%d-%m-%Y %H:%M` and `%d/%m/%Y %H:%M` — mismatch was causing `next_match_datetime_iso` and `next_match_minutes_until` to always return `N/A`/`None`
+
+### New top-level attributes
+- `next_match_broadcasts` — list of TV/streaming channels
+- `next_match_attendance`, `next_match_neutral_site`, `next_match_has_stats`, `next_match_has_commentary`, `next_match_links`, `next_match_week`
+
+### Diagnostics
+- `diagnostics.py` added — download via HA Settings → Integrations → Soccer Live; includes competition code, sensor types, request count, match count, cache age (no large match payloads)
+
+### Options flow
+- `enable_summary_enrichment` (default: on) — disable to skip ESPN summary endpoint and reduce API calls
+- `max_matches` (0/5/10/15/20/30, default: 0 = unlimited) — caps `matches` list to reduce recorder payload
+
 ## v3.5.6 (2026-06-17)
 - Normalise indentation in `_fetch_match_summary` and `_get_calendar_data` HTTP session blocks
 

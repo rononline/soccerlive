@@ -59,6 +59,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
         base_scan_interval = timedelta(minutes=entry.options.get("scan_interval", 3))
         recent_match_hours = entry.options.get("recent_match_hours", 24)
+        enable_summary_enrichment = entry.options.get("enable_summary_enrichment", True)
+        max_matches = entry.options.get("max_matches", 0)
         sensors = []
 
         if DOMAIN not in hass.data:
@@ -171,7 +173,7 @@ class SoccerLiveSensor(Entity):
 
     def __init__(self, hass, name, code, sensor_type=None, scan_interval=timedelta(minutes=5),
                  team_name=None, config_entry_id=None, start_date=None, end_date=None, team_id=None,
-                 recent_match_hours=24):
+                 recent_match_hours=24, enable_summary_enrichment=True, max_matches=0):
         self.hass = hass
         self._name = name
         self._code = code
@@ -184,8 +186,9 @@ class SoccerLiveSensor(Entity):
         self._team_name = team_name
         self._start_date = start_date
         self._end_date = end_date
-        # Hours to keep showing a finished match before switching to the next upcoming one
         self._recent_match_hours = recent_match_hours
+        self._enable_summary_enrichment = enable_summary_enrichment
+        self._max_matches = max_matches  # 0 = unlimited
         
         # Conversione delle date in oggetti datetime
         self._start_date = datetime.strptime(self._start_date, "%Y-%m-%d")
@@ -330,7 +333,10 @@ class SoccerLiveSensor(Entity):
                     self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
                 )
                 self._state = result["state"]
-                self._attributes = result["attributes"]
+                attrs = result["attributes"]
+                if self._max_matches and "matches" in attrs:
+                    attrs["matches"] = attrs["matches"][:self._max_matches]
+                self._attributes = attrs
                 self._pending_events = result.get("events", [])
                 self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
                 await self._enrich_with_summary()
@@ -365,7 +371,10 @@ class SoccerLiveSensor(Entity):
                         try:
                             result = await self.hass.async_add_executor_job(self._process_data, data)
                             self._state = result["state"]
-                            self._attributes = result["attributes"]
+                            attrs = result["attributes"]
+                            if self._max_matches and "matches" in attrs:
+                                attrs["matches"] = attrs["matches"][:self._max_matches]
+                            self._attributes = attrs
                             self._pending_events = result.get("events", [])
                             self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
                             await self._enrich_with_summary()
@@ -445,7 +454,7 @@ class SoccerLiveSensor(Entity):
 
     async def _enrich_with_commentary(self):
         """Fetch live play-by-play commentary for commentary sensor type."""
-        if self._sensor_type != "commentary":
+        if self._sensor_type != "commentary" or not self._enable_summary_enrichment:
             return
         matches = self._attributes.get("matches") or []
         live = next((m for m in matches if m.get("state") in ("live", "in")), None)
@@ -480,7 +489,7 @@ class SoccerLiveSensor(Entity):
     async def _enrich_with_summary(self):
         """Per il sensor team_match, aggiunge lineup/formazione/keyEvents/h2h
         chiamando l'endpoint summary?event=ID per la partita corrente."""
-        if self._sensor_type != "team_match":
+        if self._sensor_type != "team_match" or not self._enable_summary_enrichment:
             return
         matches = self._attributes.get("matches") or []
         if not matches:
@@ -630,18 +639,18 @@ class SoccerLiveSensor(Entity):
 
 
     def _parse_match_datetime(self, date_str):
-        """Converte stringa data dal formato '%d/%m/%Y %H:%M' a datetime con timezone utente"""
-        try:
-            if isinstance(date_str, str):
-                user_timezone = self.hass.config.time_zone
-                from zoneinfo import ZoneInfo
-                parsed_dt = datetime.strptime(date_str, "%d/%m/%Y %H:%M")
-                local_tz = ZoneInfo(user_timezone)
-                # Assume che la data sia già nella timezone utente
-                return parsed_dt.replace(tzinfo=local_tz)
+        """Parse a match date string to a timezone-aware datetime."""
+        if not isinstance(date_str, str):
             return None
-        except (ValueError, TypeError):
-            return None
+        user_timezone = self.hass.config.time_zone
+        from zoneinfo import ZoneInfo
+        local_tz = ZoneInfo(user_timezone)
+        for fmt in ("%d-%m-%Y %H:%M", "%d/%m/%Y %H:%M"):
+            try:
+                return datetime.strptime(date_str, fmt).replace(tzinfo=local_tz)
+            except ValueError:
+                continue
+        return None
 
     def _detect_and_dispatch_goals(self, matches, events: list):
         live_matches = [m for m in matches if m.get("state") == "in"]
@@ -921,6 +930,9 @@ class SoccerLiveSensor(Entity):
         
         match_datetime = self._parse_match_datetime(match.get("date"))
         
+        broadcasts = match.get("broadcasts") or []
+        if not isinstance(broadcasts, list):
+            broadcasts = [broadcasts] if broadcasts and broadcasts != "N/A" else []
         return {
             "next_match_home_team": match.get("home_team", "N/A"),
             "next_match_away_team": match.get("away_team", "N/A"),
@@ -939,6 +951,13 @@ class SoccerLiveSensor(Entity):
             "next_match_home_form": match.get("home_form", "N/A"),
             "next_match_away_form": match.get("away_form", "N/A"),
             "next_match_season_info": match.get("season_info", "N/A"),
+            "next_match_broadcasts": broadcasts,
+            "next_match_attendance": match.get("attendance", "N/A"),
+            "next_match_neutral_site": match.get("neutral_site", False),
+            "next_match_has_stats": bool(match.get("home_statistics")),
+            "next_match_has_commentary": bool(match.get("key_events")),
+            "next_match_links": match.get("links") or [],
+            "next_match_week": match.get("week_number", "N/A"),
         }
 
     def _compute_live_match_attributes(self, matches):

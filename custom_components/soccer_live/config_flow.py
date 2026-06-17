@@ -282,6 +282,8 @@ class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
         recent_match_hours = self.config_entry.options.get("recent_match_hours", 24)
         scan_interval = self.config_entry.options.get("scan_interval", 3)
         notify_service = self.config_entry.options.get("notify_service", "")
+        enable_summary_enrichment = self.config_entry.options.get("enable_summary_enrichment", True)
+        max_matches = self.config_entry.options.get("max_matches", 0)
 
         return self.async_show_form(
             step_id="init",
@@ -291,6 +293,8 @@ class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("start_date", default=start_date): str,
                 vol.Optional("end_date", default=end_date): str,
                 vol.Optional("notify_service", default=notify_service): str,
+                vol.Optional("enable_summary_enrichment", default=enable_summary_enrichment): bool,
+                vol.Optional("max_matches", default=max_matches): vol.In([0, 5, 10, 15, 20, 30]),
             }),
         )
         
