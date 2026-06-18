@@ -81,7 +81,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             if end_date and match_date and match_date > end_date:
                 continue
 
-            #Solo per il mixed
+            # Only for mixed sensor type
             season_info = get_season_slug_or_displayname(match)
             week_number = (match.get("week") or {}).get("number")
 

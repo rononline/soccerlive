@@ -408,7 +408,7 @@ class SoccerLiveSensor(Entity):
                             _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
                         break
                     else:
-                        # 5xx: tijdelijke serverfout — kort wachten en opnieuw proberen
+                        # 5xx: temporary server error — wait briefly and retry
                         await asyncio.sleep(2)
                         retries += 1
             except aiohttp.ClientError as error:
