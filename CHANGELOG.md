@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.6.3 (2026-06-18)
+- All remaining Dutch/Italian log messages translated to English (goal/card/substitution/match events in sensor.py)
+- URL-based shared fetch cache: sensors sharing the same ESPN endpoint now share one fetch per cache window instead of fetching separately
+- Parser tests added (17 passing): scoreboard and standings parsers tested against minimal ESPN fixtures; direct module import bypasses HA's `__init__.py`
+
+## v3.6.2 (2026-06-18)
+- All log messages standardized to English (IT/NL strings in sensor.py and parsers)
+- Data contract table added to README: match object attributes, enriched sensor fields, top-level `next_match_*` attributes
+
 ## v3.6.1 (2026-06-17)
 - Pass `enable_summary_enrichment` and `max_matches` to all sensor constructors (were read from options but not forwarded)
 - Translation labels for `enable_summary_enrichment`, `max_matches`, `notify_service` added in all 7 languages
