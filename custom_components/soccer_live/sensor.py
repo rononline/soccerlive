@@ -18,7 +18,7 @@ _LIVE_POLL_TYPES = {"team_match", "team_matches", "team_matches_mixed", "match_d
 
 _LOGGER = logging.getLogger(__name__)
 
-# Competizioni con fase a eliminazione diretta (knockout bracket)
+# Competitions with a knockout bracket phase
 KNOCKOUT_LEAGUES = {
     "uefa.champions",
     "uefa.europa",
@@ -202,7 +202,7 @@ class SoccerLiveSensor(Entity):
         self._enable_summary_enrichment = enable_summary_enrichment
         self._max_matches = max_matches  # 0 = unlimited
         
-        # Conversione delle date in oggetti datetime
+        # Parse date strings into datetime objects
         self._start_date = datetime.strptime(self._start_date, "%Y-%m-%d")
         self._end_date = datetime.strptime(self._end_date, "%Y-%m-%d")
 
@@ -400,7 +400,7 @@ class SoccerLiveSensor(Entity):
                         _LOGGER.info(f"Finished update for {self._name}")
                         break
                     elif response.status < 500:
-                        # 4xx: endpoint bestaat niet of geen toegang — niet opnieuw proberen
+                        # 4xx: endpoint does not exist or access denied — do not retry
                         _LOGGER.debug(f"HTTP {response.status} for {self._name} — no retry")
                         if self._sensor_type == "top_scorers" and response.status == 404:
                             self._state = "Not available"
@@ -537,7 +537,7 @@ class SoccerLiveSensor(Entity):
         season_start = ""
         season_end = ""
 
-        # Per news e standings non serve il calendario: skip per evitare chiamate API inutili
+        # News and standings sensors do not use calendar dates — skip to avoid unnecessary API calls
         if self._sensor_type == "news":
             return f"{self.base_url_2}/{self._code}/news?limit=15"
 
@@ -610,10 +610,10 @@ class SoccerLiveSensor(Entity):
     
     
     async def _get_calendar_data(self):
-        """Recupera il calendario delle partite per ottenere le date di inizio e fine"""
+        """Fetch the competition calendar to determine season start and end dates."""
     
         if self._code == "99999":
-           # _LOGGER.warning("Competition code 99999 escluso dal recupero del calendario.")
+           # _LOGGER.warning("Competition code 99999 excluded from calendar fetch.")
             return None, None
 
         calendar_url = f"{self.base_url_2}/{self._code}/scoreboard"

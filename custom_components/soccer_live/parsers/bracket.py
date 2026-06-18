@@ -112,10 +112,10 @@ def process_bracket_data(data):
                 }
             tie = ties[tie_key]
 
-            # Solo i campi consumati dalla Bracket card: per ogni leg la card legge
-            # home_team/away_team/home_score/away_score/state (i loghi/abbrev li prende
-            # da team_a/team_b, non dal leg). Loghi/abbrev/status/venue/event_id per leg
-            # sono ESPN raw inutilizzati → omessi per restare sotto i 16384 byte del recorder.
+            # Only fields consumed by the Bracket card: per leg the card reads
+            # home_team/away_team/home_score/away_score/state (logos/abbrev come from
+            # team_a/team_b, not per leg). Per-leg logos/abbrev/status/venue/event_id
+            # are unused ESPN raw fields — omitted to stay under the 16384-byte recorder limit.
             leg_payload = {
                 "home_team": home_team,
                 "home_score": _safe_int(home.get("score")),
@@ -158,7 +158,7 @@ def process_bracket_data(data):
                     tie["team_a"] = {"name": home_team, "logo": home_logo, "abbrev": home_abbrev, "id": home_id}
                     tie["team_b"] = {"name": away_team, "logo": away_logo, "abbrev": away_abbrev, "id": away_id}
 
-                # Determina vincitore se completata
+                # Determine winner if the match is completed
                 hs, as_ = leg_payload["home_score"], leg_payload["away_score"]
                 if leg_payload["state"] == "post" and hs is not None and as_ is not None:
                     tie["completed"] = True
@@ -168,15 +168,15 @@ def process_bracket_data(data):
                         tie["winner_team"] = away_team
                     else:
                         tie["tied"] = True
-        # Ordino i tie per data della 1st leg (o single)
+        # Sort ties by date of the 1st leg (or single-leg match)
         sorted_ties = sorted(
             ties.values(),
             key=lambda t: t.get("first_leg_date") or t.get("leg2", {}).get("date", "") if t.get("leg2") else "",
         )
 
-        # Raggruppo i tie in round per data: tie con date vicine appartengono allo stesso round.
-        # Strategia semplice: cluster sequenziali, dove un nuovo round inizia se la differenza
-        # con il tie precedente è > 5 giorni.
+        # Group ties into rounds by date: ties with close dates belong to the same round.
+        # Simple strategy: sequential clusters where a new round starts if the gap
+        # from the previous tie is more than 5 days.
         from datetime import datetime
         groups = []
         current = []
@@ -202,7 +202,7 @@ def process_bracket_data(data):
         if current:
             groups.append(current)
 
-        # Calcolo size (potenza di 2) di ciascun gruppo cronologico
+        # Compute size (next power of 2) for each chronological group
         sized_rounds = []
         for g in groups:
             size = 1
@@ -210,12 +210,11 @@ def process_bracket_data(data):
                 size *= 2
             sized_rounds.append({"size": size, "ties": g})
 
-        # Etichettatura: vado a ritroso (dal round più recente al più vecchio).
-        # Tengo traccia della "size attesa" che parte dalla size dell'ultimo round
-        # e raddoppia ad ogni step indietro (perché un torneo a eliminazione raddoppia
-        # i tie ad ogni round precedente). Se la size effettiva matcha l'attesa, uso
-        # il nome canonico. Se invece è uguale alla size del round successivo (caso UCL
-        # con KO Playoffs prima dell'R16), uso "Knockout Playoffs".
+        # Label rounds by working backwards (most recent to oldest).
+        # Track the expected size starting from the final round and doubling each step
+        # (knockout tournaments double the ties per earlier round). If the actual size
+        # matches the expected, use the canonical name. If it equals the next round's size
+        # (UCL Knockout Playoffs before R16), label it "Knockout Playoffs".
         canonical = {
             1: ("Final", "Finale"),
             2: ("Semifinals", "Halve finales"),
@@ -234,14 +233,14 @@ def process_bracket_data(data):
                     labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
                     expected = actual * 2
                 elif idx + 1 < n and actual == sized_rounds[idx + 1]["size"]:
-                    # Stessa size del round successivo → playoff/preliminare
+                    # Same size as next round → playoff/preliminary stage
                     if actual == 8:
                         labels[idx] = ("Knockout Playoffs", "KO-play-offs")
                     elif actual == 16:
                         labels[idx] = ("Preliminary Round", "Voorronde")
                     else:
                         labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
-                    # non cambio expected: il prossimo round (precedente) dovrebbe essere doppio
+                    # keep expected unchanged: the previous round should be double the size
                     expected = actual * 2
                 else:
                     labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))

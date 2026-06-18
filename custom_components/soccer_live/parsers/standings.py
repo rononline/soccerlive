@@ -60,7 +60,7 @@ def standings_data(data):
         season_start = _parse_date(current_season.get("startDate", "N/A")) if current_season else None
         season_end = _parse_date(current_season.get("endDate", "N/A")) if current_season else None
 
-        # De standings-API heeft name/abbreviation op het top-niveau (geen leagues-array)
+        # The standings API exposes name/abbreviation at the top level (no leagues array)
         league_name = data.get("name", "N/A")
         league_abbreviation = data.get("abbreviation", "N/A")
 
