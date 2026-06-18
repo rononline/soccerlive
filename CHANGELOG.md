@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.5 (2026-06-18)
+- `league_info` objects now include a `name` field (ESPN full league name, e.g. "FIFA World Cup") — Countdown card uses this to display the competition name
+
+## v3.6.4 (2026-06-18)
+- Translate remaining NL/IT inline comments in sensor.py to English
+
 ## v3.6.3 (2026-06-18)
 - All remaining Dutch/Italian log messages translated to English (goal/card/substitution/match events in sensor.py)
 - URL-based shared fetch cache: sensors sharing the same ESPN endpoint now share one fetch per cache window instead of fetching separately
