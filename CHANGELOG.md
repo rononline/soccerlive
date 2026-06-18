@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.6 (2026-06-18)
+- Add `icon.png` inside component directory so the HA update entity shows the integration icon
+
 ## v3.6.5 (2026-06-18)
 - `league_info` objects now include a `name` field (ESPN full league name, e.g. "FIFA World Cup") — Countdown card uses this to display the competition name
 
