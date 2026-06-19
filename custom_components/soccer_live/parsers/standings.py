@@ -63,6 +63,8 @@ def standings_data(data):
         # The standings API exposes name/abbreviation at the top level (no leagues array)
         league_name = data.get("name", "N/A")
         league_abbreviation = data.get("abbreviation", "N/A")
+        logos = data.get("logos", [])
+        league_logo = logos[0].get("href", "") if logos else ""
 
         return {
             "season": season_display_name,
@@ -70,6 +72,7 @@ def standings_data(data):
             "season_end": season_end,
             "league_name": league_name,
             "league_abbreviation": league_abbreviation,
+            "league_logo": league_logo,
             "standings_groups": standings_list
         }
     except Exception as e:

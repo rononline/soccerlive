@@ -1062,11 +1062,14 @@ class SoccerLiveSensor(Entity):
 
         if self._sensor_type == "news":
             articles = process_news_data(data)
+            count = len(articles)
             return {
-                "state": f"{len(articles)} artikelen" if articles else "Geen artikelen",
+                "state": f"{count} articles" if count else "No articles",
                 "attributes": {
                     "articles": articles,
                     "competition_code": self._code,
+                    "league_name": self._name or self._code or "",
+                    "league_logo": "",
                 },
             }
 
@@ -1088,6 +1091,7 @@ class SoccerLiveSensor(Entity):
 
         if self._sensor_type == "bracket":
             from .parsers.bracket import process_bracket_data
+            from .parsers.scoreboard import process_league_data
             bracket = process_bracket_data(data)
             rounds = bracket.get("rounds", [])
             if rounds:
@@ -1095,12 +1099,17 @@ class SoccerLiveSensor(Entity):
                 state = f"{last.get('name')} ({last.get('size')} teams)"
             else:
                 state = "Bracket unavailable"
+            league_info = process_league_data(data, self.hass)
+            league_logo = (league_info[0].get("logo_href", "") if league_info else "")
+            league_name = (league_info[0].get("name", "") if league_info else "")
             return {
                 "state": state,
                 "attributes": {
                     "rounds": rounds,
                     "ties_count": bracket.get("ties_count", 0),
                     "competition_code": self._code,
+                    "league_logo": league_logo,
+                    "league_name": league_name,
                 },
             }
 
@@ -1110,10 +1119,13 @@ class SoccerLiveSensor(Entity):
 
         if self._sensor_type == "match_day":
             match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
+            league_info = match_data.get("league_info") or []
+            league_logo = (league_info[0].get("logo_href", "") if league_info else "")
             return {
-                "state": "Speelronde",
+                "state": "Match day",
                 "attributes": {
-                    "league_info": match_data.get("league_info", "N/A"),
+                    "league_info": league_info,
+                    "league_logo": league_logo,
                     "matches": match_data.get("matches", []),
                 },
             }
@@ -1125,11 +1137,14 @@ class SoccerLiveSensor(Entity):
             if live_match:
                 state = f"{live_match.get('home_team','?')} {live_match.get('home_score','?')} - {live_match.get('away_score','?')} {live_match.get('away_team','?')}"
             else:
-                state = "Geen live wedstrijd"
+                state = "No live match"
+            league_info = match_data.get("league_info") or []
+            league_logo = (league_info[0].get("logo_href", "") if league_info else "")
             return {
                 "state": state,
                 "attributes": {
-                    "league_info": match_data.get("league_info", "N/A"),
+                    "league_info": league_info,
+                    "league_logo": league_logo,
                     "matches": matches,
                 },
             }

@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.10 (2026-06-19)
+- `standings` parser: include `league_logo` from ESPN logos array
+- `bracket` sensor: include `league_logo` and `league_name` from `process_league_data`
+- `match_day` sensor: include `league_logo`; state changed from Dutch "Speelronde" to "Match day"
+- `commentary` sensor: include `league_logo`; state no longer says "Geen live wedstrijd" — now "No live match"
+- `news` sensor: include `league_name` and empty `league_logo`; state no longer says "artikelen" — now "articles"
+
 ## v3.6.9 (2026-06-19)
 - Fix Dutch sensor state strings: `"tegen"` → `"vs"`, `"wedstrijden beschikbaar"` → `"matches available"`, `"Geen wedstrijden beschikbaar"` → `"No matches available"`
 
