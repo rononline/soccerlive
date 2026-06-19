@@ -1,11 +1,10 @@
-"""Processing del tabellone (knockout bracket) per competizioni a eliminazione diretta.
+"""Knockout bracket processing for elimination-phase competitions.
 
-ESPN espone le partite KO nel solito endpoint /scoreboard ma le distingue tramite
-note del tipo "1st Leg" / "2nd Leg - X advance Y-Z on aggregate". Qui le raggruppiamo
-in tie (andata + ritorno) e in round (Round of 16 / Quarterfinals / Semifinals / Final).
+ESPN exposes KO matches on the standard /scoreboard endpoint, distinguished by
+notes like "1st Leg" / "2nd Leg - X advance Y-Z on aggregate". This module groups
+them into ties (first + second leg) and rounds (Round of 16 / Quarterfinals / etc.).
 
-Etichette in inglese (standard internazionale football). La card può aggiungere
-una traduzione localizzata.
+Round names are English; the card translates them via i18n keys (round.*).
 """
 
 import logging
@@ -13,10 +12,9 @@ _LOGGER = logging.getLogger(__name__)
 import re
 
 
-
 def _parse_aggregate(note_text):
-    """Estrae info dal testo del 2nd leg: '2nd Leg - X advance Y-Z on aggregate'.
-    Ritorna dict {winner_team, agg_for, agg_against, tied} oppure None.
+    """Parse the 2nd-leg note: '2nd Leg - X advance Y-Z on aggregate'.
+    Returns dict {winner_team, agg_for, agg_against, tied} or None.
     """
     if not note_text:
         return None
@@ -41,8 +39,8 @@ def _safe_int(v):
 
 
 def process_bracket_data(data):
-    """Estrae il bracket dai dati di /scoreboard di una fase KO.
-    Restituisce {rounds: [{name, ties: [...]}], updated_at}.
+    """Extract the bracket from /scoreboard data for a KO phase.
+    Returns {rounds: [{name, size, ties: [...]}], ties_count}.
     """
     out = {"rounds": [], "ties_count": 0}
     try:
@@ -63,12 +61,12 @@ def process_bracket_data(data):
             slug = str(season.get("slug", "")).lower()
 
             slug_map = {
-                "round-of-32": ("Round of 32", "Laatste 32"),
-                "round-of-16": ("Round of 16", "Achtste finales"),
-                "quarterfinals": ("Quarterfinals", "Kwartfinales"),
-                "semifinals": ("Semifinals", "Halve finales"),
-                "3rd-place-match": ("Third Place", "Troostfinale"),
-                "final": ("Final", "Finale"),
+                "round-of-32": "Round of 32",
+                "round-of-16": "Round of 16",
+                "quarterfinals": "Quarterfinals",
+                "semifinals": "Semifinals",
+                "3rd-place-match": "Third Place",
+                "final": "Final",
             }
 
             is_first_leg = "1st Leg" in note_text
@@ -147,10 +145,7 @@ def process_bracket_data(data):
                     tie["team_b"] = {"name": home_team, "logo": home_logo, "abbrev": home_abbrev, "id": home_id}
 
             elif is_final_single:
-                round_name, round_name_nl = slug_map.get(slug, ("Final", "Finale"))
-                tie["round_name"] = round_name
-                tie["round_name_nl"] = round_name_nl
-
+                tie["round_name"] = slug_map.get(slug, "Final")
                 tie["single"] = leg_payload
                 tie["first_leg_date"] = e.get("date", "")
 
@@ -168,6 +163,7 @@ def process_bracket_data(data):
                         tie["winner_team"] = away_team
                     else:
                         tie["tied"] = True
+
         # Sort ties by date of the 1st leg (or single-leg match)
         sorted_ties = sorted(
             ties.values(),
@@ -216,11 +212,11 @@ def process_bracket_data(data):
         # matches the expected, use the canonical name. If it equals the next round's size
         # (UCL Knockout Playoffs before R16), label it "Knockout Playoffs".
         canonical = {
-            1: ("Final", "Finale"),
-            2: ("Semifinals", "Halve finales"),
-            4: ("Quarterfinals", "Kwartfinales"),
-            8: ("Round of 16", "Achtste finales"),
-            16: ("Round of 32", "Laatste 32"),
+            1: "Final",
+            2: "Semifinals",
+            4: "Quarterfinals",
+            8: "Round of 16",
+            16: "Round of 32",
         }
         n = len(sized_rounds)
         labels = [None] * n
@@ -230,30 +226,28 @@ def process_bracket_data(data):
             for idx in range(n - 1, -1, -1):
                 actual = sized_rounds[idx]["size"]
                 if actual == expected:
-                    labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
+                    labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
                     expected = actual * 2
                 elif idx + 1 < n and actual == sized_rounds[idx + 1]["size"]:
                     # Same size as next round → playoff/preliminary stage
                     if actual == 8:
-                        labels[idx] = ("Knockout Playoffs", "KO-play-offs")
+                        labels[idx] = "Knockout Playoffs"
                     elif actual == 16:
-                        labels[idx] = ("Preliminary Round", "Voorronde")
+                        labels[idx] = "Preliminary Round"
                     else:
-                        labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
+                        labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
                     # keep expected unchanged: the previous round should be double the size
                     expected = actual * 2
                 else:
-                    labels[idx] = canonical.get(actual, (f"Round of {actual*2}", f"Laatste {actual*2}"))
+                    labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
                     expected = actual * 2
 
         for idx, sr in enumerate(sized_rounds):
-            name_en, name_nl = labels[idx]
             for tie in sr["ties"]:
                 tie.get("team_a", {}).pop("id", None)
                 tie.get("team_b", {}).pop("id", None)
             out["rounds"].append({
-                "name": name_en,
-                "name_nl": name_nl,
+                "name": labels[idx],
                 "size": sr["size"],
                 "ties": sr["ties"],
             })
