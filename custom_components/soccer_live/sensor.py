@@ -1092,9 +1092,9 @@ class SoccerLiveSensor(Entity):
             rounds = bracket.get("rounds", [])
             if rounds:
                 last = rounds[-1]
-                state = f"{last.get('name_nl', last.get('name'))} ({last.get('size')} ploegen)"
+                state = f"{last.get('name')} ({last.get('size')} teams)"
             else:
-                state = "Bracket niet beschikbaar"
+                state = "Bracket unavailable"
             return {
                 "state": state,
                 "attributes": {

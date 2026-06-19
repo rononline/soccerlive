@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.8 (2026-06-19)
+- `bracket.py`: remove dead `round_name_nl`/`name_nl` Dutch fields; simplify slug/canonical tuples to plain strings; translate Italian docstrings to English
+- `sensor.py`: bracket sensor state now uses English — `"Round of 16 (16 teams)"` instead of `"Round of 16 (16 ploegen)"`; fallback `"Bracket unavailable"` instead of `"Bracket niet beschikbaar"`
+
 ## v3.6.7 (2026-06-19)
 - README: `league_info` attribute added to data contract table
 - Config-flow: `commentary` setup step added to all 6 translation files (was missing — showed blank UI)
