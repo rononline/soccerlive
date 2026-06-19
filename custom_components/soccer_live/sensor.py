@@ -1165,11 +1165,11 @@ class SoccerLiveSensor(Entity):
                         upcoming_matches = [m for m in matches if m.get("state") == "pre"]
                         if upcoming_matches:
                             um = upcoming_matches[0]
-                            state = f"⏳ {um.get('home_team','?')} tegen {um.get('away_team','?')} ({um.get('date','?')})"
+                            state = f"⏳ {um.get('home_team','?')} vs {um.get('away_team','?')} ({um.get('date','?')})"
                         else:
-                            state = f"📊 {len(matches)} wedstrijden beschikbaar"
+                            state = f"📊 {len(matches)} matches available"
                 else:
-                    state = "Geen wedstrijden beschikbaar"
+                    state = "No matches available"
 
                 computed_attrs = self._compute_all_matches_attributes(matches, events)
                 return {

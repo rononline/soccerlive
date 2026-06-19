@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.9 (2026-06-19)
+- Fix Dutch sensor state strings: `"tegen"` → `"vs"`, `"wedstrijden beschikbaar"` → `"matches available"`, `"Geen wedstrijden beschikbaar"` → `"No matches available"`
+
 ## v3.6.8 (2026-06-19)
 - `bracket.py`: remove dead `round_name_nl`/`name_nl` Dutch fields; simplify slug/canonical tuples to plain strings; translate Italian docstrings to English
 - `sensor.py`: bracket sensor state now uses English — `"Round of 16 (16 teams)"` instead of `"Round of 16 (16 ploegen)"`; fallback `"Bracket unavailable"` instead of `"Bracket niet beschikbaar"`
