@@ -388,6 +388,7 @@ These attributes are guaranteed to be present when available. Card developers ca
 | `has_stats` | bool | Boxscore available |
 | `has_commentary` | bool | Play-by-play available |
 | `clock` | string | Match clock (live) |
+| `league_info` | list | Competition metadata: `name`, `abbreviation`, `logo_href`, `startDate`, `endDate` |
 
 ### Enriched team_match sensor (via summary endpoint)
 

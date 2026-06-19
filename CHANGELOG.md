@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.7 (2026-06-19)
+- README: `league_info` attribute added to data contract table
+- Config-flow: `commentary` setup step added to all 6 translation files (was missing — showed blank UI)
+- Comments in `bracket.py`, `standings.py`, `sensor.py` translated to English
+
 ## v3.6.6 (2026-06-18)
 - Add `icon.png` inside component directory so the HA update entity shows the integration icon
 
