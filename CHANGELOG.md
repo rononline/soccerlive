@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.11 (2026-06-19)
+- `standings` sensor: when ESPN standings API returns no logo, construct fallback URL from competition code (`espncdn.com/leaguelogos/soccer/500/{code}.png`)
+- `standings` sensor: state changed from Dutch "Stand" to "Standings"
+- `standings` parser: broader logo extraction (tries top-level `logos`, then `leagues[0].logos`)
+
 ## v3.6.10 (2026-06-19)
 - `standings` parser: include `league_logo` from ESPN logos array
 - `bracket` sensor: include `league_logo` and `league_name` from `process_league_data`

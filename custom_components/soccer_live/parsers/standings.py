@@ -63,7 +63,10 @@ def standings_data(data):
         # The standings API exposes name/abbreviation at the top level (no leagues array)
         league_name = data.get("name", "N/A")
         league_abbreviation = data.get("abbreviation", "N/A")
-        logos = data.get("logos", [])
+        # Try multiple locations ESPN may put the competition logo
+        logos = (data.get("logos") or
+                 (data.get("leagues") or [{}])[0].get("logos") or
+                 (data.get("sport") or {}).get("logos") or [])
         league_logo = logos[0].get("href", "") if logos else ""
 
         return {
