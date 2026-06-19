@@ -1115,10 +1115,7 @@ class SoccerLiveSensor(Entity):
 
         if self._sensor_type == "standings":
             from .parsers.standings import standings_data
-            result = standings_data(data)
-            if not result.get("league_logo") and self._code:
-                result["league_logo"] = f"https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/{self._code.lower()}.png"
-            return {"state": "Standings", "attributes": result}
+            return {"state": "Standings", "attributes": standings_data(data)}
 
         if self._sensor_type == "match_day":
             match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())

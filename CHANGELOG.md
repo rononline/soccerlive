@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.12 (2026-06-19)
+- `standings` sensor: remove fallback ESPN logo URL construction — ESPN uses numeric IDs not competition code strings, causing 404 errors; card now shows fallback emoji instead
+
 ## v3.6.11 (2026-06-19)
 - `standings` sensor: when ESPN standings API returns no logo, construct fallback URL from competition code (`espncdn.com/leaguelogos/soccer/500/{code}.png`)
 - `standings` sensor: state changed from Dutch "Stand" to "Standings"
