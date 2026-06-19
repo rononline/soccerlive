@@ -51,6 +51,13 @@
           "start_date": "Begindatum (YYYY-MM-DD)",
           "end_date": "Einddatum (YYYY-MM-DD)"
         }
+      },
+      "commentary": {
+        "title": "Live commentaar · kies competitie",
+        "description": "Selecteer de competitie waarvoor je live commentaar wilt ontvangen.",
+        "data": {
+          "competition_code": "Competitie"
+        }
       }
     }
   },

@@ -51,6 +51,13 @@
           "start_date": "Data di inizio (YYYY-MM-DD)",
           "end_date": "Data di fine (YYYY-MM-DD)"
         }
+      },
+      "commentary": {
+        "title": "Telecronaca live · seleziona competizione",
+        "description": "Seleziona la competizione per cui desideri ricevere la telecronaca live.",
+        "data": {
+          "competition_code": "Competizione"
+        }
       }
     }
   },

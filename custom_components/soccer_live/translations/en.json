@@ -51,6 +51,13 @@
           "start_date": "Start date (YYYY-MM-DD)",
           "end_date": "End date (YYYY-MM-DD)"
         }
+      },
+      "commentary": {
+        "title": "Live Commentary — select competition",
+        "description": "Select the competition you want to receive live commentary for.",
+        "data": {
+          "competition_code": "Competition"
+        }
       }
     }
   },

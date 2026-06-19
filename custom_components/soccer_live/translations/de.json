@@ -51,6 +51,13 @@
           "start_date": "Startdatum (JJJJ-MM-TT)",
           "end_date": "Enddatum (JJJJ-MM-TT)"
         }
+      },
+      "commentary": {
+        "title": "Live-Kommentar · Wettbewerb wählen",
+        "description": "Wählen Sie den Wettbewerb aus, für den Sie den Live-Kommentar empfangen möchten.",
+        "data": {
+          "competition_code": "Wettbewerb"
+        }
       }
     }
   },

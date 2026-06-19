@@ -51,6 +51,13 @@
           "start_date": "Date de début (AAAA-MM-JJ)",
           "end_date": "Date de fin (AAAA-MM-JJ)"
         }
+      },
+      "commentary": {
+        "title": "Commentaire live · sélectionner une compétition",
+        "description": "Sélectionnez la compétition pour laquelle vous souhaitez recevoir le commentaire live.",
+        "data": {
+          "competition_code": "Compétition"
+        }
       }
     }
   },

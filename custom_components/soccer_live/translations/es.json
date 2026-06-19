@@ -51,6 +51,13 @@
           "start_date": "Fecha de inicio (AAAA-MM-DD)",
           "end_date": "Fecha de fin (AAAA-MM-DD)"
         }
+      },
+      "commentary": {
+        "title": "Comentario en directo · seleccionar competición",
+        "description": "Selecciona la competición de la que quieres recibir comentario en directo.",
+        "data": {
+          "competition_code": "Competición"
+        }
       }
     }
   },
