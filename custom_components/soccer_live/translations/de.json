@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Soccer Live Konfiguration",
-        "description": "Willkommen zum Konfigurationsassistenten von Soccer Live.\n\nWählen Sie aus, was Sie verfolgen möchten:\n\n- **Liga**: alle Spiele einer bestimmten Liga (für Pokalwettbewerbe wird automatisch ein K.O.-Bracket-Sensor erstellt).\n- **Team**: Spiele eines bestimmten Teams (zuerst Liga, dann Team auswählen).\n- **Team suchen**: Team nach Name suchen — ohne die Liga kennen zu müssen.\n- **Alle Spiele heute**: alle heute weltweit gespielten Spiele.\n- **News**: News-Feed eines Wettbewerbs.\n- **Manuelle Eingabe**: Team-ID manuell eingeben.",
+        "description": "Willkommen zum Konfigurationsassistenten von Soccer Live.\n\nWählen Sie aus, was Sie verfolgen möchten:\n\n- **Liga**: alle Spiele einer bestimmten Liga (für Pokalwettbewerbe wird automatisch ein K.O.-Bracket-Sensor erstellt).\n- **Team**: Spiele eines bestimmten Teams.\n- **Alle Spiele heute**: alle heute weltweit gespielten Spiele.\n- **News**: News-Feed eines Wettbewerbs.\n- **Manuelle Eingabe**: Team-ID manuell eingeben.",
         "data": {
           "selection": "Was möchten Sie verfolgen?"
         }
@@ -58,25 +58,7 @@
         "data": {
           "competition_code": "Wettbewerb"
         }
-      },
-      "search_team_query": {
-        "title": "Team suchen",
-        "description": "Geben Sie den Namen des Teams ein, das Sie verfolgen möchten. Soccer Live durchsucht automatisch alle Wettbewerbe — Sie müssen die Liga nicht kennen.\n\nBeispiele: *Feyenoord*, *Arsenal*, *PSG*, *Real Madrid*.",
-        "data": {
-          "search_query": "Teamname"
-        }
-      },
-      "search_team_results": {
-        "title": "Team auswählen",
-        "description": "Wählen Sie das richtige Team aus den Suchergebnissen.\n\nDer Sensor verfolgt automatisch alle Wettbewerbe, an denen dieses Team teilnimmt.",
-        "data": {
-          "team_result": "Team"
-        }
       }
-    },
-    "error": {
-      "empty_query": "Bitte geben Sie einen Teamnamen ein.",
-      "no_results": "Keine Teams gefunden — versuchen Sie eine andere Schreibweise oder den vollständigen Teamnamen."
     }
   },
   "options": {

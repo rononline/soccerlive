@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Soccer Live setup",
-        "description": "Welcome to the Soccer Live configuration wizard.\n\nChoose what you want to monitor:\n\n- **League**: every match of a specific league (a knockout bracket sensor is created automatically for cup competitions).\n- **Team**: matches of a specific team (select league first, then pick team).\n- **Search team**: find a team by name across all competitions — no need to know the league.\n- **All matches today**: every match in the world played today.\n- **News**: news feed for a specific competition.\n- **Manual entry**: enter the team ID manually.",
+        "description": "Welcome to the Soccer Live configuration wizard.\n\nChoose what you want to monitor:\n\n- **League**: every match of a specific league (a knockout bracket sensor is created automatically for cup competitions).\n- **Team**: matches of a specific team.\n- **All matches today**: every match in the world played today.\n- **News**: news feed for a specific competition.\n- **Manual entry**: enter the team ID manually.",
         "data": {
           "selection": "What do you want to monitor?"
         }
@@ -58,25 +58,7 @@
         "data": {
           "competition_code": "Competition"
         }
-      },
-      "search_team_query": {
-        "title": "Search team",
-        "description": "Enter the name of the team you want to follow. Soccer Live will search across all competitions automatically — you don't need to know the league.\n\nExamples: *Feyenoord*, *Arsenal*, *PSG*, *Real Madrid*.",
-        "data": {
-          "search_query": "Team name"
-        }
-      },
-      "search_team_results": {
-        "title": "Select team",
-        "description": "Pick the team from the search results below.\n\nThe sensor will track all competitions this team participates in.",
-        "data": {
-          "team_result": "Team"
-        }
       }
-    },
-    "error": {
-      "empty_query": "Please enter a team name.",
-      "no_results": "No teams found — try a different spelling or use the full team name."
     }
   },
   "options": {

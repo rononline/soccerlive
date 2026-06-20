@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Soccer Live instellen",
-        "description": "Welkom bij de Soccer Live configuratiewizard.\n\nKies wat je wilt volgen:\n\n- **Competitie**: alle wedstrijden van een specifieke competitie (voor bekertoernooien wordt automatisch een bracket-sensor aangemaakt).\n- **Team**: wedstrijden van een specifiek team (kies eerst de competitie, dan het team).\n- **Team zoeken**: vind een team op naam, over alle competities heen — je hoeft de competitie niet te weten.\n- **Alle wedstrijden vandaag**: alle wedstrijden ter wereld die vandaag gespeeld worden.\n- **Nieuws**: nieuwsfeed van een competitie.\n- **Handmatige invoer**: voer het team-ID handmatig in.",
+        "description": "Welkom bij de Soccer Live configuratiewizard.\n\nKies wat je wilt volgen:\n\n- **Competitie**: alle wedstrijden van een specifieke competitie (voor bekertoernooien wordt automatisch een bracket-sensor aangemaakt).\n- **Team**: wedstrijden van een specifiek team.\n- **Alle wedstrijden vandaag**: alle wedstrijden ter wereld die vandaag gespeeld worden.\n- **Nieuws**: nieuwsfeed van een competitie.\n- **Handmatige invoer**: voer het team-ID handmatig in.",
         "data": {
           "selection": "Wat wil je volgen?"
         }
@@ -58,25 +58,7 @@
         "data": {
           "competition_code": "Competitie"
         }
-      },
-      "search_team_query": {
-        "title": "Team zoeken",
-        "description": "Voer de naam in van het team dat je wilt volgen. Soccer Live zoekt automatisch in alle competities — je hoeft de competitie niet te weten.\n\nVoorbeelden: *Feyenoord*, *Arsenal*, *PSG*, *Real Madrid*.",
-        "data": {
-          "search_query": "Teamnaam"
-        }
-      },
-      "search_team_results": {
-        "title": "Selecteer team",
-        "description": "Kies het juiste team uit de zoekresultaten.\n\nDe sensor volgt automatisch alle competities waarin dit team speelt.",
-        "data": {
-          "team_result": "Team"
-        }
       }
-    },
-    "error": {
-      "empty_query": "Voer een teamnaam in.",
-      "no_results": "Geen teams gevonden — probeer een andere schrijfwijze of de volledige teamnaam."
     }
   },
   "options": {

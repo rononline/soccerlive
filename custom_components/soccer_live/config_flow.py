@@ -12,7 +12,6 @@ _LOGGER = logging.getLogger(__name__)
 
 OPTION_SELECT_LEAGUE = "League"
 OPTION_SELECT_TEAM = "Team"
-OPTION_SEARCH_TEAM = "Search team"
 OPTION_MANUAL_TEAM = "Manual entry"
 OPTION_ALL_TODAY = "All matches today"
 OPTION_NEWS = "News"
@@ -26,7 +25,6 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._errors = {}
         self._data = {}
         self._teams = []
-        self._search_results = []
 
     async def async_step_user(self, user_input=None):
         self._errors = {}
@@ -41,10 +39,6 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif selection == OPTION_SELECT_TEAM:
                 self._data.update(user_input)
                 return await self.async_step_select_competition_for_team()
-
-            elif selection == OPTION_SEARCH_TEAM:
-                self._data.update(user_input)
-                return await self.async_step_search_team_query()
             
             elif selection == OPTION_ALL_TODAY:
                 self._data.update(user_input)
@@ -69,7 +63,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("selection", default=OPTION_SELECT_LEAGUE): vol.In([OPTION_SELECT_LEAGUE, OPTION_SELECT_TEAM, OPTION_SEARCH_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM, OPTION_COMMENTARY]),
+                vol.Required("selection", default=OPTION_SELECT_LEAGUE): vol.In([OPTION_SELECT_LEAGUE, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM, OPTION_COMMENTARY]),
             }),
             errors=self._errors,
         )
@@ -227,75 +221,6 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-
-    async def async_step_search_team_query(self, user_input=None):
-        if user_input is not None:
-            query = user_input.get("search_query", "").strip()
-            if not query:
-                self._errors["search_query"] = "empty_query"
-            else:
-                self._search_results = await self._search_teams(query)
-                if not self._search_results:
-                    self._errors["search_query"] = "no_results"
-                else:
-                    return await self.async_step_search_team_results()
-
-        return self.async_show_form(
-            step_id="search_team_query",
-            data_schema=vol.Schema({
-                vol.Required("search_query"): str,
-            }),
-            errors=self._errors,
-        )
-
-    async def async_step_search_team_results(self, user_input=None):
-        if user_input is not None:
-            selected_id = user_input.get("team_result")
-            match = next((r for r in self._search_results if r["id"] == selected_id), None)
-            if match:
-                team_name = match["displayName"]
-                team_id = match["id"]
-                label = match.get("competition", "")
-                title = f"Team {team_name}" + (f" ({label})" if label else "")
-                self._data.update({
-                    "team_id": team_id,
-                    "team_name": team_name,
-                    "competition_code": "N/A",
-                    "name": title,
-                    "selection": OPTION_SEARCH_TEAM,
-                })
-                return self.async_create_entry(title=title, data=self._data)
-
-        options = {r["id"]: f"{r['displayName']}" + (f" — {r['competition']}" if r.get("competition") else "") for r in self._search_results}
-        return self.async_show_form(
-            step_id="search_team_results",
-            data_schema=vol.Schema({
-                vol.Required("team_result"): vol.In(options),
-            }),
-            errors=self._errors,
-        )
-
-    async def _search_teams(self, query):
-        url = f"https://site.api.espn.com/apis/common/v3/search?query={query}&sport=soccer&limit=20"
-        try:
-            session = async_get_clientsession(self.hass)
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                response.raise_for_status()
-                data = await response.json()
-                results = []
-                for group in data.get("results", []):
-                    if group.get("type") != "team":
-                        continue
-                    for item in group.get("contents", []):
-                        team_id = str(item.get("id", ""))
-                        name = item.get("displayName") or item.get("shortName", "")
-                        competition = item.get("description", "")
-                        if team_id and name:
-                            results.append({"id": team_id, "displayName": name, "competition": competition})
-                return results
-        except Exception as e:
-            _LOGGER.error(f"Team search failed for '{query}': {e}")
-            return []
 
     async def _get_competitions(self):
         url = "https://site.api.espn.com/apis/site/v2/leagues/dropdown?lang=en&region=us&calendartype=whitelist&limit=200&sport=soccer"

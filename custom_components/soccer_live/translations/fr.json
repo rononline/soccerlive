@@ -58,25 +58,7 @@
         "data": {
           "competition_code": "Compétition"
         }
-      },
-      "search_team_query": {
-        "title": "Rechercher une équipe",
-        "description": "Entrez le nom de l'équipe que vous souhaitez suivre. Soccer Live recherchera automatiquement dans toutes les compétitions — inutile de connaître la ligue.\n\nExemples : *Feyenoord*, *Arsenal*, *PSG*, *Real Madrid*.",
-        "data": {
-          "search_query": "Nom de l'équipe"
-        }
-      },
-      "search_team_results": {
-        "title": "Sélectionner une équipe",
-        "description": "Choisissez la bonne équipe parmi les résultats de recherche.\n\nLe capteur suivra automatiquement toutes les compétitions auxquelles cette équipe participe.",
-        "data": {
-          "team_result": "Équipe"
-        }
       }
-    },
-    "error": {
-      "empty_query": "Veuillez entrer un nom d'équipe.",
-      "no_results": "Aucune équipe trouvée — essayez une autre orthographe ou le nom complet de l'équipe."
     }
   },
   "options": {
