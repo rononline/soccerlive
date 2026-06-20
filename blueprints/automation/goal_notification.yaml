@@ -1,0 +1,42 @@
+blueprint:
+  name: Soccer Live - Goal notification
+  description: Send a notification when a Soccer Live sensor reports a new goal event.
+  domain: automation
+  input:
+    soccer_sensor:
+      name: Soccer Live sensor
+      selector:
+        entity:
+          domain: sensor
+    notify_service:
+      name: Notify service
+      description: "Example: notify.mobile_app_iphone"
+      selector:
+        text:
+    title:
+      name: Notification title
+      default: "Goal!"
+      selector:
+        text:
+
+trigger:
+  - platform: state
+    entity_id: !input soccer_sensor
+    attribute: last_goal_event
+
+condition:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.last_goal_event is defined }}"
+  - condition: template
+    value_template: "{{ trigger.from_state is none or trigger.from_state.attributes.last_goal_event != trigger.to_state.attributes.last_goal_event }}"
+
+action:
+  - service: !input notify_service
+    data:
+      title: !input title
+      message: >-
+        {% set event = trigger.to_state.attributes.last_goal_event %}
+        {{ event.player | default(event.team, true) }} ·
+        {{ event.home_team }} {{ event.home_score }} - {{ event.away_score }} {{ event.away_team }}
+
+mode: queued

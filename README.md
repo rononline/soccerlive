@@ -373,6 +373,9 @@ mode: queued
 | `soccer_live_substitution` | Substitution | `player`, `minute`, `team`, `home_team`, `away_team`, `league_name` |
 | `soccer_live_match_finished` | Full time | `home_score`, `away_score`, `goal_scorers`, `goal_scorers_str`, `league_name` |
 
+Example automation blueprints are available in [`blueprints/automation`](blueprints/automation):
+goal notification, red card notification and match started notification.
+
 ---
 
 ## 🗂️ Sensor attribute data contract

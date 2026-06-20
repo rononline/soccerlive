@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.16 (2026-06-20)
+- Add Home Assistant automation blueprints for goal, red card and match started notifications
+
 ## v3.6.15 (2026-06-20)
 - Docs: document health attributes, automation last-event attributes, schedule summary attributes and new match color/count fields
 
