@@ -351,6 +351,15 @@ mode: queued
 **Counters & booleans**:
 `total_matches`, `live_matches_count`, `upcoming_matches_count`, `finished_matches_count`, `has_live_match`, `has_upcoming_match`, `has_recent_match`
 
+**Schedule summary**:
+`schedule_match_count`, `schedule_live_count`, `schedule_upcoming_count`, `schedule_recent_count`, `schedule_live_matches`, `schedule_upcoming_matches`, `schedule_recent_matches`
+
+**Automation-friendly last event attributes**:
+`last_event`, `last_event_type`, `last_event_timestamp`, `last_goal_event`, `last_card_event`, `last_match_started_event`, `last_match_finished_event`
+
+**Health/debug attributes**:
+`api_status`, `last_successful_update`, `last_error`, `request_count`, `last_request_time`, `sensor_type`, `start_date`, `end_date`
+
 ---
 
 ## 📡 Available events
@@ -375,7 +384,9 @@ These attributes are guaranteed to be present when available. Card developers ca
 | Attribute | Type | Description |
 |---|---|---|
 | `home_team` / `away_team` | string | Team names |
+| `home_abbrev` / `away_abbrev` | string | Team abbreviations |
 | `home_logo` / `away_logo` | string | Logo URLs |
+| `home_color` / `away_color` | string | ESPN team colors when available |
 | `home_score` / `away_score` | int\|str | Score or `N/A` |
 | `state` | string | `pre` / `in` / `post` |
 | `date` | string | `DD-MM-YYYY HH:MM` |
@@ -406,7 +417,19 @@ Available after kick-off when `enable_summary_enrichment` is on:
 
 ### Top-level computed attributes (next_match_* sensors)
 
-`next_match_home_team`, `next_match_away_team`, `next_match_date`, `next_match_datetime_iso`, `next_match_minutes_until`, `next_match_status`, `next_match_venue`, `next_match_broadcasts`, `next_match_has_stats`, `next_match_has_commentary`, `next_match_links`, `next_match_attendance`, `next_match_neutral_site`
+`next_match_home_team`, `next_match_away_team`, `next_match_home_abbrev`, `next_match_away_abbrev`, `next_match_home_color`, `next_match_away_color`, `team_colors`, `next_match_date`, `next_match_datetime_iso`, `next_match_minutes_until`, `next_match_status`, `next_match_venue`, `next_match_broadcasts`, `next_match_broadcast_count`, `next_match_event_id`, `next_match_event_count`, `next_match_h2h_count`, `next_match_has_stats`, `next_match_has_commentary`, `next_match_links`, `next_match_attendance`, `next_match_neutral_site`
+
+### Top-level live match attributes
+
+`live_match_home_team`, `live_match_away_team`, `live_match_home_abbrev`, `live_match_away_abbrev`, `live_match_home_color`, `live_match_away_color`, `team_colors`, `live_match_date`, `live_match_status`, `live_match_venue`, `live_match_clock`, `live_match_event_id`, `live_match_event_count`, `live_match_h2h_count`
+
+### Schedule summary attributes
+
+`schedule_live_matches`, `schedule_upcoming_matches` and `schedule_recent_matches` contain compact match objects with: `event_id`, `date`, `state`, team names/abbreviations/logos/colors, scores, `venue` and `broadcasts`.
+
+### Automation attributes
+
+`last_event` always contains the latest fired Soccer Live event payload plus `event_type` and `timestamp`. Typed convenience attributes are populated for the latest matching event category: `last_goal_event`, `last_card_event`, `last_match_started_event`, `last_match_finished_event`.
 
 ---
 

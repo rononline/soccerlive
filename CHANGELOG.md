@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.15 (2026-06-20)
+- Docs: document health attributes, automation last-event attributes, schedule summary attributes and new match color/count fields
+
 ## v3.6.14 (2026-06-20)
 - Automation attributes: expose `last_event`, `last_event_type`, `last_event_timestamp` and typed last-event attributes for goals, cards, match started and match finished
 - Health attributes: expose `last_successful_update`, `last_error` and `api_status`
