@@ -50,9 +50,24 @@ recorder:
 
 ---
 
+## 🔍 Setup options
+
+When adding the integration, you can choose how to set it up:
+
+| Option | Description |
+|---|---|
+| **League** | All matches of a specific competition (bracket sensor auto-created for cup competitions) |
+| **Team** | Pick a competition first, then select the team |
+| **Search team** | Type a team name — ESPN is searched automatically across all competitions. No need to know the league. |
+| **All matches today** | Every match worldwide played today |
+| **News** | News feed for a specific competition |
+| **Manual entry** | Enter the team ID directly |
+
+---
+
 ## 🔢 Finding a Team ID
 
-Usually **not needed**: the ID is filled in automatically when you select a competition and team. Only required for manual entry.
+Usually **not needed**: the ID is filled in automatically when you select a competition and team (or use "Search team"). Only required for manual entry.
 
 1. **Via ESPN website**: open the team page on `espn.com` — the ID is the number in the URL:  
    `espn.com/soccer/team/_/id/`**`9723`**`/portland-timbers` → Team ID = **9723**
