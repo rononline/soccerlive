@@ -51,9 +51,20 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
         matches = []
         team_logo = None
 
-        # ESPN returns league name at the top level, not per-competition
+        # Build id-keyed lookup so per-match league resolution works for multi-league
+        # endpoints like /all/scoreboard (which has many leagues in the top-level array)
         top_leagues = data.get("leagues", [])
-        top_league_name = top_leagues[0].get("name", "N/A") if top_leagues else "N/A"
+        leagues_by_id = {}
+        for _lg in top_leagues:
+            _lid = str(_lg.get("id", "") or "")
+            if _lid:
+                _logos = _lg.get("logos", [])
+                leagues_by_id[_lid] = {
+                    "name": _lg.get("name") or _lg.get("abbreviation") or "",
+                    "logo": _logos[0].get("href", "") if _logos else "",
+                }
+        # For single-league endpoints use the name directly as before
+        top_league_name = top_leagues[0].get("name", "N/A") if len(top_leagues) == 1 else "N/A"
 
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
@@ -88,12 +99,19 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             week_number = (match.get("week") or {}).get("number")
 
             competitions = match.get("competitions", [])
-            # Extract league/competition name: from the competition first, then from the top-level
-            league_name = competitions[0].get("league", {}).get("displayName", "N/A") if competitions else "N/A"
-            if league_name == "N/A":
-                league_name = top_league_name
+            comp = competitions[0] if competitions else {}
+            comp_league = comp.get("league", {}) or {}
+            league_id = str(comp_league.get("id", "") or "")
+            league_name = (
+                comp_league.get("displayName")
+                or comp_league.get("name")
+                or (leagues_by_id.get(league_id, {}).get("name") if league_id else None)
+                or (top_league_name if top_league_name != "N/A" else None)
+                or "N/A"
+            )
+            league_logo = (leagues_by_id.get(league_id, {}).get("logo") if league_id else None) or ""
             
-            competitors = competitions[0].get("competitors", []) if competitions else []
+            competitors = comp.get("competitors", []) if comp else []
             if len(competitors) < 2:
                 _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
                 continue
@@ -130,7 +148,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             clock = match.get("status", {}).get("displayClock", "N/A")
             period = match.get("status", {}).get("period", "N/A")
 
-            venue_obj = competitions[0].get("venue", {}) or {}
+            venue_obj = comp.get("venue", {}) or {}
             venue = venue_obj.get("fullName", "N/A")
             venue_address = venue_obj.get("address", {}) or {}
             venue_city = venue_address.get("city", "N/A")
@@ -150,16 +168,16 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             away_record_summary = competitors[1].get("recordSummary", "")
             away_standing_summary = competitors[1].get("standingSummary", "")
 
-            broadcast = _get_broadcast(competitions[0])
-            broadcasts = _get_broadcasts(competitions[0])
-            neutral_site = competitions[0].get("neutralSite", False)
-            tickets_available = competitions[0].get("ticketsAvailable", False)
-            attendance = competitions[0].get("attendance", 0)
-            has_stats = competitions[0].get("boxscoreAvailable", False)
-            has_commentary = competitions[0].get("playByPlayAvailable", False)
-            match_links = _get_links(competitions[0])
+            broadcast = _get_broadcast(comp)
+            broadcasts = _get_broadcasts(comp)
+            neutral_site = comp.get("neutralSite", False)
+            tickets_available = comp.get("ticketsAvailable", False)
+            attendance = comp.get("attendance", 0)
+            has_stats = comp.get("boxscoreAvailable", False)
+            has_commentary = comp.get("playByPlayAvailable", False)
+            match_links = _get_links(comp)
 
-            match_details = _get_details(competitions[0].get("details", []))
+            match_details = _get_details(comp.get("details", []))
 
             if team_name and (team_name.lower() in home_team.lower() or team_name.lower() in away_team.lower()):
                 team_logo = home_logo if team_name.lower() in home_team.lower() else away_logo
@@ -170,6 +188,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 "season_info": season_info,
                 "week_number": week_number,
                 "league_name": league_name,
+                "league_logo": league_logo,
                 "home_team": home_team,
                 "home_abbrev": home_abbrev,
                 "home_color": home_color,
