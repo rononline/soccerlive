@@ -948,8 +948,18 @@ class SoccerLiveSensor(Entity):
         return {
             "next_match_home_team": match.get("home_team", "N/A"),
             "next_match_away_team": match.get("away_team", "N/A"),
+            "next_match_home_abbrev": match.get("home_abbrev", "N/A"),
+            "next_match_away_abbrev": match.get("away_abbrev", "N/A"),
             "next_match_home_logo": match.get("home_logo", "N/A"),
             "next_match_away_logo": match.get("away_logo", "N/A"),
+            "next_match_home_color": match.get("home_color", "N/A"),
+            "next_match_away_color": match.get("away_color", "N/A"),
+            "home_color": match.get("home_color", "N/A"),
+            "away_color": match.get("away_color", "N/A"),
+            "team_colors": [
+                color for color in (match.get("home_color"), match.get("away_color"))
+                if color and color != "N/A"
+            ],
             "next_match_home_score": match.get("home_score", "N/A"),
             "next_match_away_score": match.get("away_score", "N/A"),
             "next_match_date": match.get("date", "N/A"),
@@ -968,6 +978,10 @@ class SoccerLiveSensor(Entity):
             "next_match_neutral_site": match.get("neutral_site", False),
             "next_match_has_stats": bool(match.get("has_stats") or match.get("home_statistics")),
             "next_match_has_commentary": bool(match.get("has_commentary") or match.get("key_events")),
+            "next_match_event_id": match.get("event_id", "N/A"),
+            "next_match_broadcast_count": len(broadcasts),
+            "next_match_event_count": len(match.get("match_details") or []),
+            "next_match_h2h_count": len(match.get("head_to_head") or []),
             "next_match_links": match.get("links") or [],
             "next_match_week": match.get("week_number", "N/A"),
         }
@@ -982,8 +996,18 @@ class SoccerLiveSensor(Entity):
         return {
             "live_match_home_team": match.get("home_team", "N/A"),
             "live_match_away_team": match.get("away_team", "N/A"),
+            "live_match_home_abbrev": match.get("home_abbrev", "N/A"),
+            "live_match_away_abbrev": match.get("away_abbrev", "N/A"),
             "live_match_home_logo": match.get("home_logo", "N/A"),
             "live_match_away_logo": match.get("away_logo", "N/A"),
+            "live_match_home_color": match.get("home_color", "N/A"),
+            "live_match_away_color": match.get("away_color", "N/A"),
+            "home_color": match.get("home_color", "N/A"),
+            "away_color": match.get("away_color", "N/A"),
+            "team_colors": [
+                color for color in (match.get("home_color"), match.get("away_color"))
+                if color and color != "N/A"
+            ],
             "live_match_home_score": match.get("home_score", "N/A"),
             "live_match_away_score": match.get("away_score", "N/A"),
             "live_match_date": match.get("date", "N/A"),
@@ -994,6 +1018,9 @@ class SoccerLiveSensor(Entity):
             "live_match_clock": match.get("clock", "N/A"),
             "live_match_home_form": match.get("home_form", "N/A"),
             "live_match_away_form": match.get("away_form", "N/A"),
+            "live_match_event_id": match.get("event_id", "N/A"),
+            "live_match_event_count": len(match.get("match_details") or []),
+            "live_match_h2h_count": len(match.get("head_to_head") or []),
         }
 
     def _compute_all_matches_attributes(self, matches, events: list = None):

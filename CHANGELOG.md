@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.13 (2026-06-20)
+- Match sensors: expose top-level home/away colors and `team_colors` for card auto-skins
+- Match sensors: expose next/live match abbreviations, event IDs, event counts, H2H counts and broadcast counts for richer cards and automations
+
 ## v3.6.12 (2026-06-19)
 - `standings` sensor: remove fallback ESPN logo URL construction — ESPN uses numeric IDs not competition code strings, causing 404 errors; card now shows fallback emoji instead
 
