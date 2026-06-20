@@ -1,9 +1,5 @@
 # Changelog
 
-## v3.6.17 (2026-06-20)
-- Config flow: add "Search team" option — type a team name, ESPN is searched across all competitions automatically; no need to know the league; creates a `team_matches_mixed` sensor directly
-- Translations: add `search_team_query` and `search_team_results` steps in all 6 languages (EN, NL, DE, FR, IT, ES)
-
 ## v3.6.16 (2026-06-20)
 - Add Home Assistant automation blueprints for goal, red card and match started notifications
 
