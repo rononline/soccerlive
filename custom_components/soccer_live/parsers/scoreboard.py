@@ -102,6 +102,16 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             comp = competitions[0] if competitions else {}
             comp_league = comp.get("league", {}) or {}
             league_id = str(comp_league.get("id", "") or "")
+
+            # For /all/scoreboard the league id is often encoded in the competition uid:
+            # e.g.  "s:600~l:ned.1~e:700001"  →  league_id = "ned.1"
+            if not league_id:
+                comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
+                for _part in comp_uid.split("~"):
+                    if _part.startswith("l:"):
+                        league_id = _part[2:]
+                        break
+
             league_name = (
                 comp_league.get("displayName")
                 or comp_league.get("name")
@@ -110,7 +120,11 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 or "N/A"
             )
             league_logo = (leagues_by_id.get(league_id, {}).get("logo") if league_id else None) or ""
-            
+            _LOGGER.debug(
+                "league_resolve: event=%s uid=%s league_id=%s comp_league=%s → name=%s",
+                match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
+            )
+
             competitors = comp.get("competitors", []) if comp else []
             if len(competitors) < 2:
                 _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
