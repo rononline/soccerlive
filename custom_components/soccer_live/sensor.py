@@ -214,6 +214,8 @@ class SoccerLiveSensor(Entity):
         
         self._request_count = 0
         self._last_request_time = None
+        self._last_successful_update = None
+        self._last_error = None
         
         self._previous_scores = {}
         self._previous_match_details = {}
@@ -295,6 +297,9 @@ class SoccerLiveSensor(Entity):
             **self._attributes,
             "request_count": self._request_count,
             "last_request_time": self._last_request_time,
+            "last_successful_update": self._last_successful_update,
+            "last_error": self._last_error,
+            "api_status": "error" if self._last_error else "ok",
             "start_date": self._filter_start_str(),
             "end_date": self._filter_end_str(),
             "sensor_type": self._sensor_type,
@@ -359,7 +364,10 @@ class SoccerLiveSensor(Entity):
                 await self._enrich_with_summary()
                 await self._enrich_with_commentary()
                 await self._flush_pending_events()
+                self._last_successful_update = datetime.now().isoformat()
+                self._last_error = None
             except Exception as proc_err:
+                self._last_error = str(proc_err)
                 _LOGGER.error(f"Error processing cached data for {self._name}: {proc_err}")
             _LOGGER.info(f"Using cached data for {self._name}")
             self._schedule_live_refresh()
@@ -393,10 +401,13 @@ class SoccerLiveSensor(Entity):
                             await self._enrich_with_commentary()
                             await self._flush_pending_events()
                         except Exception as proc_err:
+                            self._last_error = str(proc_err)
                             _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
                         self._schedule_live_refresh()
                         self._request_count += 1
                         self._last_request_time = datetime.now().isoformat()
+                        self._last_successful_update = self._last_request_time
+                        self._last_error = None
                         _LOGGER.info(f"Finished update for {self._name}")
                         break
                     elif response.status < 500:
@@ -412,12 +423,15 @@ class SoccerLiveSensor(Entity):
                         await asyncio.sleep(2)
                         retries += 1
             except aiohttp.ClientError as error:
+                self._last_error = str(error)
                 await asyncio.sleep(2)
                 retries += 1
             except asyncio.TimeoutError:
+                self._last_error = "Timeout while fetching ESPN data"
                 await asyncio.sleep(2)
                 retries += 1
         else:
+            self._last_error = "All attempts failed; no data received from ESPN"
             _LOGGER.warning(f"All attempts failed for {self._name} — no data received from ESPN")
 
     def _filter_start_str(self):
@@ -430,13 +444,35 @@ class SoccerLiveSensor(Entity):
 
     async def _flush_pending_events(self):
         """Fire events collected during executor processing on the event loop (thread-safe)."""
+        now_iso = datetime.now().isoformat()
         for event_type, event_data in self._pending_events:
+            self._store_last_event_attributes(event_type, event_data, now_iso)
             self.hass.bus.fire(event_type, event_data)
             await self._send_notification(event_type, event_data)
         self._pending_events = []
         if self._save_store_needed:
             self._save_store_needed = False
             await self._save_match_finished_store()
+
+    def _store_last_event_attributes(self, event_type, event_data, timestamp):
+        """Expose the latest detected event as sensor attributes for simple automations."""
+        payload = {
+            **event_data,
+            "event_type": event_type,
+            "timestamp": timestamp,
+        }
+        self._attributes["last_event_type"] = event_type
+        self._attributes["last_event_timestamp"] = timestamp
+        self._attributes["last_event"] = payload
+
+        if event_type == "soccer_live_goal":
+            self._attributes["last_goal_event"] = payload
+        elif event_type in ("soccer_live_yellow_card", "soccer_live_red_card"):
+            self._attributes["last_card_event"] = payload
+        elif event_type == "soccer_live_match_started":
+            self._attributes["last_match_started_event"] = payload
+        elif event_type == "soccer_live_match_finished":
+            self._attributes["last_match_finished_event"] = payload
 
     async def _send_notification(self, event_type, event_data):
         """Send HA notification when a goal or card event fires, if notify_service is configured."""
@@ -1076,8 +1112,58 @@ class SoccerLiveSensor(Entity):
         computed["live_matches_count"] = len(live_matches)
         computed["upcoming_matches_count"] = len(upcoming_matches)
         computed["finished_matches_count"] = len([m for m in matches if m.get("state") == "post"])
+        computed.update(self._compute_schedule_summary(matches))
         
         return computed
+
+    def _compute_schedule_summary(self, matches):
+        """Return compact, deduplicated schedule slices for cards and automations."""
+        unique_matches = []
+        seen = set()
+        for match in matches or []:
+            key = match.get("event_id") or f"{match.get('date')}|{match.get('home_team')}|{match.get('away_team')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_matches.append(match)
+
+        def sort_key(match):
+            parsed = self._parse_match_datetime(match.get("date"))
+            return parsed or datetime.max
+
+        unique_matches = sorted(unique_matches, key=sort_key)
+        live = [m for m in unique_matches if m.get("state") == "in"]
+        upcoming = [m for m in unique_matches if m.get("state") == "pre"]
+        recent = [m for m in unique_matches if m.get("state") == "post"][-5:]
+
+        def compact(match):
+            return {
+                "event_id": match.get("event_id"),
+                "date": match.get("date"),
+                "state": match.get("state"),
+                "home_team": match.get("home_team"),
+                "home_abbrev": match.get("home_abbrev"),
+                "home_logo": match.get("home_logo"),
+                "home_color": match.get("home_color"),
+                "home_score": match.get("home_score"),
+                "away_team": match.get("away_team"),
+                "away_abbrev": match.get("away_abbrev"),
+                "away_logo": match.get("away_logo"),
+                "away_color": match.get("away_color"),
+                "away_score": match.get("away_score"),
+                "venue": match.get("venue"),
+                "broadcasts": match.get("broadcasts") or [],
+            }
+
+        return {
+            "schedule_match_count": len(unique_matches),
+            "schedule_live_count": len(live),
+            "schedule_upcoming_count": len(upcoming),
+            "schedule_recent_count": len(recent),
+            "schedule_live_matches": [compact(m) for m in live[:5]],
+            "schedule_upcoming_matches": [compact(m) for m in upcoming[:10]],
+            "schedule_recent_matches": [compact(m) for m in list(reversed(recent))],
+        }
 
     def _process_data(self, data) -> dict:
         """Parse ESPN data and return {"state": ..., "attributes": {...}, "events": [...]}.

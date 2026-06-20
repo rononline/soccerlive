@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.14 (2026-06-20)
+- Automation attributes: expose `last_event`, `last_event_type`, `last_event_timestamp` and typed last-event attributes for goals, cards, match started and match finished
+- Health attributes: expose `last_successful_update`, `last_error` and `api_status`
+- Schedule summary: expose deduplicated `schedule_*` counts and compact live/upcoming/recent match lists
+
 ## v3.6.13 (2026-06-20)
 - Match sensors: expose top-level home/away colors and `team_colors` for card auto-skins
 - Match sensors: expose next/live match abbreviations, event IDs, event counts, H2H counts and broadcast counts for richer cards and automations
