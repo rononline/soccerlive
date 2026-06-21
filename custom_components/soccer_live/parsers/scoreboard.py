@@ -103,7 +103,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             comp_league = comp.get("league", {}) or {}
             league_id = str(comp_league.get("id", "") or "")
 
-            # For /all/scoreboard the league id is often encoded in the competition uid:
+            # For /all/scoreboard the league id is encoded in the competition uid:
             # e.g.  "s:600~l:ned.1~e:700001"  →  league_id = "ned.1"
             if not league_id:
                 comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
@@ -112,10 +112,15 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                         league_id = _part[2:]
                         break
 
+            # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" → league name
+            alt_note = (comp.get("altGameNote") or "").strip()
+            league_name_from_note = alt_note.split(",")[0].strip() if alt_note else ""
+
             league_name = (
                 comp_league.get("displayName")
                 or comp_league.get("name")
                 or (leagues_by_id.get(league_id, {}).get("name") if league_id else None)
+                or league_name_from_note
                 or (top_league_name if top_league_name != "N/A" else None)
                 or "N/A"
             )
