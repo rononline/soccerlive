@@ -394,6 +394,7 @@ These attributes are guaranteed to be present when available. Card developers ca
 | `state` | string | `pre` / `in` / `post` |
 | `date` | string | `DD-MM-YYYY HH:MM` |
 | `venue` / `venue_city` | string | Stadium info |
+| `league_name` / `league_logo` | string | Resolved league identity for mixed/all sensors |
 | `competition_name` / `competition_logo` | string | Competition identity |
 | `broadcasts` | list | TV/streaming channels |
 | `neutral_site` | bool | Neutral venue |
@@ -403,6 +404,20 @@ These attributes are guaranteed to be present when available. Card developers ca
 | `has_commentary` | bool | Play-by-play available |
 | `clock` | string | Match clock (live) |
 | `league_info` | list | Competition metadata: `name`, `abbreviation`, `logo_href`, `startDate`, `endDate` |
+
+### League name and logo resolution
+
+ESPN uses different data shapes per endpoint. The parser resolves per-match
+league identity in this order:
+
+1. `competition.league` or event-level `league`
+2. top-level `leagues[]` matched by league ID
+3. the `l:` part from competition/event `uid`
+4. `altGameNote` before the comma, e.g. `FIFA World Cup, Group F`
+5. curated logo overrides for common international competitions
+
+The integration intentionally does not guess arbitrary ESPN CDN logo URLs from
+league IDs, because many IDs do not match the logo file number.
 
 ### Enriched team_match sensor (via summary endpoint)
 

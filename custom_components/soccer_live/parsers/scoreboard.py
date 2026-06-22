@@ -53,8 +53,12 @@ _LEAGUE_LOGO_OVERRIDES = {
     "776":   "https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png",   # UEFA Europa League
     "20296": "https://a.espncdn.com/i/leaguelogos/soccer/500/20296.png",  # UEFA Conference League
     "781":   "https://a.espncdn.com/i/leaguelogos/soccer/500/74.png",     # UEFA Euro
-    "780":   "https://a.espncdn.com/i/leaguelogos/soccer/500/83.png",     # Copa América
+    "780":   "https://a.espncdn.com/i/leaguelogos/soccer/500/83.png",     # Copa America
 }
+
+def _first_logo_href(obj):
+    logos = (obj or {}).get("logos", []) or []
+    return logos[0].get("href", "") if logos else ""
 
 def process_match_data(data, hass, team_name=None, team_id=None, next_match_only=False, start_date=None, end_date=None, recent_match_hours=24):
     try:
@@ -70,10 +74,9 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
         for _lg in top_leagues:
             _lid = str(_lg.get("id", "") or "")
             if _lid:
-                _logos = _lg.get("logos", [])
                 leagues_by_id[_lid] = {
                     "name": _lg.get("name") or _lg.get("abbreviation") or "",
-                    "logo": _logos[0].get("href", "") if _logos else "",
+                    "logo": _first_logo_href(_lg),
                 }
         # For single-league endpoints use the name directly as before
         top_league_name = top_leagues[0].get("name", "N/A") if len(top_leagues) == 1 else "N/A"
@@ -118,7 +121,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             league_id = str(comp_league.get("id", "") or event_league.get("id", "") or "")
 
             # For /all/scoreboard the league id is encoded in the competition uid:
-            # e.g.  "s:600~l:ned.1~e:700001"  →  league_id = "ned.1"
+            # e.g. "s:600~l:ned.1~e:700001" -> league_id = "ned.1"
             if not league_id:
                 comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
                 for _part in comp_uid.split("~"):
@@ -126,7 +129,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                         league_id = _part[2:]
                         break
 
-            # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" → league name
+            # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" -> league name
             alt_note = (comp.get("altGameNote") or "").strip()
             league_name_from_note = alt_note.split(",")[0].strip() if alt_note else ""
 
@@ -140,11 +143,16 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 or (top_league_name if top_league_name != "N/A" else None)
                 or "N/A"
             )
-            league_logo = (leagues_by_id.get(league_id, {}).get("logo") if league_id else None) or ""
+            league_logo = (
+                _first_logo_href(comp_league)
+                or _first_logo_href(event_league)
+                or (leagues_by_id.get(league_id, {}).get("logo") if league_id else None)
+                or ""
+            )
             if not league_logo and league_id:
                 league_logo = _LEAGUE_LOGO_OVERRIDES.get(league_id, "")
             _LOGGER.debug(
-                "league_resolve: event=%s uid=%s league_id=%s comp_league=%s → name=%s",
+                "league_resolve: event=%s uid=%s league_id=%s comp_league=%s -> name=%s",
                 match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
             )
 

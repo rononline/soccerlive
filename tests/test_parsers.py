@@ -83,6 +83,86 @@ class TestScoreboardParser:
         result = process_match_data({"leagues": [], "events": []}, _MockHass())
         assert result["matches"] == []
 
+    def _minimal_event(self, **competition_overrides):
+        competition = {
+            "id": "700001",
+            "date": "2026-06-20T17:00Z",
+            "uid": "s:600~l:ned.1~e:700001",
+            "competitors": [
+                {
+                    "homeAway": "home",
+                    "score": "0",
+                    "team": {
+                        "id": "84",
+                        "displayName": "Ajax",
+                        "abbreviation": "AJX",
+                        "logos": [{"href": "https://example.com/ajax.png"}],
+                    },
+                },
+                {
+                    "homeAway": "away",
+                    "score": "0",
+                    "team": {
+                        "id": "85",
+                        "displayName": "PSV",
+                        "abbreviation": "PSV",
+                        "logos": [{"href": "https://example.com/psv.png"}],
+                    },
+                },
+            ],
+        }
+        competition.update(competition_overrides)
+        return {
+            "id": "700001",
+            "date": "2026-06-20T17:00Z",
+            "name": "Ajax vs PSV",
+            "status": {"type": {"state": "pre", "description": "Scheduled"}},
+            "competitions": [competition],
+        }
+
+    def test_league_name_and_logo_from_uid_top_league_lookup(self):
+        data = {
+            "leagues": [{
+                "id": "ned.1",
+                "name": "Dutch Eredivisie",
+                "logos": [{"href": "https://example.com/eredivisie.png"}],
+            }],
+            "events": [self._minimal_event()],
+        }
+
+        match = self._parse(data)["matches"][0]
+
+        assert match["league_name"] == "Dutch Eredivisie"
+        assert match["league_logo"] == "https://example.com/eredivisie.png"
+
+    def test_league_name_from_alt_game_note_and_curated_logo_override(self):
+        data = {
+            "leagues": [],
+            "events": [self._minimal_event(
+                uid="s:600~l:606~e:700002",
+                altGameNote="FIFA World Cup, Group F",
+            )],
+        }
+
+        match = self._parse(data)["matches"][0]
+
+        assert match["league_name"] == "FIFA World Cup"
+        assert match["league_logo"] == "https://a.espncdn.com/i/leaguelogos/soccer/500/4.png"
+
+    def test_league_name_from_event_level_league(self):
+        event = self._minimal_event(uid="")
+        event["league"] = {
+            "id": "uefa.champions",
+            "displayName": "UEFA Champions League",
+            "logos": [{"href": "https://example.com/ucl.png"}],
+        }
+        data = {"leagues": [], "events": [event]}
+
+        match = self._parse(data)["matches"][0]
+
+        assert match["league_name"] == "UEFA Champions League"
+        assert match["league_logo"] == "https://example.com/ucl.png"
+
 
 # ---------------------------------------------------------------------------
 # Standings parser
