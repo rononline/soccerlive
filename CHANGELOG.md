@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.28 (2026-06-22)
+- Add URL-building regression tests for calendar/no-calendar sensor types
+- Throttle repeated calendar fetch warnings per competition and error reason for 5 minutes
+
 ## v3.6.27 (2026-06-22)
 - Reduce unnecessary ESPN calendar calls by only fetching calendar dates for date-range scoreboard sensors
 - Add per-competition calendar caching and locking to prevent startup bursts across related sensors

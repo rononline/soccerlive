@@ -186,6 +186,7 @@ class SoccerLiveSensor(Entity):
     _cache = {}
     _calendar_cache = {}
     _calendar_locks = {}
+    _calendar_error_logs = {}
 
     def __init__(self, hass, name, code, sensor_type=None, scan_interval=timedelta(minutes=5),
                  team_name=None, config_entry_id=None, start_date=None, end_date=None, team_id=None,
@@ -706,10 +707,16 @@ class SoccerLiveSensor(Entity):
                     calendar_end_date = (now + timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
                 return calendar_start_date, calendar_end_date
         except asyncio.TimeoutError:
-            _LOGGER.warning("Calendar fetch timed out for %s (%s)", self._name, calendar_url)
+            self._log_calendar_fetch_issue(
+                "timeout",
+                "Calendar fetch timed out for %s (%s)",
+                self._name,
+                calendar_url,
+            )
             return None, None
         except aiohttp.ClientResponseError as e:
-            _LOGGER.warning(
+            self._log_calendar_fetch_issue(
+                f"http-{e.status}",
                 "Calendar fetch failed for %s (%s): HTTP %s %s",
                 self._name,
                 calendar_url,
@@ -718,7 +725,8 @@ class SoccerLiveSensor(Entity):
             )
             return None, None
         except aiohttp.ClientError as e:
-            _LOGGER.warning(
+            self._log_calendar_fetch_issue(
+                type(e).__name__,
                 "Calendar fetch failed for %s (%s): %s: %r",
                 self._name,
                 calendar_url,
@@ -727,8 +735,25 @@ class SoccerLiveSensor(Entity):
             )
             return None, None
         except Exception:
-            _LOGGER.exception("Unexpected error fetching calendar for %s (%s)", self._name, calendar_url)
+            self._log_calendar_fetch_issue(
+                "unexpected",
+                "Unexpected error fetching calendar for %s (%s)",
+                self._name,
+                calendar_url,
+                exc_info=True,
+            )
             return None, None
+
+    def _log_calendar_fetch_issue(self, reason, message, *args, exc_info=False):
+        """Throttle repeated calendar warnings per competition/reason."""
+        key = (self._code or self._name, reason)
+        now = datetime.now()
+        last = SoccerLiveSensor._calendar_error_logs.get(key)
+        if last and (now - last).total_seconds() < 300:
+            _LOGGER.debug(message, *args, exc_info=exc_info)
+            return
+        SoccerLiveSensor._calendar_error_logs[key] = now
+        _LOGGER.warning(message, *args, exc_info=exc_info)
 
 
     def _parse_match_datetime(self, date_str):
