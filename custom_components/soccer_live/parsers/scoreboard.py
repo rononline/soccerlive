@@ -125,6 +125,9 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 or "N/A"
             )
             league_logo = (leagues_by_id.get(league_id, {}).get("logo") if league_id else None) or ""
+            # Fallback: construct ESPN logo URL from numeric league ID (e.g. /all/scoreboard events)
+            if not league_logo and league_id and league_id.isdigit():
+                league_logo = f"https://a.espncdn.com/i/leaguelogos/soccer/500/{league_id}.png"
             _LOGGER.debug(
                 "league_resolve: event=%s uid=%s league_id=%s comp_league=%s → name=%s",
                 match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
