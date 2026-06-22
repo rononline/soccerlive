@@ -104,6 +104,9 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             # team schedule endpoint (/all/teams/{id}/schedule) puts league at event level
             event_league = match.get("league", {}) or {}
             league_id = str(comp_league.get("id", "") or event_league.get("id", "") or "")
+            # Track whether league_id came from a real league object (vs UID parsing below).
+            # Only real-object IDs are safe to use for CDN logo URL construction.
+            league_id_from_field = bool(league_id)
 
             # For /all/scoreboard the league id is encoded in the competition uid:
             # e.g.  "s:600~l:ned.1~e:700001"  →  league_id = "ned.1"
@@ -129,8 +132,10 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 or "N/A"
             )
             league_logo = (leagues_by_id.get(league_id, {}).get("logo") if league_id else None) or ""
-            # Fallback: construct ESPN logo URL from numeric league ID (e.g. /all/scoreboard events)
-            if not league_logo and league_id and league_id.isdigit():
+            # Fallback: construct ESPN CDN logo URL only when league_id came from a real
+            # league object (.id field), not from UID parsing — UID-sourced IDs like "606"
+            # encode sport/competition IDs that don't map to ESPN's logo file numbering.
+            if not league_logo and league_id_from_field and league_id.isdigit():
                 league_logo = f"https://a.espncdn.com/i/leaguelogos/soccer/500/{league_id}.png"
             _LOGGER.debug(
                 "league_resolve: event=%s uid=%s league_id=%s comp_league=%s → name=%s",
