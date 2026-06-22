@@ -44,6 +44,18 @@ def get_season_slug_or_displayname(match):
     display_name = season_data.get("displayName")
     return display_name
     
+# Curated ESPN CDN logo overrides for leagues where id != logo file number.
+# Avoids guessing with 500/{id}.png (unreliable) while keeping logos for
+# the most common international competitions.
+_LEAGUE_LOGO_OVERRIDES = {
+    "606":   "https://a.espncdn.com/i/leaguelogos/soccer/500/4.png",      # FIFA World Cup
+    "775":   "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",      # UEFA Champions League
+    "776":   "https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png",   # UEFA Europa League
+    "20296": "https://a.espncdn.com/i/leaguelogos/soccer/500/20296.png",  # UEFA Conference League
+    "781":   "https://a.espncdn.com/i/leaguelogos/soccer/500/74.png",     # UEFA Euro
+    "780":   "https://a.espncdn.com/i/leaguelogos/soccer/500/83.png",     # Copa América
+}
+
 def process_match_data(data, hass, team_name=None, team_id=None, next_match_only=False, start_date=None, end_date=None, recent_match_hours=24):
     try:
         matches_data = data.get("events", [])
@@ -129,6 +141,8 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 or "N/A"
             )
             league_logo = (leagues_by_id.get(league_id, {}).get("logo") if league_id else None) or ""
+            if not league_logo and league_id:
+                league_logo = _LEAGUE_LOGO_OVERRIDES.get(league_id, "")
             _LOGGER.debug(
                 "league_resolve: event=%s uid=%s league_id=%s comp_league=%s → name=%s",
                 match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
