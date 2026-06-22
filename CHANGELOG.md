@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.27 (2026-06-22)
+- Reduce unnecessary ESPN calendar calls by only fetching calendar dates for date-range scoreboard sensors
+- Add per-competition calendar caching and locking to prevent startup bursts across related sensors
+- Improve calendar fetch logging: timeouts and HTTP/client errors now include sensor name, URL and error type instead of an empty message
+
 ## v3.6.16 (2026-06-20)
 - Add Home Assistant automation blueprints for goal, red card and match started notifications
 

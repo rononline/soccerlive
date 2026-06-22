@@ -18,6 +18,8 @@ _LIVE_POLL_TYPES = {"team_match", "team_matches", "team_matches_mixed", "match_d
 
 _LOGGER = logging.getLogger(__name__)
 
+_DATE_RANGE_SENSOR_TYPES = {"match_day", "team_match", "team_matches", "commentary"}
+
 # Competitions with a knockout bracket phase
 KNOCKOUT_LEAGUES = {
     "uefa.champions",
@@ -182,6 +184,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 class SoccerLiveSensor(Entity):
     _cache = {}
+    _calendar_cache = {}
+    _calendar_locks = {}
 
     def __init__(self, hass, name, code, sensor_type=None, scan_interval=timedelta(minutes=5),
                  team_name=None, config_entry_id=None, start_date=None, end_date=None, team_id=None,
@@ -573,7 +577,9 @@ class SoccerLiveSensor(Entity):
         season_start = ""
         season_end = ""
 
-        # News and standings sensors do not use calendar dates — skip to avoid unnecessary API calls
+        # Sensors below do not need the competition calendar. Return early to
+        # avoid a burst of unnecessary calendar calls during Home Assistant
+        # startup or reloads.
         if self._sensor_type == "news":
             return f"{self.base_url_2}/{self._code}/news?limit=15"
 
@@ -592,7 +598,16 @@ class SoccerLiveSensor(Entity):
                 ko_year = now.year
             return f"{self.base_url_3}/{self._code}/scoreboard?limit=300&dates={ko_year}0201-{ko_year}0731"
 
-        if self._code:
+        if self._sensor_type == "standings":
+            return f"{self.base_url}/{self._code}/standings?"
+
+        if self._sensor_type == "team_matches_mixed" and self._team_name:
+            return f"{self.base_url_3}/all/teams/{self._team_id}/schedule?fixture=true"
+
+        if self._sensor_type == "all_matches_today":
+            return f"{self.base_url_2}/all/scoreboard"
+
+        if self._code and self._sensor_type in _DATE_RANGE_SENSOR_TYPES:
             season_start, season_end = await self._get_calendar_data()
 
         # Store dynamic dates for use in _process_data so match filtering
@@ -612,20 +627,8 @@ class SoccerLiveSensor(Entity):
         season_start = season_start[:10].replace("-", "")
         season_end = season_end[:10].replace("-", "")
 
-        if self._sensor_type == "standings":
-            return f"{self.base_url}/{self._code}/standings?"
-
-        elif self._sensor_type in ("match_day", "team_match", "team_matches", "commentary"):
+        if self._sensor_type in _DATE_RANGE_SENSOR_TYPES:
             return f"{self.base_url_3}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
-
-        elif self._sensor_type == "team_matches_mixed" and self._team_name:
-            return f"{self.base_url_3}/all/teams/{self._team_id}/schedule?fixture=true"
-
-        elif self._sensor_type == "all_matches_today":
-            return f"{self.base_url_2}/all/scoreboard"
-
-        elif self._sensor_type == "news":
-            return f"{self.base_url_2}/{self._code}/news?limit=15"
 
         return None
 
@@ -653,6 +656,27 @@ class SoccerLiveSensor(Entity):
             return None, None
 
         calendar_url = f"{self.base_url_2}/{self._code}/scoreboard"
+        cache_key = self._code or calendar_url
+        cached = SoccerLiveSensor._calendar_cache.get(cache_key)
+        if cached and (datetime.now() - cached["time"]).total_seconds() < 300:
+            return cached["start"], cached["end"]
+
+        lock = SoccerLiveSensor._calendar_locks.setdefault(cache_key, asyncio.Lock())
+        async with lock:
+            cached = SoccerLiveSensor._calendar_cache.get(cache_key)
+            if cached and (datetime.now() - cached["time"]).total_seconds() < 300:
+                return cached["start"], cached["end"]
+
+            start, end = await self._fetch_calendar_data(calendar_url)
+            SoccerLiveSensor._calendar_cache[cache_key] = {
+                "start": start,
+                "end": end,
+                "time": datetime.now(),
+            }
+            return start, end
+
+    async def _fetch_calendar_data(self, calendar_url):
+        """Fetch calendar data from ESPN. Caller handles per-code caching."""
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(calendar_url, headers={"Accept-Language": "en"}, timeout=aiohttp.ClientTimeout(total=10)) as response:
@@ -681,8 +705,29 @@ class SoccerLiveSensor(Entity):
                     calendar_start_date = (now - timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
                     calendar_end_date = (now + timedelta(days=240)).strftime("%Y-%m-%dT00:00Z")
                 return calendar_start_date, calendar_end_date
-        except Exception as e:
-            _LOGGER.error(f"Error fetching calendar: {e}")
+        except asyncio.TimeoutError:
+            _LOGGER.warning("Calendar fetch timed out for %s (%s)", self._name, calendar_url)
+            return None, None
+        except aiohttp.ClientResponseError as e:
+            _LOGGER.warning(
+                "Calendar fetch failed for %s (%s): HTTP %s %s",
+                self._name,
+                calendar_url,
+                e.status,
+                e.message,
+            )
+            return None, None
+        except aiohttp.ClientError as e:
+            _LOGGER.warning(
+                "Calendar fetch failed for %s (%s): %s: %r",
+                self._name,
+                calendar_url,
+                type(e).__name__,
+                e,
+            )
+            return None, None
+        except Exception:
+            _LOGGER.exception("Unexpected error fetching calendar for %s (%s)", self._name, calendar_url)
             return None, None
 
 
