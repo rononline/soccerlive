@@ -101,7 +101,9 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             competitions = match.get("competitions", [])
             comp = competitions[0] if competitions else {}
             comp_league = comp.get("league", {}) or {}
-            league_id = str(comp_league.get("id", "") or "")
+            # team schedule endpoint (/all/teams/{id}/schedule) puts league at event level
+            event_league = match.get("league", {}) or {}
+            league_id = str(comp_league.get("id", "") or event_league.get("id", "") or "")
 
             # For /all/scoreboard the league id is encoded in the competition uid:
             # e.g.  "s:600~l:ned.1~e:700001"  →  league_id = "ned.1"
@@ -119,6 +121,8 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             league_name = (
                 comp_league.get("displayName")
                 or comp_league.get("name")
+                or event_league.get("displayName")
+                or event_league.get("name")
                 or (leagues_by_id.get(league_id, {}).get("name") if league_id else None)
                 or league_name_from_note
                 or (top_league_name if top_league_name != "N/A" else None)
