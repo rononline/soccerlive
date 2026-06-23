@@ -280,7 +280,7 @@ class SoccerLiveSensor(Entity):
             self._match_finished_list = dispatched
             self._match_finished_dispatched = set(dispatched)
             _LOGGER.debug(
-                f"Caricati {len(self._match_finished_dispatched)} match_finished da storage per {self._name}"
+                f"Loaded {len(self._match_finished_dispatched)} match_finished entries from storage for {self._name}"
             )
 
     async def _save_match_finished_store(self):
@@ -552,8 +552,8 @@ class SoccerLiveSensor(Entity):
         self._state = f"{target.get('home_team','')} {target.get('home_score',0)}-{target.get('away_score',0)} {target.get('away_team','')}"
 
     async def _enrich_with_summary(self):
-        """Per il sensor team_match, aggiunge lineup/formazione/keyEvents/h2h
-        chiamando l'endpoint summary?event=ID per la partita corrente."""
+        """For team_match sensors, add lineup, formation, key events, and h2h
+        from the summary?event=ID endpoint for the current match."""
         if self._sensor_type != "team_match" or not self._enable_summary_enrichment:
             return
         matches = self._attributes.get("matches") or []
@@ -818,13 +818,13 @@ class SoccerLiveSensor(Entity):
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
 
     def _extract_goal_scorers_from_details(self, prev_details, curr_details, goals_count, is_home_team=True):
-        """Estrae giocatore + minuto dai nuovi goal nei match_details.
-        Ritorna una lista di dict {player, minute}."""
+        """Extract player and minute from new goals in match_details.
+        Return a list of dicts with {player, minute}."""
         new_goals = []
 
         for detail in curr_details:
             if detail not in prev_details and "Goal" in detail:
-                # Formato: "Goal - 38': Bryan Mbeumo"
+                # Format: "Goal - 38': Bryan Mbeumo"
                 try:
                     parts = detail.split("': ")
                     if len(parts) == 2:
@@ -902,7 +902,7 @@ class SoccerLiveSensor(Entity):
     def _dispatch_card_event(self, card_type, detail_str, match, events: list = None):
         """Build and collect a card event."""
         try:
-            # Parse: "Yellow Card [TOT] - 27': Destiny Udogie" o "Red Card - 29': Cristian Romero"
+            # Parse: "Yellow Card [TOT] - 27': Destiny Udogie" or "Red Card - 29': Cristian Romero"
             parts = detail_str.split("': ")
             minute = parts[0].split(" - ")[1] if " - " in parts[0] else "N/A"
             player = parts[1] if len(parts) > 1 else "N/A"
@@ -1026,7 +1026,7 @@ class SoccerLiveSensor(Entity):
         
         for detail in match_details:
             if "Goal" in detail:
-                # Formato: "Goal - 38': Bryan Mbeumo"
+                # Format: "Goal - 38': Bryan Mbeumo"
                 try:
                     parts = detail.split("': ")
                     if len(parts) == 2:
@@ -1418,9 +1418,9 @@ class SoccerLiveSensor(Entity):
                 if next_match.get("state") == "in":
                     state = f"{next_match.get('home_score','?')} - {next_match.get('away_score','?')} ({next_match.get('clock','')})"
                 else:
-                    state = f"Volgende wedstrijd: {next_match.get('home_team','N/A')} tegen {next_match.get('away_team','N/A')}"
+                    state = f"Next match: {next_match.get('home_team','N/A')} vs {next_match.get('away_team','N/A')}"
             else:
-                state = "Geen wedstrijden beschikbaar"
+                state = "No matches available"
 
             finished_matches = [m for m in all_matches if m.get("state") == "post"]
             previous_matches = [

@@ -332,14 +332,14 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
         return {}
 
 def is_within_recent_window(end_time, hours=24):
-    """Ritorna True se la partita (kickoff) è avvenuta entro le ultime `hours`."""
+    """Return True if the match kickoff happened within the last `hours`."""
     try:
         if isinstance(end_time, str):
             end_time_dt = datetime.strptime(end_time, "%d-%m-%Y %H:%M").replace(tzinfo=timezone.utc)
         elif isinstance(end_time, datetime):
             end_time_dt = end_time
         else:
-            raise ValueError("La data fornita non è né una stringa né un oggetto datetime")
+            raise ValueError("Expected a string or datetime value")
         current_time = datetime.now(timezone.utc)
         return current_time - end_time_dt <= timedelta(hours=hours)
     except Exception as e:
@@ -360,14 +360,14 @@ def _get_statistics(competitor):
     return statistics
 
 def _get_record(competitor):
-    """Restituisce il record stagionale della squadra (es. '14-6-14' = V-N-P)."""
+    """Return the team's season record, e.g. '14-6-14'."""
     records = competitor.get("records", []) or []
     if records:
         return records[0].get("summary", "")
     return ""
 
 def _get_top_scorer(competitor):
-    """Restituisce il capocannoniere della squadra: {name, short_name, value}."""
+    """Return the team's top scorer as {name, short_name, value}."""
     leaders = competitor.get("leaders", []) or []
     for ldr in leaders:
         if ldr.get("name") == "goals":
@@ -421,9 +421,9 @@ def _get_links(competition):
     return result
 
 def process_summary_data(data):
-    """Estrae lineup, formazioni, key events e head-to-head dal summary endpoint.
-    Restituisce un dict con: lineup_home, lineup_away, formation_home, formation_away,
-    key_events, head_to_head."""
+    """Extract lineups, formations, key events, and head-to-head data from summary.
+    Return a dict with lineup_home, lineup_away, formation_home, formation_away,
+    key_events, and head_to_head."""
     out = {
         "lineup_home": [],
         "lineup_away": [],

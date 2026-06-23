@@ -1,3 +1,4 @@
+import asyncio
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -230,8 +231,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 response.raise_for_status()
                 competitions_data = await response.json()
                 return {league['slug']: league['name'] for league in competitions_data.get("leagues", [])}
-        except aiohttp.ClientError as e:
-            _LOGGER.error(f"Error loading competitions: {e}")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            _LOGGER.error("Error loading competitions: %s", repr(e))
             return {}
 
     async def _get_competition_name(self, competition_code):
@@ -254,8 +255,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     {"id": team["team"]["id"], "displayName": team["team"]["displayName"]}
                     for league in leagues for team in league.get("teams", [])
                 ]
-        except aiohttp.ClientError as e:
-            _LOGGER.error(f"Error loading teams for {competition_code}: {e}")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            _LOGGER.error("Error loading teams for %s: %s", competition_code, repr(e))
             self._teams = []
 
     @staticmethod

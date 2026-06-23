@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.30 (2026-06-23)
+- config_flow: catch `asyncio.TimeoutError` alongside `aiohttp.ClientError` — timeouts during setup/team-search no longer cause an unhandled exception
+- config_flow: switch log calls from f-strings to `%s` lazy formatting
+- sensor: translate remaining Dutch/Italian hardcoded state strings to English (`"Volgende wedstrijd"`, `"Geen wedstrijden beschikbaar"`)
+- sensor/scoreboard: translate remaining Italian/Dutch docstrings and inline comments to English
+- hassfest workflow: pin `actions/checkout` to `v7.0.0` consistent with other workflows
+
 ## v3.6.29 (2026-06-23)
 - Prune `_calendar_cache` and `_calendar_locks` class-level dicts each update cycle — entries older than 5 minutes are removed and orphaned locks are dropped, preventing unbounded memory growth
 
