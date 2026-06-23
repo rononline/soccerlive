@@ -22,18 +22,29 @@ Real-time football data in Home Assistant via the ESPN API with multi-language s
 
 Sensors are created automatically depending on your selection:
 
-| Sensor type | Name | Description |
+| Sensor type | Name pattern | Description |
 |---|---|---|
-| `team_match` | `soccer_live_next_*` | Next / current match for a team |
-| `team_matches` | `soccer_live_all_*` | All matches for a team (competition-specific) |
-| `team_matches_mixed` | `soccer_live_all_mixed_*` | All matches for a team (all competitions) |
-| `match_day` | `soccer_live_all_*` | All matches in a competition |
-| `standings` | `soccer_live_standings_*` | League standings |
-| `top_scorers` | `soccer_live_scorers_*` | Top scorers for a competition (auto-created) |
-| `bracket` | `soccer_live_bracket_*` | Knockout bracket (auto-created for cup competitions) |
+| `team_match` | `soccer_live_next_{competition}_{team}` | Next / current match for a team |
+| `team_matches` | `soccer_live_all_{competition}_{team}` | All matches for a team (competition-specific) |
+| `team_matches_mixed` | `soccer_live_all_mixed_{team}` | All matches for a team (all competitions) |
+| `match_day` | `soccer_live_all_{competition}` | All matches in a competition |
+| `standings` | `soccer_live_standings_{competition}` | League standings |
+| `top_scorers` | `soccer_live_scorers_{competition}` | Top scorers for a competition (auto-created) |
+| `bracket` | `soccer_live_bracket_{competition}` | Knockout bracket (auto-created for cup competitions) |
 | `all_matches_today` | `soccer_live_all_today` | All matches worldwide today |
-| `news` | `soccer_live_news_*` | News feed for a competition |
-| `commentary` | `soccer_live_commentary_*` | Live play-by-play commentary for a match |
+| `news` | `soccer_live_news_{competition}` | News feed for a competition |
+| `commentary` | `soccer_live_commentary_{competition}` | Live play-by-play commentary for a match |
+
+---
+
+## ⚙️ Integration options
+
+Configure via **Settings → Devices & Services → Soccer Live → Configure**:
+
+| Option | Default | Description |
+|---|---|---|
+| `enable_summary_enrichment` | `true` | Fetch ESPN summary endpoint for lineup, key events, H2H and stats. Disable to reduce API calls. |
+| `max_matches` | `0` (unlimited) | Limit the number of matches stored per sensor (5 / 10 / 15 / 20 / 30). Useful to reduce state size on large sensors. |
 
 ---
 
@@ -347,6 +358,9 @@ mode: queued
 
 **Last match** (`last_match_*`):
 `home_team`, `away_team`, `home_score`, `away_score`, `date`, `venue`
+
+**Top-level next match extras**:
+`next_match_week` — competition week/round number (e.g. `"Round 30"`)
 
 **Counters & booleans**:
 `total_matches`, `live_matches_count`, `upcoming_matches_count`, `finished_matches_count`, `has_live_match`, `has_upcoming_match`, `has_recent_match`
