@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.31 (2026-06-23)
+- scoreboard: replace hardcoded Dutch `team_name` fallback `"Alle wedstrijden"` with `"All matches"` — this string is a visible sensor attribute in HA
+
 ## v3.6.30 (2026-06-23)
 - config_flow: catch `asyncio.TimeoutError` alongside `aiohttp.ClientError` — timeouts during setup/team-search no longer cause an unhandled exception
 - config_flow: switch log calls from f-strings to `%s` lazy formatting
