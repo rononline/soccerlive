@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.29 (2026-06-23)
+- Prune `_calendar_cache` and `_calendar_locks` class-level dicts each update cycle — entries older than 5 minutes are removed and orphaned locks are dropped, preventing unbounded memory growth
+
 ## v3.6.28 (2026-06-22)
 - Add URL-building regression tests for calendar/no-calendar sensor types
 - Throttle repeated calendar fetch warnings per competition and error reason for 5 minutes
