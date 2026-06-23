@@ -348,6 +348,18 @@ class SoccerLiveSensor(Entity):
             k: v for k, v in SoccerLiveSensor._cache.items()
             if (_now - v["time"]).total_seconds() < 300
         }
+        _active_calendar_keys = {
+            k for k, v in SoccerLiveSensor._calendar_cache.items()
+            if (_now - v["time"]).total_seconds() < 300
+        }
+        SoccerLiveSensor._calendar_cache = {
+            k: v for k, v in SoccerLiveSensor._calendar_cache.items()
+            if k in _active_calendar_keys
+        }
+        SoccerLiveSensor._calendar_locks = {
+            k: v for k, v in SoccerLiveSensor._calendar_locks.items()
+            if k in _active_calendar_keys
+        }
 
         # Use the URL as cache key so sensors sharing the same ESPN endpoint share one fetch
         url = await self._build_url()
