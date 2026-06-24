@@ -881,13 +881,16 @@ class SoccerLiveSensor(Entity):
 
     def _pick_goal_strings(self, curr_details, dispatched, team_abbrev, count):
         """Return up to `count` new goal strings for a team.
-        Filters by [ABBREV] tag when available; falls back to positional order."""
-        all_new = [d for d in curr_details if "Goal" in d and d not in dispatched]
+        Filters by [ABBREV] tag when available; falls back to positional order.
+        Uses the most-recent strings ([-count:]) so a late-arriving string from a
+        previous goal is not attributed to the next goal. Disallowed goals are excluded
+        so they cannot pollute future goal attribution."""
+        all_new = [d for d in curr_details if "Goal" in d and "Disallowed" not in d and d not in dispatched]
         if team_abbrev:
             tagged = [d for d in all_new if f"[{team_abbrev}]" in d]
             if tagged:
-                return tagged[:count]
-        return all_new[:count]
+                return tagged[-count:]
+        return all_new[-count:]
 
     def _extract_goal_scorers_from_details(self, goal_strings, goals_count):
         """Parse player name and minute from pre-filtered goal detail strings.
@@ -1286,7 +1289,7 @@ class SoccerLiveSensor(Entity):
 
         def sort_key(match):
             parsed = self._parse_match_datetime(match.get("date"))
-            return parsed or datetime.max
+            return parsed or datetime.max.replace(tzinfo=timezone.utc)
 
         unique_matches = sorted(unique_matches, key=sort_key)
         live = [m for m in unique_matches if m.get("state") == "in"]

@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.41 (2026-06-24)
+- sensor: `sort_key` in `_compute_schedule_summary` now returns a timezone-aware `datetime.max` fallback so matches with unparseable dates no longer cause a `TypeError` when sorted alongside valid aware datetimes
+- sensor: `_pick_goal_strings` now excludes `"Goal Disallowed"` strings so VAR-cancelled goals cannot be attributed as real goal scorers
+- sensor: `_pick_goal_strings` now returns the *most-recent* undispatched strings (`[-count:]`) instead of the oldest — prevents a late-arriving goal string from a previous goal being picked up as the scorer for the next goal
+
 ## v3.6.40 (2026-06-24)
 - sensor: `_filter_start_str` / `_filter_end_str` return `None` when no date is configured instead of calling `strftime()` on `None` and crashing
 - sensor: URL building omits the ESPN `dates` parameter when neither calendar nor configured dates provide a complete range, preventing the remaining `strftime()` crash
