@@ -76,6 +76,10 @@
           "notify_service": "Servizio notifiche (es. notify.mobile_app)"
         }
       }
+    },
+    "error": {
+      "invalid_date": "La data deve essere nel formato YYYY-MM-DD (es. 2026-06-20).",
+      "end_before_start": "La data di fine deve essere uguale o successiva alla data di inizio."
     }
   }
 }

@@ -201,15 +201,21 @@ class SoccerLiveSensor(Entity):
         self._attributes = {}
         self._config_entry_id = config_entry_id
         self._team_name = team_name
-        self._start_date = start_date
-        self._end_date = end_date
         self._recent_match_hours = recent_match_hours
         self._enable_summary_enrichment = enable_summary_enrichment
         self._max_matches = max_matches  # 0 = unlimited
-        
-        # Parse date strings into datetime objects
-        self._start_date = datetime.strptime(self._start_date, "%Y-%m-%d")
-        self._end_date = datetime.strptime(self._end_date, "%Y-%m-%d")
+
+        # Parse date strings into datetime objects; empty/missing = no filter
+        try:
+            self._start_date = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
+        except ValueError:
+            _LOGGER.warning("Invalid start_date %r for %s — date filter disabled", start_date, name)
+            self._start_date = None
+        try:
+            self._end_date = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
+        except ValueError:
+            _LOGGER.warning("Invalid end_date %r for %s — date filter disabled", end_date, name)
+            self._end_date = None
 
         # Dynamic season dates fetched from ESPN each update.
         # When available, these override the static fallbacks in URL building
@@ -435,6 +441,8 @@ class SoccerLiveSensor(Entity):
                             self._state = "Not available"
                             self._scorers_unavailable = True
                             _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
+                        else:
+                            self._last_error = f"HTTP {response.status}"
                         break
                     else:
                         # 5xx: temporary server error — wait briefly and retry

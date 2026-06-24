@@ -603,7 +603,8 @@ def process_scorers_data(data):
 def _parse_date(hass, date_str, show_time=True):
     try:
         user_timezone = hass.config.time_zone
-        parsed_date = parser.isoparse(date_str).replace(tzinfo=timezone.utc)
+        dt = parser.isoparse(date_str)
+        parsed_date = dt.astimezone(timezone.utc) if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
         local_tz = ZoneInfo(user_timezone)
         local_date = parsed_date.astimezone(local_tz)
 

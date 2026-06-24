@@ -268,9 +268,26 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
+        errors = {}
         if user_input is not None:
-            user_input.pop("info", None)
-            return self.async_create_entry(title="", data=user_input)
+            start = (user_input.get("start_date") or "").strip()
+            end = (user_input.get("end_date") or "").strip()
+            start_dt = end_dt = None
+            if start:
+                try:
+                    start_dt = datetime.strptime(start, "%Y-%m-%d")
+                except ValueError:
+                    errors["start_date"] = "invalid_date"
+            if end:
+                try:
+                    end_dt = datetime.strptime(end, "%Y-%m-%d")
+                except ValueError:
+                    errors["end_date"] = "invalid_date"
+            if start_dt and end_dt and start_dt > end_dt:
+                errors["end_date"] = "end_before_start"
+            if not errors:
+                user_input.pop("info", None)
+                return self.async_create_entry(title="", data=user_input)
 
         today = datetime.now()
 
@@ -297,6 +314,7 @@ class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("enable_summary_enrichment", default=enable_summary_enrichment): bool,
                 vol.Optional("max_matches", default=max_matches): vol.In([0, 5, 10, 15, 20, 30]),
             }),
+            errors=errors,
         )
         
         

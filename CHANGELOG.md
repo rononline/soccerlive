@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.33 (2026-06-24)
+- config_flow: validate `start_date`/`end_date` format (YYYY-MM-DD) and `start ≤ end` before saving options; error messages in all 6 languages
+- sensor: guard `datetime.strptime` with try/except so a bad stored date disables the filter with a warning instead of crashing sensor init
+- sensor: set `_last_error` on HTTP 4xx (except expected 404 for top_scorers) so `api_status` correctly shows `error` instead of `ok`
+- scoreboard: use `.astimezone(UTC)` instead of `.replace(tzinfo=UTC)` for timezone-aware dates — `17:00+02:00` now correctly becomes `15:00 UTC` instead of `17:00 UTC`
+- integration: remove accidental `package-lock.json` (Python project, not Node)
+
 ## v3.6.32 (2026-06-24)
 - sensor: parse errors no longer mark the update as successful — `api_status` now correctly stays `error` when `_process_data` raises an exception (was: `_last_error` set in except block then immediately overwritten to `None`)
 - scoreboard: end-date filter now uses `23:59:59` instead of `00:00:00` — matches on the last day were excluded when scheduled after midnight UTC

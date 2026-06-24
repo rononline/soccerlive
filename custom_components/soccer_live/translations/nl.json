@@ -76,6 +76,10 @@
           "notify_service": "Meldingsservice (bijv. notify.mobile_app)"
         }
       }
+    },
+    "error": {
+      "invalid_date": "Datum moet in YYYY-MM-DD formaat zijn (bijv. 2026-06-20).",
+      "end_before_start": "Einddatum moet op of na de begindatum liggen."
     }
   }
 }

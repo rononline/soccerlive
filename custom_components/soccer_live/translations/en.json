@@ -76,6 +76,10 @@
           "notify_service": "Notification service (e.g. notify.mobile_app)"
         }
       }
+    },
+    "error": {
+      "invalid_date": "Date must be in YYYY-MM-DD format (e.g. 2026-06-20).",
+      "end_before_start": "End date must be on or after start date."
     }
   }
 }

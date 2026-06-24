@@ -76,6 +76,10 @@
           "notify_service": "Benachrichtigungsdienst (z.B. notify.mobile_app)"
         }
       }
+    },
+    "error": {
+      "invalid_date": "Datum muss im Format JJJJ-MM-TT angegeben werden (z.B. 2026-06-20).",
+      "end_before_start": "Enddatum muss auf oder nach dem Startdatum liegen."
     }
   }
 }
