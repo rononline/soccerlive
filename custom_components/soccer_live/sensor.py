@@ -408,7 +408,12 @@ class SoccerLiveSensor(Entity):
                 async with session.get(url, headers=_ESPN_HEADERS, timeout=_timeout) as response:
                     if response.status == 200:
                         raw = await response.read()
-                        data = await self.hass.async_add_executor_job(json.loads, raw)
+                        try:
+                            data = await self.hass.async_add_executor_job(json.loads, raw)
+                        except (ValueError, UnicodeDecodeError) as json_err:
+                            self._last_error = f"Invalid JSON from ESPN: {json_err}"
+                            _LOGGER.error(f"Invalid JSON for {self._name}: {json_err}")
+                            break
                         _LOGGER.debug(f"Data received for {self._name}")
                         SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
                         try:
@@ -822,8 +827,10 @@ class SoccerLiveSensor(Entity):
                 goals_scored = away_score - prev_away
                 goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=False)
                 self._dispatch_goal_event(match.get("away_team", "N/A"), match.get("home_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
-            self._previous_scores[match_id]["home"] = home_score
-            self._previous_scores[match_id]["away"] = away_score
+            # Track the highest score seen — prevents a corrected score from
+            # triggering a duplicate goal event when it rises back to the old value.
+            self._previous_scores[match_id]["home"] = max(prev_home, home_score)
+            self._previous_scores[match_id]["away"] = max(prev_away, away_score)
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
 
     def _extract_goal_scorers_from_details(self, prev_details, curr_details, goals_count, is_home_team=True):
@@ -996,10 +1003,18 @@ class SoccerLiveSensor(Entity):
         for match in finished_matches:
             match_id = match.get("event_id") or f"{match.get('home_team', 'N/A')}_{match.get('away_team', 'N/A')}"
             if match_id not in self._match_finished_dispatched:
-                self._dispatch_match_finished_event(match, events)
+                prev_state = self._previous_match_states.get(match_id)
+                if prev_state is not None and prev_state != "post":
+                    # Known in→post transition — fire the event
+                    self._dispatch_match_finished_event(match, events)
+                    _LOGGER.info(f"Match-finished event collected for: {match_id}")
+                else:
+                    # First poll already shows post: historical match, skip notification
+                    _LOGGER.debug(f"Skipping match_finished for {match_id} (first seen already finished)")
+                # Always mark dispatched to prevent firing again in future polls
                 self._match_finished_dispatched.add(match_id)
                 self._match_finished_list.append(match_id)
-                _LOGGER.info(f"Match-finished event collected for: {match_id}")
+            self._previous_match_states[match_id] = "post"
 
     def _dispatch_match_finished_event(self, match, events: list = None):
         """Build and collect a match finished event."""
@@ -1449,7 +1464,11 @@ class SoccerLiveSensor(Entity):
                 }
                 for m in list(reversed(finished_matches))[:10]
             ]
-            upcoming_candidates = [m for m in all_matches if m.get("state") in ("pre", "in")][1:5]
+            pre_in_matches = [m for m in all_matches if m.get("state") in ("pre", "in")]
+            # Skip the first entry only when next_match itself is pre/in (it is shown separately).
+            # When next_match is a recently finished match, the first pre/in is genuinely upcoming.
+            skip = 1 if next_match and next_match.get("state") in ("pre", "in") else 0
+            upcoming_candidates = pre_in_matches[skip:skip + 4]
             upcoming_matches = [
                 {
                     "date": m.get("date"),

@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.34 (2026-06-24)
+- sensor: `match_finished` events now only fire on a known `in→post` transition; historical finished matches on first poll are silently skipped to prevent notification spam on new installs or cleared storage
+- sensor: score corrections no longer trigger duplicate goal events — track the highest score seen per match so a score that dips and recovers to a known value does not re-fire
+- sensor: `upcoming_matches` now starts from the first `pre`/`in` match when `next_match` is a recently finished match (was always skipping index 0, hiding the first upcoming fixture)
+- sensor: invalid JSON from ESPN now sets `_last_error` and breaks the retry loop instead of propagating an unhandled exception that left `api_status` stale
+
 ## v3.6.33 (2026-06-24)
 - config_flow: validate `start_date`/`end_date` format (YYYY-MM-DD) and `start ≤ end` before saving options; error messages in all 6 languages
 - sensor: guard `datetime.strptime` with try/except so a bad stored date disables the filter with a warning instead of crashing sensor init
