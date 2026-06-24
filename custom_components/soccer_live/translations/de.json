@@ -61,7 +61,8 @@
       }
     },
     "abort": {
-      "no_competitions": "Die Wettbewerbsliste konnte nicht geladen werden. Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
+      "no_competitions": "Die Wettbewerbsliste konnte nicht geladen werden. Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+      "no_teams": "Die Teamliste für diesen Wettbewerb konnte nicht geladen werden. Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
     }
   },
   "options": {

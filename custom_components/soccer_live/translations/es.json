@@ -61,7 +61,8 @@
       }
     },
     "abort": {
-      "no_competitions": "No se pudo cargar la lista de competiciones. Compruebe su conexión a Internet e inténtelo de nuevo."
+      "no_competitions": "No se pudo cargar la lista de competiciones. Compruebe su conexión a Internet e inténtelo de nuevo.",
+      "no_teams": "No se pudo cargar la lista de equipos para esta competición. Compruebe su conexión a Internet e inténtelo de nuevo."
     }
   },
   "options": {

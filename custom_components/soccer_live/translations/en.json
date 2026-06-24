@@ -82,7 +82,8 @@
       "end_before_start": "End date must be on or after start date."
     },
     "abort": {
-      "no_competitions": "Could not load the competition list. Check your internet connection and try again."
+      "no_competitions": "Could not load the competition list. Check your internet connection and try again.",
+      "no_teams": "Could not load the team list for this competition. Check your internet connection and try again."
     }
   }
 }

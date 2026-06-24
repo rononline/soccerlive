@@ -184,6 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 class SoccerLiveSensor(Entity):
     _cache = {}
+    _fetch_locks = {}
     _calendar_cache = {}
     _calendar_locks = {}
     _calendar_error_logs = {}
@@ -276,7 +277,7 @@ class SoccerLiveSensor(Entity):
     async def async_added_to_hass(self):
         """Load previously dispatched match_finished keys from disk so HA restarts
         do not re-fire events for matches that already ended."""
-        store_key = f"soccer_live_{self._name}_finished"
+        store_key = f"soccer_live_{self._config_entry_id or 'default'}_{self._name}_finished"
         self._store = Store(self.hass, 1, store_key)
         stored = await self._store.async_load()
         if stored and "dispatched" in stored:
@@ -367,6 +368,10 @@ class SoccerLiveSensor(Entity):
             k: v for k, v in SoccerLiveSensor._calendar_locks.items()
             if k in _active_calendar_keys
         }
+        SoccerLiveSensor._fetch_locks = {
+            k: v for k, v in SoccerLiveSensor._fetch_locks.items()
+            if k in SoccerLiveSensor._cache
+        }
 
         # Use the URL as cache key so sensors sharing the same ESPN endpoint share one fetch
         url = await self._build_url()
@@ -375,26 +380,7 @@ class SoccerLiveSensor(Entity):
         cache_key = url
         if cache_key in SoccerLiveSensor._cache and (datetime.now() - SoccerLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
             try:
-                result = await self.hass.async_add_executor_job(
-                    self._process_data, SoccerLiveSensor._cache[cache_key]["data"]
-                )
-                self._state = result["state"]
-                attrs = result["attributes"]
-                if self._max_matches and "matches" in attrs:
-                    attrs["matches"] = attrs["matches"][:self._max_matches]
-                # Carry forward last-event attributes from the previous update;
-                # _flush_pending_events will overwrite them if a new event fires.
-                for _k in ("last_event", "last_event_type", "last_event_timestamp",
-                           "last_goal_event", "last_card_event",
-                           "last_match_started_event", "last_match_finished_event"):
-                    if _k in self._attributes and _k not in attrs:
-                        attrs[_k] = self._attributes[_k]
-                self._attributes = attrs
-                self._pending_events = result.get("events", [])
-                self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
-                await self._enrich_with_summary()
-                await self._enrich_with_commentary()
-                await self._flush_pending_events()
+                await self._process_and_apply(SoccerLiveSensor._cache[cache_key]["data"])
                 self._last_successful_update = datetime.now().isoformat()
                 self._last_error = None
             except Exception as proc_err:
@@ -407,71 +393,95 @@ class SoccerLiveSensor(Entity):
         if self._scorers_unavailable:
             return
 
-        _ESPN_HEADERS = {"Accept-Language": "en"}
-        _timeout = aiohttp.ClientTimeout(total=10)
-        session = async_get_clientsession(self.hass)
-        retries = 0
-        while retries < 3:
-            try:
-                async with session.get(url, headers=_ESPN_HEADERS, timeout=_timeout) as response:
-                    if response.status == 200:
-                        raw = await response.read()
-                        try:
-                            data = await self.hass.async_add_executor_job(json.loads, raw)
-                        except (ValueError, UnicodeDecodeError) as json_err:
-                            self._last_error = f"Invalid JSON from ESPN: {json_err}"
-                            _LOGGER.error(f"Invalid JSON for {self._name}: {json_err}")
+        _fetch_lock = SoccerLiveSensor._fetch_locks.setdefault(cache_key, asyncio.Lock())
+        async with _fetch_lock:
+            # Double-check cache: another sensor may have fetched while we waited for the lock
+            if cache_key in SoccerLiveSensor._cache and (datetime.now() - SoccerLiveSensor._cache[cache_key]["time"]).total_seconds() < 60:
+                try:
+                    await self._process_and_apply(SoccerLiveSensor._cache[cache_key]["data"])
+                    self._last_successful_update = datetime.now().isoformat()
+                    self._last_error = None
+                except Exception as proc_err:
+                    self._last_error = str(proc_err)
+                    _LOGGER.error(f"Error processing cached data for {self._name} (lock hit): {proc_err}")
+                self._schedule_live_refresh()
+                return
+
+            _ESPN_HEADERS = {"Accept-Language": "en"}
+            _timeout = aiohttp.ClientTimeout(total=10)
+            session = async_get_clientsession(self.hass)
+            retries = 0
+            while retries < 3:
+                try:
+                    async with session.get(url, headers=_ESPN_HEADERS, timeout=_timeout) as response:
+                        if response.status == 200:
+                            raw = await response.read()
+                            try:
+                                data = await self.hass.async_add_executor_job(json.loads, raw)
+                            except (ValueError, UnicodeDecodeError) as json_err:
+                                self._last_error = f"Invalid JSON from ESPN: {json_err}"
+                                _LOGGER.error(f"Invalid JSON for {self._name}: {json_err}")
+                                break
+                            _LOGGER.debug(f"Data received for {self._name}")
+                            SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
+                            try:
+                                await self._process_and_apply(data)
+                            except Exception as proc_err:
+                                self._last_error = str(proc_err)
+                                _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
+                            else:
+                                self._last_successful_update = datetime.now().isoformat()
+                                self._last_error = None
+                            self._schedule_live_refresh()
+                            self._request_count += 1
+                            self._last_request_time = datetime.now().isoformat()
+                            _LOGGER.info(f"Finished update for {self._name}")
                             break
-                        _LOGGER.debug(f"Data received for {self._name}")
-                        SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
-                        try:
-                            result = await self.hass.async_add_executor_job(self._process_data, data)
-                            self._state = result["state"]
-                            attrs = result["attributes"]
-                            if self._max_matches and "matches" in attrs:
-                                attrs["matches"] = attrs["matches"][:self._max_matches]
-                            self._attributes = attrs
-                            self._pending_events = result.get("events", [])
-                            self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
-                            await self._enrich_with_summary()
-                            await self._enrich_with_commentary()
-                            await self._flush_pending_events()
-                        except Exception as proc_err:
-                            self._last_error = str(proc_err)
-                            _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
+                        elif response.status < 500:
+                            # 4xx: endpoint does not exist or access denied — do not retry
+                            _LOGGER.debug(f"HTTP {response.status} for {self._name} — no retry")
+                            if self._sensor_type == "top_scorers" and response.status == 404:
+                                self._state = "Not available"
+                                self._scorers_unavailable = True
+                                _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
+                            else:
+                                self._last_error = f"HTTP {response.status}"
+                            break
                         else:
-                            self._last_successful_update = datetime.now().isoformat()
-                            self._last_error = None
-                        self._schedule_live_refresh()
-                        self._request_count += 1
-                        self._last_request_time = datetime.now().isoformat()
-                        _LOGGER.info(f"Finished update for {self._name}")
-                        break
-                    elif response.status < 500:
-                        # 4xx: endpoint does not exist or access denied — do not retry
-                        _LOGGER.debug(f"HTTP {response.status} for {self._name} — no retry")
-                        if self._sensor_type == "top_scorers" and response.status == 404:
-                            self._state = "Not available"
-                            self._scorers_unavailable = True
-                            _LOGGER.info(f"Top scorers not available for {self._code} (ESPN leaders endpoint returned 404 — not supported for all competitions)")
-                        else:
-                            self._last_error = f"HTTP {response.status}"
-                        break
-                    else:
-                        # 5xx: temporary server error — wait briefly and retry
-                        await asyncio.sleep(2)
-                        retries += 1
-            except aiohttp.ClientError as error:
-                self._last_error = str(error)
-                await asyncio.sleep(2)
-                retries += 1
-            except asyncio.TimeoutError:
-                self._last_error = "Timeout while fetching ESPN data"
-                await asyncio.sleep(2)
-                retries += 1
-        else:
-            self._last_error = "All attempts failed; no data received from ESPN"
-            _LOGGER.warning(f"All attempts failed for {self._name} — no data received from ESPN")
+                            # 5xx: temporary server error — wait briefly and retry
+                            await asyncio.sleep(2)
+                            retries += 1
+                except aiohttp.ClientError as error:
+                    self._last_error = str(error)
+                    await asyncio.sleep(2)
+                    retries += 1
+                except asyncio.TimeoutError:
+                    self._last_error = "Timeout while fetching ESPN data"
+                    await asyncio.sleep(2)
+                    retries += 1
+            else:
+                self._last_error = "All attempts failed; no data received from ESPN"
+                _LOGGER.warning(f"All attempts failed for {self._name} — no data received from ESPN")
+
+    async def _process_and_apply(self, data):
+        """Process raw ESPN data and apply state/attributes to this sensor.
+        Carries forward last-event attributes so they survive between update cycles."""
+        result = await self.hass.async_add_executor_job(self._process_data, data)
+        self._state = result["state"]
+        attrs = result["attributes"]
+        if self._max_matches and "matches" in attrs:
+            attrs["matches"] = attrs["matches"][:self._max_matches]
+        for _k in ("last_event", "last_event_type", "last_event_timestamp",
+                   "last_goal_event", "last_card_event",
+                   "last_match_started_event", "last_match_finished_event"):
+            if _k in self._attributes and _k not in attrs:
+                attrs[_k] = self._attributes[_k]
+        self._attributes = attrs
+        self._pending_events = result.get("events", [])
+        self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
+        await self._enrich_with_summary()
+        await self._enrich_with_commentary()
+        await self._flush_pending_events()
 
     def _filter_start_str(self):
         d = self._dyn_start_date or self._start_date

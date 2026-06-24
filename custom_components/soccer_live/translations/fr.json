@@ -61,7 +61,8 @@
       }
     },
     "abort": {
-      "no_competitions": "Impossible de charger la liste des compétitions. Vérifiez votre connexion internet et réessayez."
+      "no_competitions": "Impossible de charger la liste des compétitions. Vérifiez votre connexion internet et réessayez.",
+      "no_teams": "Impossible de charger la liste des équipes pour cette compétition. Vérifiez votre connexion internet et réessayez."
     }
   },
   "options": {

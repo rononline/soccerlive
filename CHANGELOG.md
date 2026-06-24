@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.39 (2026-06-24)
+- sensor: introduce `_process_and_apply()` helper used by all three code paths (cache hit, lock double-check, network fetch) so `last_event` attributes are preserved on every update path, not just the cache path
+- sensor: per-URL `_fetch_lock` (mirrors `_calendar_locks`) prevents concurrent sensors sharing the same ESPN URL from issuing duplicate network requests; a double-check inside the lock processes cached data when available
+- sensor: store key now includes `config_entry_id` so two identical config entries each keep their own `match_finished` dispatched-event file and cannot overwrite each other
+- config_flow: empty team list now returns `async_abort(reason="no_teams")` instead of presenting an unusable empty dropdown; translated in all 6 languages
+
 ## v3.6.38 (2026-06-24)
 - sensor: goal attribution now uses `[ABBREV]` tag from ESPN detail strings to match goals to the correct team; falls back to positional order when tag is absent
 - sensor: `last_event`, `last_goal_event`, `last_card_event` and related attributes now survive the next update cycle — carried forward until a new event of the same type overwrites them

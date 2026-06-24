@@ -160,6 +160,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         team_options = {team['displayName']: team['displayName'] for team in sorted(self._teams, key=lambda t: t['displayName'])}
+        if not team_options:
+            return self.async_abort(reason="no_teams")
 
         return self.async_show_form(
             step_id="team",
