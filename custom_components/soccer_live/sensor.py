@@ -826,8 +826,8 @@ class SoccerLiveSensor(Entity):
 
             if home_score > prev_home:
                 goals_scored = home_score - prev_home
-                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=True)
                 new_detail_keys = {d for d in curr_details if "Goal" in d and d not in dispatched}
+                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, exclude=dispatched)
                 synthetic_key = f"h_{home_score}"
                 if new_detail_keys or synthetic_key not in dispatched:
                     self._dispatch_goal_event(match.get("home_team", "N/A"), match.get("away_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
@@ -835,8 +835,8 @@ class SoccerLiveSensor(Entity):
                     dispatched.add(synthetic_key)
             if away_score > prev_away:
                 goals_scored = away_score - prev_away
-                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=False)
                 new_detail_keys = {d for d in curr_details if "Goal" in d and d not in dispatched}
+                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, exclude=dispatched)
                 synthetic_key = f"a_{away_score}"
                 if new_detail_keys or synthetic_key not in dispatched:
                     self._dispatch_goal_event(match.get("away_team", "N/A"), match.get("home_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
@@ -846,13 +846,14 @@ class SoccerLiveSensor(Entity):
             self._previous_scores[match_id]["away"] = away_score
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
 
-    def _extract_goal_scorers_from_details(self, prev_details, curr_details, goals_count, is_home_team=True):
+    def _extract_goal_scorers_from_details(self, prev_details, curr_details, goals_count, is_home_team=True, exclude=None):
         """Extract player and minute from new goals in match_details.
         Return a list of dicts with {player, minute}."""
+        exclude = exclude or set()
         new_goals = []
 
         for detail in curr_details:
-            if detail not in prev_details and "Goal" in detail:
+            if detail not in prev_details and "Goal" in detail and detail not in exclude:
                 # Format: "Goal - 38': Bryan Mbeumo"
                 try:
                     parts = detail.split("': ")

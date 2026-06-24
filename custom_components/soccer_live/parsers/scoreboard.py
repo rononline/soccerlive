@@ -205,17 +205,17 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
 
             home_abbrev = home_team_data.get("abbreviation", "N/A")
             home_color = home_team_data.get("color", "N/A")
-            home_record = _get_record(competitors[0])
-            home_top_scorer = _get_top_scorer(competitors[0])
-            home_record_summary = competitors[0].get("recordSummary", "")
-            home_standing_summary = competitors[0].get("standingSummary", "")
+            home_record = _get_record(home_comp)
+            home_top_scorer = _get_top_scorer(home_comp)
+            home_record_summary = home_comp.get("recordSummary", "")
+            home_standing_summary = home_comp.get("standingSummary", "")
 
             away_abbrev = away_team_data.get("abbreviation", "N/A")
             away_color = away_team_data.get("color", "N/A")
-            away_record = _get_record(competitors[1])
-            away_top_scorer = _get_top_scorer(competitors[1])
-            away_record_summary = competitors[1].get("recordSummary", "")
-            away_standing_summary = competitors[1].get("standingSummary", "")
+            away_record = _get_record(away_comp)
+            away_top_scorer = _get_top_scorer(away_comp)
+            away_record_summary = away_comp.get("recordSummary", "")
+            away_standing_summary = away_comp.get("standingSummary", "")
 
             broadcast = _get_broadcast(comp)
             broadcasts = _get_broadcasts(comp)
@@ -346,7 +346,9 @@ def is_within_recent_window(end_time, hours=24):
         else:
             raise ValueError("Expected a string or datetime value")
         current_time = datetime.now()
-        return current_time - end_time_dt <= timedelta(hours=hours)
+        # end_time is the kickoff; add 2 h for typical match duration so the window
+        # is measured from the approximate end of the match, not the start.
+        return current_time - end_time_dt <= timedelta(hours=hours + 2)
     except Exception as e:
         _LOGGER.error(f"Error calculating recent interval ({hours}h): {e}")
         return False

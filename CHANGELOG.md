@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.36 (2026-06-24)
+- scoreboard: `home_record`, `home_top_scorer`, `home_record_summary`, `home_standing_summary` and their away equivalents now use `home_comp`/`away_comp` — the remaining `competitors[0]`/`[1]` references were missed in v3.6.35
+- scoreboard: `is_within_recent_window` adds 2 h to the configured window so the threshold is measured from match end (kickoff + ~2 h) rather than kickoff; a match with a 6 h window that kicked off 7 h ago and ended 5 h ago is now correctly shown
+- sensor: `_extract_goal_scorers_from_details` now accepts an `exclude` set so home-goal strings are excluded when extracting the away scorer — prevents the same player from being attributed to both teams when both score in one poll cycle
+
 ## v3.6.35 (2026-06-24)
 - scoreboard: use `homeAway` field from ESPN to correctly assign home and away competitors — was always taking `competitors[0]` as home, swapping teams in roughly half of matches
 - scoreboard: `is_within_recent_window()` now compares naive local datetimes — the stored date string is local time (formatted by `_parse_date`), but the previous code treated it as UTC, causing 1–2 h drift depending on timezone
