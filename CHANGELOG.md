@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6.38 (2026-06-24)
+- sensor: goal attribution now uses `[ABBREV]` tag from ESPN detail strings to match goals to the correct team; falls back to positional order when tag is absent
+- sensor: `last_event`, `last_goal_event`, `last_card_event` and related attributes now survive the next update cycle — carried forward until a new event of the same type overwrites them
+- sensor: push notifications now use `minute` (not `clock`) for goal/card events, and `league_name` (not `competition_name`) for match-finished events
+- config_flow: `{"sports": []}` no longer raises `IndexError` in the teams step
+- config_flow: empty competition list now returns an `async_abort` instead of showing a broken empty dropdown; translated in all 6 languages
+
 ## v3.6.37 (2026-06-24)
 - sensor: simultaneous goals now correctly attributed — home claims only `goals_scored` strings from the timeline, leaving the rest for away; `_extract_goal_scorers_from_details` simplified to work on the pre-filtered list
 - scoreboard: prefer `competition.status` over `event.status` for match state, clock and period so a live match with status only in `competitions[0]` is no longer treated as N/A

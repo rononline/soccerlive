@@ -59,6 +59,9 @@
           "competition_code": "Competizione"
         }
       }
+    },
+    "abort": {
+      "no_competitions": "Impossibile caricare l'elenco delle competizioni. Controllare la connessione Internet e riprovare."
     }
   },
   "options": {

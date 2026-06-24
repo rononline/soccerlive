@@ -59,6 +59,9 @@
           "competition_code": "Compétition"
         }
       }
+    },
+    "abort": {
+      "no_competitions": "Impossible de charger la liste des compétitions. Vérifiez votre connexion internet et réessayez."
     }
   },
   "options": {

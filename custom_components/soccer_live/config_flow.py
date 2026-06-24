@@ -85,6 +85,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         competitions = await self._get_competitions()
         sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
+        if not sorted_competitions:
+            return self.async_abort(reason="no_competitions")
         return self.async_show_form(
             step_id="news_competition",
             data_schema=vol.Schema({
@@ -108,7 +110,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         competitions = await self._get_competitions()
         sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
-
+        if not sorted_competitions:
+            return self.async_abort(reason="no_competitions")
         return self.async_show_form(
             step_id="league",
             data_schema=vol.Schema({
@@ -127,7 +130,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         competitions = await self._get_competitions()
         sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
-
+        if not sorted_competitions:
+            return self.async_abort(reason="no_competitions")
         return self.async_show_form(
             step_id="select_competition_for_team",
             data_schema=vol.Schema({
@@ -180,6 +184,8 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
         competitions = await self._get_competitions()
         sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
+        if not sorted_competitions:
+            return self.async_abort(reason="no_competitions")
         return self.async_show_form(
             step_id="commentary",
             data_schema=vol.Schema({
@@ -247,7 +253,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 response.raise_for_status()
                 teams_data = await response.json()
-                leagues = teams_data.get("sports", [{}])[0].get("leagues", [{}])
+                leagues = (teams_data.get("sports") or [{}])[0].get("leagues", [{}])
                 if not leagues:
                     self._teams = []
                     return

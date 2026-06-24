@@ -382,6 +382,13 @@ class SoccerLiveSensor(Entity):
                 attrs = result["attributes"]
                 if self._max_matches and "matches" in attrs:
                     attrs["matches"] = attrs["matches"][:self._max_matches]
+                # Carry forward last-event attributes from the previous update;
+                # _flush_pending_events will overwrite them if a new event fires.
+                for _k in ("last_event", "last_event_type", "last_event_timestamp",
+                           "last_goal_event", "last_card_event",
+                           "last_match_started_event", "last_match_finished_event"):
+                    if _k in self._attributes and _k not in attrs:
+                        attrs[_k] = self._attributes[_k]
                 self._attributes = attrs
                 self._pending_events = result.get("events", [])
                 self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
@@ -515,16 +522,16 @@ class SoccerLiveSensor(Entity):
                 return
             if event_type == "soccer_live_goal":
                 title = f"⚽ Goal! {event_data.get('home_team','')} {event_data.get('home_score','')} - {event_data.get('away_score','')} {event_data.get('away_team','')}"
-                message = f"{event_data.get('player','Unknown')} · {event_data.get('clock','')}"
+                message = f"{event_data.get('player','Unknown')} · {event_data.get('minute','')}"
             elif event_type == "soccer_live_yellow_card":
                 title = f"🟨 Yellow card · {event_data.get('home_team','')} vs {event_data.get('away_team','')}"
-                message = f"{event_data.get('player','Unknown')} · {event_data.get('clock','')}"
+                message = f"{event_data.get('player','Unknown')} · {event_data.get('minute','')}"
             elif event_type == "soccer_live_red_card":
                 title = f"🟥 Red card · {event_data.get('home_team','')} vs {event_data.get('away_team','')}"
-                message = f"{event_data.get('player','Unknown')} · {event_data.get('clock','')}"
+                message = f"{event_data.get('player','Unknown')} · {event_data.get('minute','')}"
             elif event_type == "soccer_live_match_finished":
                 title = f"🏁 Full time · {event_data.get('home_team','')} {event_data.get('home_score','')} - {event_data.get('away_score','')} {event_data.get('away_team','')}"
-                message = event_data.get('competition_name','')
+                message = event_data.get('league_name','')
             else:
                 return
             domain, service = notify_service.split(".", 1) if "." in notify_service else ("notify", notify_service)
@@ -824,11 +831,12 @@ class SoccerLiveSensor(Entity):
                 self._dispatched_goal_details[match_id] = set()
             dispatched = self._dispatched_goal_details[match_id]
 
+            home_abbrev = match.get("home_abbrev", "")
+            away_abbrev = match.get("away_abbrev", "")
+
             if home_score > prev_home:
                 goals_scored = home_score - prev_home
-                # Claim only as many goal strings as this team scored; leave the rest for away
-                all_new = [d for d in curr_details if "Goal" in d and d not in dispatched]
-                home_strings = all_new[:goals_scored]
+                home_strings = self._pick_goal_strings(curr_details, dispatched, home_abbrev, goals_scored)
                 goal_scorers = self._extract_goal_scorers_from_details(home_strings, goals_scored)
                 synthetic_key = f"h_{home_score}"
                 if home_strings or synthetic_key not in dispatched:
@@ -837,8 +845,7 @@ class SoccerLiveSensor(Entity):
                     dispatched.add(synthetic_key)
             if away_score > prev_away:
                 goals_scored = away_score - prev_away
-                all_new = [d for d in curr_details if "Goal" in d and d not in dispatched]
-                away_strings = all_new[:goals_scored]
+                away_strings = self._pick_goal_strings(curr_details, dispatched, away_abbrev, goals_scored)
                 goal_scorers = self._extract_goal_scorers_from_details(away_strings, goals_scored)
                 synthetic_key = f"a_{away_score}"
                 if away_strings or synthetic_key not in dispatched:
@@ -848,6 +855,16 @@ class SoccerLiveSensor(Entity):
             self._previous_scores[match_id]["home"] = home_score
             self._previous_scores[match_id]["away"] = away_score
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
+
+    def _pick_goal_strings(self, curr_details, dispatched, team_abbrev, count):
+        """Return up to `count` new goal strings for a team.
+        Filters by [ABBREV] tag when available; falls back to positional order."""
+        all_new = [d for d in curr_details if "Goal" in d and d not in dispatched]
+        if team_abbrev:
+            tagged = [d for d in all_new if f"[{team_abbrev}]" in d]
+            if tagged:
+                return tagged[:count]
+        return all_new[:count]
 
     def _extract_goal_scorers_from_details(self, goal_strings, goals_count):
         """Parse player name and minute from pre-filtered goal detail strings.
