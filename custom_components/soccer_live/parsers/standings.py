@@ -48,7 +48,12 @@ def standings_data(data):
                 "full_table_link": full_table_link
             })
 
-        seasons_data = data.get("seasons", [])
+        # ESPN exposes season as either a "seasons" array or a singular "season" object
+        seasons_data = data.get("seasons") or []
+        if not seasons_data:
+            singular = data.get("season")
+            if isinstance(singular, dict):
+                seasons_data = [singular]
         current_year = datetime.now().year
         current_season = (
             next((s for s in seasons_data if s.get("year") == current_year), None)
@@ -60,9 +65,12 @@ def standings_data(data):
         season_start = _parse_date(current_season.get("startDate", "N/A")) if current_season else None
         season_end = _parse_date(current_season.get("endDate", "N/A")) if current_season else None
 
-        # The standings API exposes name/abbreviation at the top level (no leagues array)
-        league_name = data.get("name", "N/A")
-        league_abbreviation = data.get("abbreviation", "N/A")
+        # ESPN puts name/abbreviation at the top level for some endpoints and under
+        # leagues[0] for others; try both.
+        _leagues = data.get("leagues") or []
+        _first_league = _leagues[0] if _leagues else {}
+        league_name = data.get("name") or _first_league.get("name", "N/A") or "N/A"
+        league_abbreviation = data.get("abbreviation") or _first_league.get("abbreviation", "N/A") or "N/A"
         # Try multiple locations ESPN may put the competition logo
         logos = (data.get("logos") or
                  (data.get("leagues") or [{}])[0].get("logos") or

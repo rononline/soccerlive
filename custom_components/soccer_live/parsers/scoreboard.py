@@ -81,10 +81,13 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
         # For single-league endpoints use the name directly as before
         top_league_name = top_leagues[0].get("name", "N/A") if len(top_leagues) == 1 else "N/A"
 
+        # Interpret user-supplied date strings in the HA timezone so that a match
+        # at 00:30 local time is not filtered by the wrong UTC day boundary.
+        _tz = ZoneInfo(hass.config.time_zone) if (hass and hass.config.time_zone) else timezone.utc
         if isinstance(start_date, str):
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=_tz).astimezone(timezone.utc)
         if isinstance(end_date, str):
-            end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=_tz).astimezone(timezone.utc)
 
         team_id_str = str(team_id) if team_id else None
 
@@ -190,12 +193,15 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             away_score = away_comp.get("score", "N/A")
             away_statistics = _get_statistics(away_comp)
 
-            status_type = match.get("status", {}).get("type", {})
+            # Prefer competition-level status (more reliable for live clock/period);
+            # fall back to event-level status for basic pre/post state.
+            status_obj = comp.get("status") or match.get("status") or {}
+            status_type = status_obj.get("type", {})
             match_state = status_type.get("state", "N/A")
             match_status = status_type.get("description", "N/A")
             status_detail = status_type.get("detail", "N/A")
-            clock = match.get("status", {}).get("displayClock", "N/A")
-            period = match.get("status", {}).get("period", "N/A")
+            clock = status_obj.get("displayClock", "N/A")
+            period = status_obj.get("period", "N/A")
 
             venue_obj = comp.get("venue", {}) or {}
             venue = venue_obj.get("fullName", "N/A")

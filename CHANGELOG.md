@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.37 (2026-06-24)
+- sensor: simultaneous goals now correctly attributed — home claims only `goals_scored` strings from the timeline, leaving the rest for away; `_extract_goal_scorers_from_details` simplified to work on the pre-filtered list
+- scoreboard: prefer `competition.status` over `event.status` for match state, clock and period so a live match with status only in `competitions[0]` is no longer treated as N/A
+- scoreboard: date filter interprets user-supplied `start_date`/`end_date` in the HA timezone instead of UTC, preventing midnight-local matches from being included or excluded by the wrong UTC day
+- standings: handle both `seasons` (array) and `season` (singular object) fixture shapes; read `league_name`/`abbreviation` from `leagues[0]` as fallback when not present at the top level
+
 ## v3.6.36 (2026-06-24)
 - scoreboard: `home_record`, `home_top_scorer`, `home_record_summary`, `home_standing_summary` and their away equivalents now use `home_comp`/`away_comp` — the remaining `competitors[0]`/`[1]` references were missed in v3.6.35
 - scoreboard: `is_within_recent_window` adds 2 h to the configured window so the threshold is measured from match end (kickoff + ~2 h) rather than kickoff; a match with a 6 h window that kicked off 7 h ago and ended 5 h ago is now correctly shown

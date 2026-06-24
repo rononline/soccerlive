@@ -826,46 +826,43 @@ class SoccerLiveSensor(Entity):
 
             if home_score > prev_home:
                 goals_scored = home_score - prev_home
-                new_detail_keys = {d for d in curr_details if "Goal" in d and d not in dispatched}
-                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, exclude=dispatched)
+                # Claim only as many goal strings as this team scored; leave the rest for away
+                all_new = [d for d in curr_details if "Goal" in d and d not in dispatched]
+                home_strings = all_new[:goals_scored]
+                goal_scorers = self._extract_goal_scorers_from_details(home_strings, goals_scored)
                 synthetic_key = f"h_{home_score}"
-                if new_detail_keys or synthetic_key not in dispatched:
+                if home_strings or synthetic_key not in dispatched:
                     self._dispatch_goal_event(match.get("home_team", "N/A"), match.get("away_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
-                    dispatched.update(new_detail_keys)
+                    dispatched.update(home_strings)
                     dispatched.add(synthetic_key)
             if away_score > prev_away:
                 goals_scored = away_score - prev_away
-                new_detail_keys = {d for d in curr_details if "Goal" in d and d not in dispatched}
-                goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, exclude=dispatched)
+                all_new = [d for d in curr_details if "Goal" in d and d not in dispatched]
+                away_strings = all_new[:goals_scored]
+                goal_scorers = self._extract_goal_scorers_from_details(away_strings, goals_scored)
                 synthetic_key = f"a_{away_score}"
-                if new_detail_keys or synthetic_key not in dispatched:
+                if away_strings or synthetic_key not in dispatched:
                     self._dispatch_goal_event(match.get("away_team", "N/A"), match.get("home_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
-                    dispatched.update(new_detail_keys)
+                    dispatched.update(away_strings)
                     dispatched.add(synthetic_key)
             self._previous_scores[match_id]["home"] = home_score
             self._previous_scores[match_id]["away"] = away_score
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
 
-    def _extract_goal_scorers_from_details(self, prev_details, curr_details, goals_count, is_home_team=True, exclude=None):
-        """Extract player and minute from new goals in match_details.
+    def _extract_goal_scorers_from_details(self, goal_strings, goals_count):
+        """Parse player name and minute from pre-filtered goal detail strings.
         Return a list of dicts with {player, minute}."""
-        exclude = exclude or set()
         new_goals = []
-
-        for detail in curr_details:
-            if detail not in prev_details and "Goal" in detail and detail not in exclude:
-                # Format: "Goal - 38': Bryan Mbeumo"
-                try:
-                    parts = detail.split("': ")
-                    if len(parts) == 2:
-                        player_name = parts[1].strip()
-                        # Minute: extracted from the part before "': " -> "Goal - 38" -> "38"
-                        minute = parts[0].split(" - ")[-1].strip() if " - " in parts[0] else "N/A"
-                        new_goals.append({"player": player_name, "minute": minute})
-                except Exception as e:
-                    _LOGGER.debug(f"Error extracting player name: {e}")
-
-        # Return only extracted goals, up to the number of goals scored
+        for detail in goal_strings:
+            # Format: "Goal - 38': Bryan Mbeumo"
+            try:
+                parts = detail.split("': ")
+                if len(parts) == 2:
+                    player_name = parts[1].strip()
+                    minute = parts[0].split(" - ")[-1].strip() if " - " in parts[0] else "N/A"
+                    new_goals.append({"player": player_name, "minute": minute})
+            except Exception as e:
+                _LOGGER.debug(f"Error extracting player name: {e}")
         return new_goals[:goals_count]
 
     def _dispatch_goal_event(self, scoring_team, opponent_team, goals_count, home_score, away_score, match, goal_scorers=None, events: list = None):
