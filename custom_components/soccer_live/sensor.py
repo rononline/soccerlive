@@ -420,11 +420,12 @@ class SoccerLiveSensor(Entity):
                         except Exception as proc_err:
                             self._last_error = str(proc_err)
                             _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
+                        else:
+                            self._last_successful_update = datetime.now().isoformat()
+                            self._last_error = None
                         self._schedule_live_refresh()
                         self._request_count += 1
                         self._last_request_time = datetime.now().isoformat()
-                        self._last_successful_update = self._last_request_time
-                        self._last_error = None
                         _LOGGER.info(f"Finished update for {self._name}")
                         break
                     elif response.status < 500:

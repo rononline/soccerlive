@@ -84,7 +84,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         if isinstance(end_date, str):
-            end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
 
         team_id_str = str(team_id) if team_id else None
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.32 (2026-06-24)
+- sensor: parse errors no longer mark the update as successful — `api_status` now correctly stays `error` when `_process_data` raises an exception (was: `_last_error` set in except block then immediately overwritten to `None`)
+- scoreboard: end-date filter now uses `23:59:59` instead of `00:00:00` — matches on the last day were excluded when scheduled after midnight UTC
+- translations: remove unused `strings.json` (HA reads from `en.json`; duplicate file caused confusion)
+
 ## v3.6.31 (2026-06-23)
 - scoreboard: replace hardcoded Dutch `team_name` fallback `"Alle wedstrijden"` with `"All matches"` — this string is a visible sensor attribute in HA
 
