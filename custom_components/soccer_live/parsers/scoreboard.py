@@ -161,10 +161,14 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
                 continue
 
-            home_team_data = competitors[0].get("team", {})
+            # Use the homeAway field to identify home and away; fall back to index order
+            home_comp = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
+            away_comp = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
+
+            home_team_data = home_comp.get("team", {})
             if team_id_str:
                 _home_id = str(home_team_data.get("id", ""))
-                _away_id = str((competitors[1].get("team", {}) or {}).get("id", ""))
+                _away_id = str((away_comp.get("team", {}) or {}).get("id", ""))
                 if _home_id != team_id_str and _away_id != team_id_str:
                     continue
             home_team = home_team_data.get("displayName", "N/A")
@@ -172,19 +176,19 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             if not home_logo:
                 home_logos = home_team_data.get("logos", [{}])
                 home_logo = home_logos[0].get("href", "N/A")
-            home_form = competitors[0].get("form", "N/A")
-            home_score = competitors[0].get("score", "N/A")
-            home_statistics = _get_statistics(competitors[0])
+            home_form = home_comp.get("form", "N/A")
+            home_score = home_comp.get("score", "N/A")
+            home_statistics = _get_statistics(home_comp)
 
-            away_team_data = competitors[1].get("team", {})
+            away_team_data = away_comp.get("team", {})
             away_team = away_team_data.get("displayName", "N/A")
             away_logo = away_team_data.get("logo", None)
             if not away_logo:
                 away_logos = away_team_data.get("logos", [{}])
                 away_logo = away_logos[0].get("href", "N/A")
-            away_form = competitors[1].get("form", "N/A")
-            away_score = competitors[1].get("score", "N/A")
-            away_statistics = _get_statistics(competitors[1])
+            away_form = away_comp.get("form", "N/A")
+            away_score = away_comp.get("score", "N/A")
+            away_statistics = _get_statistics(away_comp)
 
             status_type = match.get("status", {}).get("type", {})
             match_state = status_type.get("state", "N/A")
@@ -335,12 +339,13 @@ def is_within_recent_window(end_time, hours=24):
     """Return True if the match kickoff happened within the last `hours`."""
     try:
         if isinstance(end_time, str):
-            end_time_dt = datetime.strptime(end_time, "%d-%m-%Y %H:%M").replace(tzinfo=timezone.utc)
+            # The stored string is local time formatted by _parse_date(); compare as naive
+            end_time_dt = datetime.strptime(end_time, "%d-%m-%Y %H:%M")
         elif isinstance(end_time, datetime):
-            end_time_dt = end_time
+            end_time_dt = end_time.replace(tzinfo=None)
         else:
             raise ValueError("Expected a string or datetime value")
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime.now()
         return current_time - end_time_dt <= timedelta(hours=hours)
     except Exception as e:
         _LOGGER.error(f"Error calculating recent interval ({hours}h): {e}")

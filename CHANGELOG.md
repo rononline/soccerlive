@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.6.35 (2026-06-24)
+- scoreboard: use `homeAway` field from ESPN to correctly assign home and away competitors — was always taking `competitors[0]` as home, swapping teams in roughly half of matches
+- scoreboard: `is_within_recent_window()` now compares naive local datetimes — the stored date string is local time (formatted by `_parse_date`), but the previous code treated it as UTC, causing 1–2 h drift depending on timezone
+- sensor: goal deduplication now uses a per-match `_dispatched_goal_details` set instead of `max()` — a real goal scored after a disallowed goal (score reverts and rises again) was silently dropped
+- sensor: sensor state for a post-match now reads `"Last match: X 2 - 1 Y"` instead of `"Next match: X vs Y"` — the `else` branch was also covering the `post` state
+
 ## v3.6.34 (2026-06-24)
 - sensor: `match_finished` events now only fire on a known `in→post` transition; historical finished matches on first poll are silently skipped to prevent notification spam on new installs or cleared storage
 - sensor: score corrections no longer trigger duplicate goal events — track the highest score seen per match so a score that dips and recovers to a known value does not re-fire

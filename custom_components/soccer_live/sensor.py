@@ -231,6 +231,7 @@ class SoccerLiveSensor(Entity):
         self._previous_scores = {}
         self._previous_match_details = {}
         self._previous_match_states = {}
+        self._dispatched_goal_details = {}
         self._match_finished_dispatched = set()
         self._match_finished_list = []
         self._store = None
@@ -819,18 +820,30 @@ class SoccerLiveSensor(Entity):
             prev_away = self._previous_scores[match_id]["away"]
             prev_details = self._previous_scores[match_id].get("match_details", [])
             curr_details = match.get("match_details", [])
+            if match_id not in self._dispatched_goal_details:
+                self._dispatched_goal_details[match_id] = set()
+            dispatched = self._dispatched_goal_details[match_id]
+
             if home_score > prev_home:
                 goals_scored = home_score - prev_home
                 goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=True)
-                self._dispatch_goal_event(match.get("home_team", "N/A"), match.get("away_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
+                new_detail_keys = {d for d in curr_details if "Goal" in d and d not in dispatched}
+                synthetic_key = f"h_{home_score}"
+                if new_detail_keys or synthetic_key not in dispatched:
+                    self._dispatch_goal_event(match.get("home_team", "N/A"), match.get("away_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
+                    dispatched.update(new_detail_keys)
+                    dispatched.add(synthetic_key)
             if away_score > prev_away:
                 goals_scored = away_score - prev_away
                 goal_scorers = self._extract_goal_scorers_from_details(prev_details, curr_details, goals_scored, is_home_team=False)
-                self._dispatch_goal_event(match.get("away_team", "N/A"), match.get("home_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
-            # Track the highest score seen — prevents a corrected score from
-            # triggering a duplicate goal event when it rises back to the old value.
-            self._previous_scores[match_id]["home"] = max(prev_home, home_score)
-            self._previous_scores[match_id]["away"] = max(prev_away, away_score)
+                new_detail_keys = {d for d in curr_details if "Goal" in d and d not in dispatched}
+                synthetic_key = f"a_{away_score}"
+                if new_detail_keys or synthetic_key not in dispatched:
+                    self._dispatch_goal_event(match.get("away_team", "N/A"), match.get("home_team", "N/A"), goals_scored, home_score, away_score, match, goal_scorers, events)
+                    dispatched.update(new_detail_keys)
+                    dispatched.add(synthetic_key)
+            self._previous_scores[match_id]["home"] = home_score
+            self._previous_scores[match_id]["away"] = away_score
             self._previous_scores[match_id]["match_details"] = curr_details.copy()
 
     def _extract_goal_scorers_from_details(self, prev_details, curr_details, goals_count, is_home_team=True):
@@ -1441,6 +1454,8 @@ class SoccerLiveSensor(Entity):
             if next_match:
                 if next_match.get("state") == "in":
                     state = f"{next_match.get('home_score','?')} - {next_match.get('away_score','?')} ({next_match.get('clock','')})"
+                elif next_match.get("state") == "post":
+                    state = f"Last match: {next_match.get('home_team','N/A')} {next_match.get('home_score','?')} - {next_match.get('away_score','?')} {next_match.get('away_team','N/A')}"
                 else:
                     state = f"Next match: {next_match.get('home_team','N/A')} vs {next_match.get('away_team','N/A')}"
             else:
