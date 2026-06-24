@@ -370,7 +370,7 @@ class SoccerLiveSensor(Entity):
         }
         SoccerLiveSensor._fetch_locks = {
             k: v for k, v in SoccerLiveSensor._fetch_locks.items()
-            if k in SoccerLiveSensor._cache
+            if k in SoccerLiveSensor._cache or v.locked()
         }
 
         # Use the URL as cache key so sensors sharing the same ESPN endpoint share one fetch
@@ -423,13 +423,16 @@ class SoccerLiveSensor(Entity):
                                 _LOGGER.error(f"Invalid JSON for {self._name}: {json_err}")
                                 break
                             _LOGGER.debug(f"Data received for {self._name}")
-                            SoccerLiveSensor._cache[cache_key] = {"data": data, "time": datetime.now()}
                             try:
                                 await self._process_and_apply(data)
                             except Exception as proc_err:
                                 self._last_error = str(proc_err)
                                 _LOGGER.error(f"Error processing data for {self._name}: {proc_err}")
                             else:
+                                SoccerLiveSensor._cache[cache_key] = {
+                                    "data": data,
+                                    "time": datetime.now(),
+                                }
                                 self._last_successful_update = datetime.now().isoformat()
                                 self._last_error = None
                             self._schedule_live_refresh()
@@ -485,11 +488,11 @@ class SoccerLiveSensor(Entity):
 
     def _filter_start_str(self):
         d = self._dyn_start_date or self._start_date
-        return d.strftime("%Y-%m-%d")
+        return d.strftime("%Y-%m-%d") if d else None
 
     def _filter_end_str(self):
         d = self._dyn_end_date or self._end_date
-        return d.strftime("%Y-%m-%d")
+        return d.strftime("%Y-%m-%d") if d else None
 
     async def _flush_pending_events(self):
         """Fire events collected during executor processing on the event loop (thread-safe)."""
@@ -664,16 +667,26 @@ class SoccerLiveSensor(Entity):
             except (ValueError, TypeError):
                 pass
 
-        # Fall back to static dates if ESPN did not return calendar dates
+        # Fall back to static dates if ESPN did not return calendar dates.
+        # Empty filters are valid, so omit the date range when neither source
+        # provides a complete range.
         if not season_start or not season_end:
-            season_start = self._start_date.strftime("%Y-%m-%d")
-            season_end = self._end_date.strftime("%Y-%m-%d")
+            if self._start_date and self._end_date:
+                season_start = self._start_date.strftime("%Y-%m-%d")
+                season_end = self._end_date.strftime("%Y-%m-%d")
+            else:
+                season_start = ""
+                season_end = ""
 
-        season_start = season_start[:10].replace("-", "")
-        season_end = season_end[:10].replace("-", "")
+        if season_start and season_end:
+            season_start = season_start[:10].replace("-", "")
+            season_end = season_end[:10].replace("-", "")
 
         if self._sensor_type in _DATE_RANGE_SENSOR_TYPES:
-            return f"{self.base_url_3}/{self._code}/scoreboard?limit=1000&dates={season_start}-{season_end}"
+            url = f"{self.base_url_3}/{self._code}/scoreboard?limit=1000"
+            if season_start and season_end:
+                url += f"&dates={season_start}-{season_end}"
+            return url
 
         return None
 

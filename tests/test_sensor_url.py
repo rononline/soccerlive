@@ -142,6 +142,69 @@ def test_team_match_falls_back_to_static_dates_when_calendar_missing():
     assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=20260101-20261231"
 
 
+def test_team_match_omits_dates_when_calendar_and_filters_are_missing():
+    sensor = _sensor("team_match", code="ned.1")
+    sensor._start_date = None
+    sensor._end_date = None
+
+    async def _calendar():
+        return None, None
+
+    sensor._get_calendar_data = _calendar
+
+    url = asyncio.run(sensor._build_url())
+
+    assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000"
+
+
+def test_failed_processing_does_not_cache_response(monkeypatch):
+    sensor = _sensor("team_match", code="ned.1")
+    sensor._last_error = None
+    sensor._last_successful_update = None
+    sensor._request_count = 0
+    sensor._last_request_time = None
+    sensor._scorers_unavailable = False
+    sensor._schedule_live_refresh = lambda: None
+
+    async def _build_url():
+        return "https://example.test/scoreboard"
+
+    async def _process_and_apply(data):
+        raise ValueError("broken payload")
+
+    class _Response:
+        status = 200
+
+        async def read(self):
+            return b'{"events": []}'
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+    class _Session:
+        def get(self, *args, **kwargs):
+            return _Response()
+
+    class _Hass:
+        async def async_add_executor_job(self, func, *args):
+            return func(*args)
+
+    sensor.hass = _Hass()
+    sensor._build_url = _build_url
+    sensor._process_and_apply = _process_and_apply
+    SoccerLiveSensor._cache = {}
+    SoccerLiveSensor._fetch_locks = {}
+    monkeypatch.setattr(_sensor_mod, "async_get_clientsession", lambda hass: _Session())
+
+    asyncio.run(sensor.async_update())
+
+    assert "https://example.test/scoreboard" not in SoccerLiveSensor._cache
+    assert sensor._last_error == "broken payload"
+
+
 def test_calendar_issue_logging_is_throttled(caplog):
     caplog.set_level(logging.DEBUG, logger="custom_components.soccer_live.sensor")
     sensor = _sensor("team_match", code="ned.1")

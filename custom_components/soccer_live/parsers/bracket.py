@@ -255,4 +255,5 @@ def process_bracket_data(data):
         out["ties_count"] = sum(len(sr["ties"]) for sr in sized_rounds)
     except Exception as e:
         _LOGGER.error(f"Error processing bracket data: {e}")
+        raise
     return out

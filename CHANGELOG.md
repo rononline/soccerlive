@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.6.40 (2026-06-24)
+- sensor: `_filter_start_str` / `_filter_end_str` return `None` when no date is configured instead of calling `strftime()` on `None` and crashing
+- sensor: URL building omits the ESPN `dates` parameter when neither calendar nor configured dates provide a complete range, preventing the remaining `strftime()` crash
+- sensor: fetch lock pruning now preserves locks that are currently held (`v.locked()`) so an in-progress fetch is never evicted from `_fetch_locks`, eliminating the remaining race condition
+- sensor: ESPN responses are cached only after successful processing, so malformed payloads cannot poison the shared cache
+- parsers: match, standings, league, news, scorers and bracket parsers now re-raise internal errors instead of silently returning empty data — the sensor catches the exception and correctly sets `api_status = error`
+- config_flow: competition and team responses are normalized defensively; null, non-object and incomplete entries are skipped instead of crashing with KeyError/TypeError
+- tests: add regressions for empty date filters, failed-response caching, parser failures and malformed competition/team responses
+
 ## v3.6.39 (2026-06-24)
 - sensor: introduce `_process_and_apply()` helper used by all three code paths (cache hit, lock double-check, network fetch) so `last_event` attributes are preserved on every update path, not just the cache path
 - sensor: per-URL `_fetch_lock` (mirrors `_calendar_locks`) prevents concurrent sensors sharing the same ESPN URL from issuing duplicate network requests; a double-check inside the lock processes cached data when available

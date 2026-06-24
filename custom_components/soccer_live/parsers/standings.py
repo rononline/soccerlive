@@ -88,7 +88,7 @@ def standings_data(data):
         }
     except Exception as e:
         _LOGGER.error(f"Error processing standings data: {e}")
-        return {}
+        raise
 
 
 

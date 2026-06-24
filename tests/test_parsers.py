@@ -22,6 +22,10 @@ _scoreboard = _load_parser("scoreboard")
 _standings  = _load_parser("standings")
 process_match_data = _scoreboard.process_match_data
 standings_data     = _standings.standings_data
+process_league_data = _scoreboard.process_league_data
+process_news_data = _scoreboard.process_news_data
+process_scorers_data = _scoreboard.process_scorers_data
+process_bracket_data = _load_parser("bracket").process_bracket_data
 
 class _MockHass:
     class config:
@@ -82,6 +86,19 @@ class TestScoreboardParser:
     def test_graceful_on_no_events(self):
         result = process_match_data({"leagues": [], "events": []}, _MockHass())
         assert result["matches"] == []
+
+    @pytest.mark.parametrize(
+        ("parser_func", "data"),
+        [
+            (process_league_data, {"leagues": [None]}),
+            (process_news_data, {"articles": [None]}),
+            (process_scorers_data, {"leaders": [None]}),
+            (process_bracket_data, {"events": [None]}),
+        ],
+    )
+    def test_malformed_payloads_raise(self, parser_func, data):
+        with pytest.raises((AttributeError, TypeError)):
+            parser_func(data)
 
     def _minimal_event(self, **competition_overrides):
         competition = {

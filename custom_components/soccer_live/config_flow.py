@@ -8,6 +8,7 @@ import aiohttp
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from .const import DOMAIN
+from .data import parse_competitions, parse_teams
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -238,7 +239,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 response.raise_for_status()
                 competitions_data = await response.json()
-                return {league['slug']: league['name'] for league in competitions_data.get("leagues", [])}
+                return parse_competitions(competitions_data)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             _LOGGER.error("Error loading competitions: %s", repr(e))
             return {}
@@ -255,14 +256,7 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 response.raise_for_status()
                 teams_data = await response.json()
-                leagues = (teams_data.get("sports") or [{}])[0].get("leagues", [{}])
-                if not leagues:
-                    self._teams = []
-                    return
-                self._teams = [
-                    {"id": team["team"]["id"], "displayName": team["team"]["displayName"]}
-                    for league in leagues for team in league.get("teams", [])
-                ]
+                self._teams = parse_teams(teams_data)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             _LOGGER.error("Error loading teams for %s: %s", competition_code, repr(e))
             self._teams = []

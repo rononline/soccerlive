@@ -30,7 +30,7 @@ def process_league_data(data, hass=None):
 
     except Exception as e:
         _LOGGER.error(f"Error processing league data: {e}")
-        return []
+        raise
 
 def get_season_slug_or_displayname(match):
     season_data = match.get("season", {})
@@ -339,7 +339,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
 
     except Exception as e:
         _LOGGER.error(f"Error processing match data: {e}")
-        return {}
+        raise
 
 def is_within_recent_window(end_time, hours=24):
     """Return True if the match kickoff happened within the last `hours`."""
@@ -574,6 +574,7 @@ def process_news_data(data):
             })
     except Exception as e:
         _LOGGER.error(f"Error processing news: {e}")
+        raise
     return articles
 
 def _get_details(details):
@@ -610,6 +611,7 @@ def process_scorers_data(data):
             break
     except Exception as e:
         _LOGGER.error(f"Error processing top scorers data: {e}")
+        raise
     return scorers
 
 
