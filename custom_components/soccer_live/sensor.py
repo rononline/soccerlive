@@ -1103,7 +1103,7 @@ class SoccerLiveSensor(Entity):
         goal_scorers = []
         
         for detail in match_details:
-            if "Goal" in detail:
+            if "Goal" in detail and "Disallowed" not in detail:
                 # Format: "Goal - 38': Bryan Mbeumo"
                 try:
                     parts = detail.split("': ")
@@ -1312,6 +1312,7 @@ class SoccerLiveSensor(Entity):
                 "away_color": match.get("away_color"),
                 "away_score": match.get("away_score"),
                 "venue": match.get("venue"),
+                "league_name": match.get("league_name"),
                 "broadcasts": match.get("broadcasts") or [],
             }
 
