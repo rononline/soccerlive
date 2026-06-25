@@ -580,8 +580,8 @@ def process_news_data(data):
 def _get_details(details):
     events = []
     for detail in details:
-        event_type = detail.get("type", {}).get("text", "Unknown")
-        clock = detail.get("clock", {}).get("displayValue", "N/A")
+        event_type = (detail.get("type") or {}).get("text", "Unknown")
+        clock = (detail.get("clock") or {}).get("displayValue", "N/A")
         athletes = [athlete.get("displayName", "Unknown") for athlete in detail.get("athletesInvolved", [])]
         athletes_str = ", ".join(athletes) if athletes else "N/A"
         team_abbr = (detail.get("team", {}) or {}).get("abbreviation", "")

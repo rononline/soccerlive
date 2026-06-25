@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.43 (2026-06-25)
+- parser: `_get_details` now uses `(detail.get("type") or {})` and `(detail.get("clock") or {})` — prevents `AttributeError` when ESPN returns `null` for these fields instead of an object
+
 ## v3.6.42 (2026-06-25)
 - sensor: `_extract_all_goal_scorers` now excludes `"Goal Disallowed"` strings — disallowed goals no longer appear in `goal_scorers_str` of the `match_finished` event
 - sensor: `compact()` in `_compute_schedule_summary` now includes `league_name` so `schedule_upcoming_matches`, `schedule_live_matches`, and `schedule_recent_matches` carry competition info (relevant for `team_matches_mixed` sensors)
