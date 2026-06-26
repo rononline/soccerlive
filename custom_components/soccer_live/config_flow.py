@@ -17,7 +17,6 @@ OPTION_SELECT_TEAM = "Team"
 OPTION_MANUAL_TEAM = "Manual entry"
 OPTION_ALL_TODAY = "All matches today"
 OPTION_NEWS = "News"
-OPTION_COMMENTARY = "Live Commentary"
 
 @config_entries.HANDLERS.register(DOMAIN)
 class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -58,14 +57,10 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._data.update(user_input)
                 return await self.async_step_manual_team()
 
-            elif selection == OPTION_COMMENTARY:
-                self._data.update(user_input)
-                return await self.async_step_commentary()
-
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("selection", default=OPTION_SELECT_LEAGUE): vol.In([OPTION_SELECT_LEAGUE, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM, OPTION_COMMENTARY]),
+                vol.Required("selection", default=OPTION_SELECT_LEAGUE): vol.In([OPTION_SELECT_LEAGUE, OPTION_SELECT_TEAM, OPTION_ALL_TODAY, OPTION_NEWS, OPTION_MANUAL_TEAM]),
             }),
             errors=self._errors,
         )
@@ -168,31 +163,6 @@ class SoccerLiveConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="team",
             data_schema=vol.Schema({
                 vol.Required("team_name"): vol.In(team_options),
-            }),
-            errors=self._errors,
-        )
-
-    async def async_step_commentary(self, user_input=None):
-        if user_input is not None:
-            competition_code = user_input.get("competition_code")
-            competition_name = await self._get_competition_name(competition_code)
-            self._data.update({
-                "competition_code": competition_code,
-                "name": f"Commentary {competition_name}",
-                "selection": "Live Commentary",
-            })
-            return self.async_create_entry(
-                title=f"Commentary {competition_name}",
-                data=self._data,
-            )
-        competitions = await self._get_competitions()
-        sorted_competitions = {k: v for k, v in sorted(competitions.items(), key=lambda item: item[1])}
-        if not sorted_competitions:
-            return self.async_abort(reason="no_competitions")
-        return self.async_show_form(
-            step_id="commentary",
-            data_schema=vol.Schema({
-                vol.Required("competition_code"): vol.In(sorted_competitions),
             }),
             errors=self._errors,
         )

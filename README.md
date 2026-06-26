@@ -33,7 +33,6 @@ Sensors are created automatically depending on your selection:
 | `bracket` | `soccer_live_bracket_{competition}` | Knockout bracket (auto-created for cup competitions) |
 | `all_matches_today` | `soccer_live_all_today` | All matches worldwide today |
 | `news` | `soccer_live_news_{competition}` | News feed for a competition |
-| `commentary` | `soccer_live_commentary_{competition}` | Live play-by-play commentary for a match |
 
 ---
 

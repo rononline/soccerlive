@@ -14,11 +14,11 @@ import random
 import re
 from .const import DOMAIN
 
-_LIVE_POLL_TYPES = {"team_match", "team_matches", "team_matches_mixed", "match_day", "all_matches_today", "commentary"}
+_LIVE_POLL_TYPES = {"team_match", "team_matches", "team_matches_mixed", "match_day", "all_matches_today"}
 
 _LOGGER = logging.getLogger(__name__)
 
-_DATE_RANGE_SENSOR_TYPES = {"match_day", "team_match", "team_matches", "commentary"}
+_DATE_RANGE_SENSOR_TYPES = {"match_day", "team_match", "team_matches"}
 
 # Competitions with a knockout bracket phase
 KNOCKOUT_LEAGUES = {
@@ -68,21 +68,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if DOMAIN not in hass.data:
             hass.data[DOMAIN] = {}
     
-        if selection == "Live Commentary":
-            comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
-            sensors += [
-                SoccerLiveSensor(
-                    hass, f"soccerlive_commentary_{comp_norm}", competition_code, "commentary",
-                    base_scan_interval + timedelta(seconds=30),
-                    config_entry_id=entry.entry_id,
-                    start_date=start_date, end_date=end_date, team_id=team_id, recent_match_hours=recent_match_hours,
-                    enable_summary_enrichment=enable_summary_enrichment,
-                    max_matches=max_matches
-                )
-            ]
-            async_add_entities(sensors, True)
-            return
-
         if selection == "News":
             comp_norm = competition_code.replace(" ", "_").replace(".", "_").lower()
             sensors += [
@@ -483,7 +468,6 @@ class SoccerLiveSensor(Entity):
         self._pending_events = result.get("events", [])
         self._save_store_needed = any(e[0] == "soccer_live_match_finished" for e in self._pending_events)
         await self._enrich_with_summary()
-        await self._enrich_with_commentary()
         await self._flush_pending_events()
 
     def _filter_start_str(self):
@@ -551,40 +535,6 @@ class SoccerLiveSensor(Entity):
             await self.hass.services.async_call(domain, service, {"title": title, "message": message}, blocking=False)
         except Exception as e:
             _LOGGER.debug(f"Notification error: {e}")
-
-    async def _enrich_with_commentary(self):
-        """Fetch live play-by-play commentary for commentary sensor type."""
-        if self._sensor_type != "commentary" or not self._enable_summary_enrichment:
-            return
-        matches = self._attributes.get("matches") or []
-        live = next((m for m in matches if m.get("state") in ("live", "in")), None)
-        target = live or (matches[0] if matches else None)
-        if not target:
-            return
-        event_id = target.get("event_id")
-        if not event_id:
-            return
-        summary = await self._fetch_match_summary(event_id)
-        if not summary:
-            return
-        plays = summary.get("plays", [])
-        self._attributes["commentary"] = [
-            {
-                "clock": p.get("clock", {}).get("displayValue", "") if isinstance(p.get("clock"), dict) else str(p.get("clock", "")),
-                "text": p.get("text", ""),
-                "type": p.get("type", {}).get("text", "") if isinstance(p.get("type"), dict) else str(p.get("type", "")),
-                "home_score": p.get("homeScore", 0),
-                "away_score": p.get("awayScore", 0),
-            }
-            for p in reversed(plays[-50:])
-        ]
-        self._attributes["home_team"] = target.get("home_team", "")
-        self._attributes["away_team"] = target.get("away_team", "")
-        self._attributes["home_score"] = target.get("home_score", 0)
-        self._attributes["away_score"] = target.get("away_score", 0)
-        self._attributes["match_status"] = target.get("status", "")
-        self._attributes["event_id"] = event_id
-        self._state = f"{target.get('home_team','')} {target.get('home_score',0)}-{target.get('away_score',0)} {target.get('away_team','')}"
 
     async def _enrich_with_summary(self):
         """For team_match sensors, add lineup, formation, key events, and h2h
@@ -1401,25 +1351,6 @@ class SoccerLiveSensor(Entity):
                     "league_info": league_info,
                     "league_logo": league_logo,
                     "matches": match_data.get("matches", []),
-                },
-            }
-
-        if self._sensor_type == "commentary":
-            match_data = process_match_data(data, self.hass, start_date=self._filter_start_str(), end_date=self._filter_end_str())
-            matches = match_data.get("matches", []) or []
-            live_match = next((m for m in matches if m.get("state") == "in"), None)
-            if live_match:
-                state = f"{live_match.get('home_team','?')} {live_match.get('home_score','?')} - {live_match.get('away_score','?')} {live_match.get('away_team','?')}"
-            else:
-                state = "No live match"
-            league_info = match_data.get("league_info") or []
-            league_logo = (league_info[0].get("logo_href", "") if league_info else "")
-            return {
-                "state": state,
-                "attributes": {
-                    "league_info": league_info,
-                    "league_logo": league_logo,
-                    "matches": matches,
                 },
             }
 

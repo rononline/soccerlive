@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.44 (2026-06-26)
+- sensor: removed `commentary` sensor type — no card uses it since LiveCommentary was removed from the card repo; removes the `_enrich_with_commentary` fetch and the `if selection == "Live Commentary"` setup path
+- config_flow: removed "Live Commentary" option from the integration setup menu
+
 ## v3.6.43 (2026-06-25)
 - parser: `_get_details` now uses `(detail.get("type") or {})` and `(detail.get("clock") or {})` — prevents `AttributeError` when ESPN returns `null` for these fields instead of an object
 
