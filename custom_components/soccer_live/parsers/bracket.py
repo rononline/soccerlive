@@ -61,6 +61,7 @@ def process_bracket_data(data):
             slug = str(season.get("slug", "")).lower()
 
             slug_map = {
+                "round-of-64": "Round of 64",
                 "round-of-32": "Round of 32",
                 "round-of-16": "Round of 16",
                 "quarterfinals": "Quarterfinals",
@@ -217,6 +218,7 @@ def process_bracket_data(data):
             4: "Quarterfinals",
             8: "Round of 16",
             16: "Round of 32",
+            32: "Round of 64",
         }
         n = len(sized_rounds)
         labels = [None] * n
