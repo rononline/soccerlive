@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.45 (2026-06-26)
+- bracket: add `"round-of-64"` to slug_map so ESPN's Round of 64 events pass the single-leg filter
+- bracket: add `32: "Round of 64"` to the canonical size→name dict
+
 ## v3.6.44 (2026-06-26)
 - sensor: removed `commentary` sensor type — no card uses it since LiveCommentary was removed from the card repo; removes the `_enrich_with_commentary` fetch and the `if selection == "Live Commentary"` setup path
 - config_flow: removed "Live Commentary" option from the integration setup menu
