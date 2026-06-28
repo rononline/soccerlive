@@ -171,13 +171,8 @@ def process_bracket_data(data):
             key=lambda t: t.get("first_leg_date") or t.get("leg2", {}).get("date", "") if t.get("leg2") else "",
         )
 
-        # Group ties into rounds by date: ties with close dates belong to the same round.
-        # Simple strategy: sequential clusters where a new round starts if the gap
-        # from the previous tie is more than 5 days.
         from datetime import datetime
-        groups = []
-        current = []
-        prev_date = None
+        from collections import OrderedDict
 
         def parse_iso(s):
             if not s:
@@ -187,74 +182,100 @@ def process_bracket_data(data):
             except Exception:
                 return None
 
-        for tie in sorted_ties:
-            d = parse_iso(tie.get("first_leg_date") or "")
-            if prev_date is None or d is None or (d - prev_date).days <= 7:
-                current.append(tie)
-            else:
+        # Single-leg tournaments (WK, Euros) set round_name via slug_map.
+        # Two-leg competitions (UCL, Europa) do not — use date-based grouping instead.
+        has_slug_rounds = any(tie.get("round_name") for tie in sorted_ties)
+
+        if has_slug_rounds:
+            # Group by explicit round name in chronological order.
+            # This prevents rounds played close together (e.g. R32 then R16 with <7d gap)
+            # from being incorrectly merged into one group.
+            round_dict = OrderedDict()
+            for tie in sorted_ties:
+                rname = tie.get("round_name", "Unknown")
+                if rname not in round_dict:
+                    round_dict[rname] = []
+                round_dict[rname].append(tie)
+
+            for rname, ties_in_round in round_dict.items():
+                size = 1
+                while size < len(ties_in_round):
+                    size *= 2
+                for tie in ties_in_round:
+                    tie.get("team_a", {}).pop("id", None)
+                    tie.get("team_b", {}).pop("id", None)
+                out["rounds"].append({
+                    "name": rname,
+                    "size": size,
+                    "ties": ties_in_round,
+                })
+
+        else:
+            # Date-based grouping for two-leg competitions (UCL, Europa League, etc.)
+            groups = []
+            current = []
+            prev_date = None
+
+            for tie in sorted_ties:
+                d = parse_iso(tie.get("first_leg_date") or "")
+                if prev_date is None or d is None or (d - prev_date).days <= 7:
+                    current.append(tie)
+                else:
+                    groups.append(current)
+                    current = [tie]
+                if d is not None:
+                    prev_date = d
+            if current:
                 groups.append(current)
-                current = [tie]
-            if d is not None:
-                prev_date = d
-        if current:
-            groups.append(current)
 
-        # Compute size (next power of 2) for each chronological group
-        sized_rounds = []
-        for g in groups:
-            size = 1
-            while size < len(g):
-                size *= 2
-            sized_rounds.append({"size": size, "ties": g})
+            sized_rounds = []
+            for g in groups:
+                size = 1
+                while size < len(g):
+                    size *= 2
+                sized_rounds.append({"size": size, "ties": g})
 
-        # Label rounds by working backwards (most recent to oldest).
-        # Track the expected size starting from the final round and doubling each step
-        # (knockout tournaments double the ties per earlier round). If the actual size
-        # matches the expected, use the canonical name. If it equals the next round's size
-        # (UCL Knockout Playoffs before R16), label it "Knockout Playoffs".
-        canonical = {
-            1: "Final",
-            2: "Semifinals",
-            4: "Quarterfinals",
-            8: "Round of 16",
-            16: "Round of 32",
-            32: "Round of 64",
-        }
-        n = len(sized_rounds)
-        labels = [None] * n
+            canonical = {
+                1: "Final",
+                2: "Semifinals",
+                4: "Quarterfinals",
+                8: "Round of 16",
+                16: "Round of 32",
+                32: "Round of 64",
+            }
+            n = len(sized_rounds)
+            labels = [None] * n
 
-        if n > 0:
-            expected = sized_rounds[-1]["size"]
-            for idx in range(n - 1, -1, -1):
-                actual = sized_rounds[idx]["size"]
-                if actual == expected:
-                    labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
-                    expected = actual * 2
-                elif idx + 1 < n and actual == sized_rounds[idx + 1]["size"]:
-                    # Same size as next round → playoff/preliminary stage
-                    if actual == 8:
-                        labels[idx] = "Knockout Playoffs"
-                    elif actual == 16:
-                        labels[idx] = "Preliminary Round"
+            if n > 0:
+                expected = sized_rounds[-1]["size"]
+                for idx in range(n - 1, -1, -1):
+                    actual = sized_rounds[idx]["size"]
+                    if actual == expected:
+                        labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
+                        expected = actual * 2
+                    elif idx + 1 < n and actual == sized_rounds[idx + 1]["size"]:
+                        if actual == 8:
+                            labels[idx] = "Knockout Playoffs"
+                        elif actual == 16:
+                            labels[idx] = "Preliminary Round"
+                        else:
+                            labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
+                        expected = actual * 2
                     else:
                         labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
-                    # keep expected unchanged: the previous round should be double the size
-                    expected = actual * 2
-                else:
-                    labels[idx] = canonical.get(actual, f"Round of {actual * 2}")
-                    expected = actual * 2
+                        expected = actual * 2
 
-        for idx, sr in enumerate(sized_rounds):
-            for tie in sr["ties"]:
-                tie.get("team_a", {}).pop("id", None)
-                tie.get("team_b", {}).pop("id", None)
-            out["rounds"].append({
-                "name": labels[idx],
-                "size": sr["size"],
-                "ties": sr["ties"],
-            })
+            for idx, sr in enumerate(sized_rounds):
+                for tie in sr["ties"]:
+                    tie.get("team_a", {}).pop("id", None)
+                    tie.get("team_b", {}).pop("id", None)
+                out["rounds"].append({
+                    "name": labels[idx],
+                    "size": sr["size"],
+                    "ties": sr["ties"],
+                })
 
-        out["ties_count"] = sum(len(sr["ties"]) for sr in sized_rounds)
+        out["ties_count"] = sum(len(r["ties"]) for r in out["rounds"])
     except Exception as e:
         _LOGGER.error(f"Error processing bracket data: {e}")
         raise
