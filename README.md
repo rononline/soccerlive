@@ -8,8 +8,10 @@ Real-time football data in Home Assistant via the ESPN API with multi-language s
 
 ## 📦 Installation via HACS
 
-1. Add the repository as a **custom repository** in HACS:  
-   `https://github.com/rononline/soccerlive` — category: **Integration**
+> **HACS default store**: submission pending — once approved, search for **Soccer Live** directly in HACS.
+
+Until then, add as a **custom repository**:
+1. In HACS → ⋮ → **Custom repositories** → add `https://github.com/rononline/soccerlive`, category: **Integration**
 2. Install **Soccer Live** via HACS
 3. Restart Home Assistant
 4. Go to **Settings → Integrations → Add Integration** and search for `Soccer Live`
