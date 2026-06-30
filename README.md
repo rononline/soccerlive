@@ -397,7 +397,7 @@ goal notification, red card notification and match started notification.
 
 These attributes are guaranteed to be present when available. Card developers can rely on this structure.
 
-### Match object (inside `matches`, `previous_matches`, `upcoming_matches`)
+### Full match object (inside `matches`, `next_match`)
 
 | Attribute | Type | Description |
 |---|---|---|
@@ -406,11 +406,13 @@ These attributes are guaranteed to be present when available. Card developers ca
 | `home_logo` / `away_logo` | string | Logo URLs |
 | `home_color` / `away_color` | string | ESPN team colors when available |
 | `home_score` / `away_score` | int\|str | Score or `N/A` |
+| `home_form` / `away_form` | string | Recent form string, e.g. `WDWLW` |
 | `state` | string | `pre` / `in` / `post` |
 | `date` | string | `DD-MM-YYYY HH:MM` |
 | `venue` / `venue_city` | string | Stadium info |
 | `league_name` / `league_logo` | string | Resolved league identity for mixed/all sensors |
 | `competition_name` / `competition_logo` | string | Competition identity |
+| `season_info` | string | Season phase slug, e.g. `round-of-16` |
 | `broadcasts` | list | TV/streaming channels |
 | `neutral_site` | bool | Neutral venue |
 | `attendance` | int | Stadium attendance |
@@ -419,6 +421,41 @@ These attributes are guaranteed to be present when available. Card developers ca
 | `has_commentary` | bool | Play-by-play available |
 | `clock` | string | Match clock (live) |
 | `league_info` | list | Competition metadata: `name`, `abbreviation`, `logo_href`, `startDate`, `endDate` |
+
+### Compact match objects (`previous_matches`)
+
+The 10 most-recently finished matches for a team sensor. Subset of the full match object:
+
+| Attribute | Type | Description |
+|---|---|---|
+| `home_team` / `away_team` | string | Team names |
+| `home_abbrev` / `away_abbrev` | string | Abbreviations |
+| `home_logo` / `away_logo` | string | Logo URLs |
+| `home_color` / `away_color` | string | Team colors |
+| `home_score` / `away_score` | int\|str | Final scores |
+| `state` | string | Always `post` |
+| `date` | string | `DD-MM-YYYY HH:MM` |
+| `league_name` | string | Competition name |
+| `season_info` | string | Season phase slug (e.g. `round-of-16`) |
+
+### Compact match objects (`upcoming_matches`)
+
+Up to 4 upcoming/live matches after the primary next match. Subset of the full match object:
+
+| Attribute | Type | Description |
+|---|---|---|
+| `home_team` / `away_team` | string | Team names |
+| `home_abbrev` / `away_abbrev` | string | Abbreviations |
+| `home_logo` / `away_logo` | string | Logo URLs |
+| `home_color` / `away_color` | string | Team colors |
+| `home_score` / `away_score` | int\|str | Scores (live) |
+| `state` | string | `pre` or `in` |
+| `date` | string | `DD-MM-YYYY HH:MM` |
+| `clock` | string | Match clock (live) |
+| `event_id` | string | ESPN event ID |
+| `head_to_head` | list | Last 3 H2H matches |
+| `home_form` / `away_form` | string | Recent form string, e.g. `WDWLW` |
+| `league_name` | string | Competition name |
 
 ### League name and logo resolution
 

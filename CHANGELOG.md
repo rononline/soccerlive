@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.47 (2026-06-30)
+- sensor: `previous_matches` compact dict now includes `league_name` and `season_info` — required for competition label and phase display in the Team card
+- sensor: `upcoming_matches` compact dict now includes `home_form`, `away_form`, and `league_name` — required for opponent form dots and competition label in the Team card
+
 ## v3.6.45 (2026-06-26)
 - bracket: add `"round-of-64"` to slug_map so ESPN's Round of 64 events pass the single-leg filter
 - bracket: add `32: "Round of 64"` to the canonical size→name dict

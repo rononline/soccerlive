@@ -1449,6 +1449,8 @@ class SoccerLiveSensor(Entity):
                     "away_color": m.get("away_color"),
                     "away_score": m.get("away_score"),
                     "state": m.get("state"),
+                    "league_name": m.get("league_name", ""),
+                    "season_info": m.get("season_info", ""),
                 }
                 for m in list(reversed(finished_matches))[:10]
             ]
@@ -1474,6 +1476,9 @@ class SoccerLiveSensor(Entity):
                     "clock": m.get("clock"),
                     "head_to_head": (m.get("head_to_head") or [])[:3],
                     "event_id": m.get("event_id"),
+                    "home_form": m.get("home_form", ""),
+                    "away_form": m.get("away_form", ""),
+                    "league_name": m.get("league_name", ""),
                 }
                 for m in upcoming_candidates
             ]
