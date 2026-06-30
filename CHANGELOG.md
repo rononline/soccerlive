@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.48 (2026-06-30)
+- sensor: schedule `compact()` now includes `clock`, `league_logo`, and `season_info` — live match clock, competition logo, and round info are now available in `schedule_live_matches`, `schedule_upcoming_matches`, and `schedule_recent_matches` for use in HA templates and automations
+
 ## v3.6.47 (2026-06-30)
 - sensor: `previous_matches` compact dict now includes `league_name` and `season_info` — required for competition label and phase display in the Team card
 - sensor: `upcoming_matches` compact dict now includes `home_form`, `away_form`, and `league_name` — required for opponent form dots and competition label in the Team card

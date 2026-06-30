@@ -495,7 +495,7 @@ Available after kick-off when `enable_summary_enrichment` is on:
 
 ### Schedule summary attributes
 
-`schedule_live_matches`, `schedule_upcoming_matches` and `schedule_recent_matches` contain compact match objects with: `event_id`, `date`, `state`, team names/abbreviations/logos/colors, scores, `venue` and `broadcasts`.
+`schedule_live_matches`, `schedule_upcoming_matches` and `schedule_recent_matches` contain compact match objects with: `event_id`, `date`, `state`, `clock`, team names/abbreviations/logos/colors, scores, `venue`, `league_name`, `league_logo`, `season_info`, and `broadcasts`.
 
 ### Automation attributes
 

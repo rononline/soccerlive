@@ -1251,6 +1251,7 @@ class SoccerLiveSensor(Entity):
                 "event_id": match.get("event_id"),
                 "date": match.get("date"),
                 "state": match.get("state"),
+                "clock": match.get("clock"),
                 "home_team": match.get("home_team"),
                 "home_abbrev": match.get("home_abbrev"),
                 "home_logo": match.get("home_logo"),
@@ -1263,6 +1264,8 @@ class SoccerLiveSensor(Entity):
                 "away_score": match.get("away_score"),
                 "venue": match.get("venue"),
                 "league_name": match.get("league_name"),
+                "league_logo": match.get("league_logo"),
+                "season_info": match.get("season_info"),
                 "broadcasts": match.get("broadcasts") or [],
             }
 
