@@ -458,7 +458,11 @@ class SoccerLiveSensor(Entity):
         self._state = result["state"]
         attrs = result["attributes"]
         if self._max_matches and "matches" in attrs:
-            attrs["matches"] = attrs["matches"][:self._max_matches]
+            _all = attrs["matches"]
+            _live = [m for m in _all if m.get("state") == "in"]
+            _upcoming = [m for m in _all if m.get("state") == "pre"]
+            _past = list(reversed([m for m in _all if m.get("state") == "post"]))
+            attrs["matches"] = (_live + _upcoming + _past)[:self._max_matches]
         for _k in ("last_event", "last_event_type", "last_event_timestamp",
                    "last_goal_event", "last_card_event",
                    "last_match_started_event", "last_match_finished_event"):
@@ -1412,6 +1416,11 @@ class SoccerLiveSensor(Entity):
             all_data = get_team_match_data()
             all_matches = all_data.get("matches", []) or []
 
+            self._detect_and_dispatch_goals(all_matches, events)
+            self._detect_and_dispatch_cards(all_matches, events)
+            self._detect_and_dispatch_match_finished(all_matches, events)
+            self._detect_and_dispatch_match_started(all_matches, events)
+
             from .parsers.scoreboard import is_within_recent_window
             _live = [m for m in all_matches if m.get("state") == "in"]
             _recent_post = [m for m in all_matches
@@ -1496,6 +1505,7 @@ class SoccerLiveSensor(Entity):
                     "previous_matches": previous_matches,
                     **computed_attrs,
                 },
+                "events": events,
             }
 
         return {"state": "", "attributes": {}, "events": events}
