@@ -5,19 +5,16 @@ from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta, timezone
 
 def process_league_data(data, hass=None):
-    try:
-        leagues_data = data.get("leagues", [])
-        league_info = []
-
-        for league in leagues_data:
+    leagues_data = data.get("leagues", []) or []
+    league_info = []
+    for league in leagues_data:
+        try:
             league_name = league.get("name", "")
             league_abbreviation = league.get("abbreviation", "N/A")
             league_start_date = league.get("season", {}).get("startDate", "N/A")
             league_end_date = league.get("season", {}).get("endDate", "N/A")
-
             logos = league.get("logos", [])
             logo_href = logos[0].get("href", "N/A") if logos else "N/A"
-
             league_info.append({
                 "name": league_name,
                 "abbreviation": league_abbreviation,
@@ -25,12 +22,9 @@ def process_league_data(data, hass=None):
                 "endDate": _parse_date(hass, league_end_date, show_time=False),
                 "logo_href": logo_href
             })
-
-        return league_info
-
-    except Exception as e:
-        _LOGGER.error(f"Error processing league data: {e}")
-        raise
+        except Exception as e:
+            _LOGGER.warning(f"Skipping malformed league entry: {e}")
+    return league_info
 
 def get_season_slug_or_displayname(match):
     season_data = match.get("season", {})
@@ -531,9 +525,9 @@ def process_summary_data(data):
 
 def process_news_data(data):
     articles = []
-    try:
-        items = data.get("articles", []) or []
-        for a in items:
+    items = data.get("articles", []) or []
+    for a in items:
+        try:
             images = a.get("images", []) or []
             img_obj = images[0] if images else {}
             img = img_obj.get("url", "")
@@ -572,9 +566,8 @@ def process_news_data(data):
                 "type": a.get("type", ""),
                 "premium": a.get("premium", False),
             })
-    except Exception as e:
-        _LOGGER.error(f"Error processing news: {e}")
-        raise
+        except Exception as e:
+            _LOGGER.warning(f"Skipping malformed news article: {e}")
     return articles
 
 def _get_details(details):
@@ -592,26 +585,28 @@ def _get_details(details):
 def process_scorers_data(data):
     """Extracts top scorers list from ESPN /leaders endpoint."""
     scorers = []
-    try:
-        for section in (data.get("leaders", []) or []):
+    for section in (data.get("leaders", []) or []):
+        try:
             if "goal" not in section.get("name", "").lower():
                 continue
             for entry in (section.get("leaders", []) or []):
-                athlete = entry.get("athlete", {}) or {}
-                team = entry.get("team", {}) or {}
-                scorers.append({
-                    "rank": entry.get("rank", len(scorers) + 1),
-                    "goals": entry.get("displayValue", "0"),
-                    "player": athlete.get("displayName", ""),
-                    "short_name": athlete.get("shortName", ""),
-                    "headshot": (athlete.get("headshot", {}) or {}).get("href", ""),
-                    "team_name": team.get("displayName", ""),
-                    "team_logo": team.get("logo", "") or "",
-                })
+                try:
+                    athlete = entry.get("athlete", {}) or {}
+                    team = entry.get("team", {}) or {}
+                    scorers.append({
+                        "rank": entry.get("rank", len(scorers) + 1),
+                        "goals": entry.get("displayValue", "0"),
+                        "player": athlete.get("displayName", ""),
+                        "short_name": athlete.get("shortName", ""),
+                        "headshot": (athlete.get("headshot", {}) or {}).get("href", ""),
+                        "team_name": team.get("displayName", ""),
+                        "team_logo": team.get("logo", "") or "",
+                    })
+                except Exception as e:
+                    _LOGGER.warning(f"Skipping malformed scorer entry: {e}")
             break
-    except Exception as e:
-        _LOGGER.error(f"Error processing top scorers data: {e}")
-        raise
+        except Exception as e:
+            _LOGGER.warning(f"Skipping malformed leaders section: {e}")
     return scorers
 
 

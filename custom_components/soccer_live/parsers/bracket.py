@@ -48,6 +48,9 @@ def process_bracket_data(data):
         ties = {}  # key: frozenset(id1, id2) → tie dict
 
         for e in events:
+            if not isinstance(e, dict):
+                _LOGGER.warning("Skipping malformed bracket event (not a dict)")
+                continue
             comps = e.get("competitions", []) or []
             if not comps:
                 continue
@@ -278,5 +281,4 @@ def process_bracket_data(data):
         out["ties_count"] = sum(len(r["ties"]) for r in out["rounds"])
     except Exception as e:
         _LOGGER.error(f"Error processing bracket data: {e}")
-        raise
     return out

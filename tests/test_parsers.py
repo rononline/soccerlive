@@ -88,17 +88,22 @@ class TestScoreboardParser:
         assert result["matches"] == []
 
     @pytest.mark.parametrize(
-        ("parser_func", "data"),
+        ("parser_func", "data", "expected_key"),
         [
-            (process_league_data, {"leagues": [None]}),
-            (process_news_data, {"articles": [None]}),
-            (process_scorers_data, {"leaders": [None]}),
-            (process_bracket_data, {"events": [None]}),
+            (process_league_data, {"leagues": [None]}, None),
+            (process_news_data, {"articles": [None]}, None),
+            (process_scorers_data, {"leaders": [None]}, None),
+            (process_bracket_data, {"events": [None]}, "rounds"),
         ],
     )
-    def test_malformed_payloads_raise(self, parser_func, data):
-        with pytest.raises((AttributeError, TypeError)):
-            parser_func(data)
+    def test_malformed_payloads_skip_gracefully(self, parser_func, data, expected_key):
+        result = parser_func(data)
+        if expected_key:
+            assert isinstance(result, dict)
+            assert result[expected_key] == []
+        else:
+            assert isinstance(result, list)
+            assert result == []
 
     def _minimal_event(self, **competition_overrides):
         competition = {
