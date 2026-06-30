@@ -3,6 +3,9 @@ _LOGGER = logging.getLogger(__name__)
 from dateutil import parser
 from datetime import datetime
 
+def _as_dict(v):
+    return v if isinstance(v, dict) else {}
+
 def standings_data(data):
     standings_list = []
 
@@ -18,11 +21,11 @@ def standings_data(data):
                 _LOGGER.warning("Skipping malformed standings entry (not a dict)")
                 continue
             try:
-                team = entry.get("team") or {}
+                team = _as_dict(entry.get("team"))
                 raw_stats = entry.get("stats") or []
                 stats = {s["name"]: s["displayValue"] for s in raw_stats if isinstance(s, dict) and "name" in s}
 
-                note = entry.get("note") or {}
+                note = _as_dict(entry.get("note"))
                 rank = note.get("rank", index)
                 zone_color = note.get("color", "")
                 zone_label = note.get("description", "")

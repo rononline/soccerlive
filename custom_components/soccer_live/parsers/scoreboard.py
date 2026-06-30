@@ -4,6 +4,11 @@ from dateutil import parser
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta, timezone
 
+def _as_dict(v):
+    """Return v if it is a dict, otherwise return {}.  Guards against ESPN returning
+    null or a scalar where an object is expected (e.g. "team": null, "league": "N/A")."""
+    return v if isinstance(v, dict) else {}
+
 def process_league_data(data, hass=None):
     leagues_data = data.get("leagues", []) or []
     league_info = []
@@ -99,191 +104,187 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                     continue
 
             match_date_str = match.get("date", "")
-
             try:
                 match_date = parser.isoparse(match_date_str).astimezone(timezone.utc) if match_date_str else None
-            except ValueError:
-                _LOGGER.error(f"Error parsing match date: {match_date_str}")
-                continue
-
-            if start_date and match_date and match_date < start_date:
-                continue
-            if end_date and match_date and match_date > end_date:
-                continue
-
-            # Only for mixed sensor type
-            season_info = get_season_slug_or_displayname(match)
-            week_number = (match.get("week") or {}).get("number")
-
-            competitions = [c for c in (match.get("competitions", []) or []) if isinstance(c, dict)]
-            comp = competitions[0] if competitions else {}
-            comp_league = comp.get("league", {}) or {}
-            # team schedule endpoint (/all/teams/{id}/schedule) puts league at event level
-            event_league = match.get("league", {}) or {}
-            league_id = str(comp_league.get("id", "") or event_league.get("id", "") or "")
-
-            # For /all/scoreboard the league id is encoded in the competition uid:
-            # e.g. "s:600~l:ned.1~e:700001" -> league_id = "ned.1"
-            if not league_id:
-                comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
-                for _part in comp_uid.split("~"):
-                    if _part.startswith("l:"):
-                        league_id = _part[2:]
-                        break
-
-            # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" -> league name
-            alt_note = (comp.get("altGameNote") or "").strip()
-            league_name_from_note = alt_note.split(",")[0].strip() if alt_note else ""
-
-            league_name = (
-                comp_league.get("displayName")
-                or comp_league.get("name")
-                or event_league.get("displayName")
-                or event_league.get("name")
-                or (leagues_by_id.get(league_id, {}).get("name") if league_id else None)
-                or league_name_from_note
-                or (top_league_name if top_league_name != "N/A" else None)
-                or "N/A"
-            )
-            league_logo = (
-                _first_logo_href(comp_league)
-                or _first_logo_href(event_league)
-                or (leagues_by_id.get(league_id, {}).get("logo") if league_id else None)
-                or ""
-            )
-            if not league_logo and league_id:
-                league_logo = _LEAGUE_LOGO_OVERRIDES.get(league_id, "")
-            _LOGGER.debug(
-                "league_resolve: event=%s uid=%s league_id=%s comp_league=%s -> name=%s",
-                match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
-            )
-
-            competitors = [c for c in (comp.get("competitors", []) if comp else []) if isinstance(c, dict)]
-            if len(competitors) < 2:
-                _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
-                continue
-
-            # Use the homeAway field to identify home and away; fall back to index order
-            home_comp = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
-            away_comp = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
-
-            home_team_data = home_comp.get("team", {})
-            if team_id_str:
-                _home_id = str(home_team_data.get("id", ""))
-                _away_id = str((away_comp.get("team", {}) or {}).get("id", ""))
-                if _home_id != team_id_str and _away_id != team_id_str:
+                if start_date and match_date and match_date < start_date:
                     continue
-            home_team = home_team_data.get("displayName", "N/A")
-            home_logo = home_team_data.get("logo", None)
-            if not home_logo:
-                home_logos = [x for x in (home_team_data.get("logos") or []) if isinstance(x, dict)]
-                home_logo = home_logos[0].get("href", "N/A") if home_logos else "N/A"
-            home_form = home_comp.get("form") or ""
-            home_score = home_comp.get("score", "N/A")
-            home_statistics = _get_statistics(home_comp)
+                if end_date and match_date and match_date > end_date:
+                    continue
 
-            away_team_data = away_comp.get("team", {})
-            away_team = away_team_data.get("displayName", "N/A")
-            away_logo = away_team_data.get("logo", None)
-            if not away_logo:
-                away_logos = [x for x in (away_team_data.get("logos") or []) if isinstance(x, dict)]
-                away_logo = away_logos[0].get("href", "N/A") if away_logos else "N/A"
-            away_form = away_comp.get("form") or ""
-            away_score = away_comp.get("score", "N/A")
-            away_statistics = _get_statistics(away_comp)
+                # Only for mixed sensor type
+                season_info = get_season_slug_or_displayname(match)
+                week_number = _as_dict(match.get("week")).get("number")
 
-            # Prefer competition-level status (more reliable for live clock/period);
-            # fall back to event-level status for basic pre/post state.
-            status_obj = comp.get("status") or match.get("status") or {}
-            status_type = status_obj.get("type", {})
-            match_state = status_type.get("state", "N/A")
-            match_status = status_type.get("description", "N/A")
-            status_detail = status_type.get("detail", "N/A")
-            clock = status_obj.get("displayClock", "N/A")
-            period = status_obj.get("period", "N/A")
+                competitions = [c for c in (match.get("competitions", []) or []) if isinstance(c, dict)]
+                comp = competitions[0] if competitions else {}
+                comp_league = _as_dict(comp.get("league"))
+                # team schedule endpoint (/all/teams/{id}/schedule) puts league at event level
+                event_league = _as_dict(match.get("league"))
+                league_id = str(comp_league.get("id", "") or event_league.get("id", "") or "")
 
-            venue_obj = comp.get("venue", {}) or {}
-            venue = venue_obj.get("fullName", "N/A")
-            venue_address = venue_obj.get("address", {}) or {}
-            venue_city = venue_address.get("city", "N/A")
-            venue_country = venue_address.get("country", "N/A")
+                # For /all/scoreboard the league id is encoded in the competition uid:
+                # e.g. "s:600~l:ned.1~e:700001" -> league_id = "ned.1"
+                if not league_id:
+                    comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
+                    for _part in comp_uid.split("~"):
+                        if _part.startswith("l:"):
+                            league_id = _part[2:]
+                            break
 
-            home_abbrev = home_team_data.get("abbreviation", "N/A")
-            home_color = home_team_data.get("color", "N/A")
-            home_record = _get_record(home_comp)
-            home_top_scorer = _get_top_scorer(home_comp)
-            home_record_summary = home_comp.get("recordSummary", "")
-            home_standing_summary = home_comp.get("standingSummary", "")
+                # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" -> league name
+                alt_note = (comp.get("altGameNote") or "").strip()
+                league_name_from_note = alt_note.split(",")[0].strip() if alt_note else ""
 
-            away_abbrev = away_team_data.get("abbreviation", "N/A")
-            away_color = away_team_data.get("color", "N/A")
-            away_record = _get_record(away_comp)
-            away_top_scorer = _get_top_scorer(away_comp)
-            away_record_summary = away_comp.get("recordSummary", "")
-            away_standing_summary = away_comp.get("standingSummary", "")
+                league_name = (
+                    comp_league.get("displayName")
+                    or comp_league.get("name")
+                    or event_league.get("displayName")
+                    or event_league.get("name")
+                    or (leagues_by_id.get(league_id, {}).get("name") if league_id else None)
+                    or league_name_from_note
+                    or (top_league_name if top_league_name != "N/A" else None)
+                    or "N/A"
+                )
+                league_logo = (
+                    _first_logo_href(comp_league)
+                    or _first_logo_href(event_league)
+                    or (leagues_by_id.get(league_id, {}).get("logo") if league_id else None)
+                    or ""
+                )
+                if not league_logo and league_id:
+                    league_logo = _LEAGUE_LOGO_OVERRIDES.get(league_id, "")
+                _LOGGER.debug(
+                    "league_resolve: event=%s uid=%s league_id=%s comp_league=%s -> name=%s",
+                    match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
+                )
 
-            broadcast = _get_broadcast(comp)
-            broadcasts = _get_broadcasts(comp)
-            neutral_site = comp.get("neutralSite", False)
-            tickets_available = comp.get("ticketsAvailable", False)
-            attendance = comp.get("attendance", 0)
-            has_stats = comp.get("boxscoreAvailable", False)
-            has_commentary = comp.get("playByPlayAvailable", False)
-            match_links = _get_links(comp)
+                competitors = [c for c in (comp.get("competitors", []) or []) if isinstance(c, dict)]
+                if len(competitors) < 2:
+                    _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
+                    continue
 
-            match_details = _get_details(comp.get("details", []))
+                # Use the homeAway field to identify home and away; fall back to index order
+                home_comp = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
+                away_comp = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
 
-            if team_name and (team_name.lower() in home_team.lower() or team_name.lower() in away_team.lower()):
-                team_logo = home_logo if team_name.lower() in home_team.lower() else away_logo
+                home_team_data = _as_dict(home_comp.get("team"))
+                if team_id_str:
+                    _home_id = str(home_team_data.get("id", ""))
+                    _away_id = str(_as_dict(away_comp.get("team")).get("id", ""))
+                    if _home_id != team_id_str and _away_id != team_id_str:
+                        continue
+                home_team = home_team_data.get("displayName", "N/A")
+                home_logo = home_team_data.get("logo", None)
+                if not home_logo:
+                    home_logos = [x for x in (home_team_data.get("logos") or []) if isinstance(x, dict)]
+                    home_logo = home_logos[0].get("href", "N/A") if home_logos else "N/A"
+                home_form = home_comp.get("form") or ""
+                home_score = home_comp.get("score", "N/A")
+                home_statistics = _get_statistics(home_comp)
 
-            match_data = {
-                "event_id": match.get("id"),
-                "date": _parse_date(hass, match.get("date")),
-                "season_info": season_info,
-                "week_number": week_number,
-                "league_name": league_name,
-                "league_logo": league_logo,
-                "home_team": home_team,
-                "home_abbrev": home_abbrev,
-                "home_color": home_color,
-                "home_logo": home_logo,
-                "home_form": home_form,
-                "home_score": home_score,
-                "home_statistics": home_statistics,
-                "home_record": home_record,
-                "home_top_scorer": home_top_scorer,
-                "home_record_summary": home_record_summary,
-                "home_standing_summary": home_standing_summary,
-                "away_team": away_team,
-                "away_abbrev": away_abbrev,
-                "away_color": away_color,
-                "away_logo": away_logo,
-                "away_form": away_form,
-                "away_score": away_score,
-                "away_statistics": away_statistics,
-                "away_record": away_record,
-                "away_top_scorer": away_top_scorer,
-                "away_record_summary": away_record_summary,
-                "away_standing_summary": away_standing_summary,
-                "state": match_state,
-                "status": match_status,
-                "status_detail": status_detail,
-                "clock": clock,
-                "period": period,
-                "venue": venue,
-                "venue_city": venue_city,
-                "venue_country": venue_country,
-                "broadcast": broadcast,
-                "broadcasts": broadcasts,
-                "neutral_site": neutral_site,
-                "tickets_available": tickets_available,
-                "attendance": attendance,
-                "has_stats": has_stats,
-                "has_commentary": has_commentary,
-                "links": match_links,
-                "match_details": match_details,
-            }
-            matches.append(match_data)
+                away_team_data = _as_dict(away_comp.get("team"))
+                away_team = away_team_data.get("displayName", "N/A")
+                away_logo = away_team_data.get("logo", None)
+                if not away_logo:
+                    away_logos = [x for x in (away_team_data.get("logos") or []) if isinstance(x, dict)]
+                    away_logo = away_logos[0].get("href", "N/A") if away_logos else "N/A"
+                away_form = away_comp.get("form") or ""
+                away_score = away_comp.get("score", "N/A")
+                away_statistics = _get_statistics(away_comp)
+
+                # Prefer competition-level status (more reliable for live clock/period);
+                # fall back to event-level status for basic pre/post state.
+                status_obj = _as_dict(comp.get("status") or match.get("status"))
+                status_type = _as_dict(status_obj.get("type"))
+                match_state = status_type.get("state", "N/A")
+                match_status = status_type.get("description", "N/A")
+                status_detail = status_type.get("detail", "N/A")
+                clock = status_obj.get("displayClock", "N/A")
+                period = status_obj.get("period", "N/A")
+
+                venue_obj = _as_dict(comp.get("venue"))
+                venue = venue_obj.get("fullName", "N/A")
+                venue_address = _as_dict(venue_obj.get("address"))
+                venue_city = venue_address.get("city", "N/A")
+                venue_country = venue_address.get("country", "N/A")
+
+                home_abbrev = home_team_data.get("abbreviation", "N/A")
+                home_color = home_team_data.get("color", "N/A")
+                home_record = _get_record(home_comp)
+                home_top_scorer = _get_top_scorer(home_comp)
+                home_record_summary = home_comp.get("recordSummary", "")
+                home_standing_summary = home_comp.get("standingSummary", "")
+
+                away_abbrev = away_team_data.get("abbreviation", "N/A")
+                away_color = away_team_data.get("color", "N/A")
+                away_record = _get_record(away_comp)
+                away_top_scorer = _get_top_scorer(away_comp)
+                away_record_summary = away_comp.get("recordSummary", "")
+                away_standing_summary = away_comp.get("standingSummary", "")
+
+                broadcast = _get_broadcast(comp)
+                broadcasts = _get_broadcasts(comp)
+                neutral_site = comp.get("neutralSite", False)
+                tickets_available = comp.get("ticketsAvailable", False)
+                attendance = comp.get("attendance", 0)
+                has_stats = comp.get("boxscoreAvailable", False)
+                has_commentary = comp.get("playByPlayAvailable", False)
+                match_links = _get_links(comp)
+
+                match_details = _get_details(comp.get("details", []))
+
+                if team_name and (team_name.lower() in home_team.lower() or team_name.lower() in away_team.lower()):
+                    team_logo = home_logo if team_name.lower() in home_team.lower() else away_logo
+
+                matches.append({
+                    "event_id": match.get("id"),
+                    "date": _parse_date(hass, match.get("date")),
+                    "season_info": season_info,
+                    "week_number": week_number,
+                    "league_name": league_name,
+                    "league_logo": league_logo,
+                    "home_team": home_team,
+                    "home_abbrev": home_abbrev,
+                    "home_color": home_color,
+                    "home_logo": home_logo,
+                    "home_form": home_form,
+                    "home_score": home_score,
+                    "home_statistics": home_statistics,
+                    "home_record": home_record,
+                    "home_top_scorer": home_top_scorer,
+                    "home_record_summary": home_record_summary,
+                    "home_standing_summary": home_standing_summary,
+                    "away_team": away_team,
+                    "away_abbrev": away_abbrev,
+                    "away_color": away_color,
+                    "away_logo": away_logo,
+                    "away_form": away_form,
+                    "away_score": away_score,
+                    "away_statistics": away_statistics,
+                    "away_record": away_record,
+                    "away_top_scorer": away_top_scorer,
+                    "away_record_summary": away_record_summary,
+                    "away_standing_summary": away_standing_summary,
+                    "state": match_state,
+                    "status": match_status,
+                    "status_detail": status_detail,
+                    "clock": clock,
+                    "period": period,
+                    "venue": venue,
+                    "venue_city": venue_city,
+                    "venue_country": venue_country,
+                    "broadcast": broadcast,
+                    "broadcasts": broadcasts,
+                    "neutral_site": neutral_site,
+                    "tickets_available": tickets_available,
+                    "attendance": attendance,
+                    "has_stats": has_stats,
+                    "has_commentary": has_commentary,
+                    "links": match_links,
+                    "match_details": match_details,
+                })
+            except Exception as _exc:
+                _LOGGER.warning(f"Skipping match {match.get('id', 'unknown')} due to parse error: {_exc}")
 
         if next_match_only:
             # Priority 1: Live matches
@@ -338,7 +339,12 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
 
     except Exception as e:
         _LOGGER.error(f"Error processing match data: {e}")
-        raise
+        return {
+            "league_info": [],
+            "team_name": team_name if team_name else "All matches",
+            "team_logo": "N/A",
+            "matches": []
+        }
 
 def is_within_recent_window(end_time, hours=24):
     """Return True if the match kickoff happened within the last `hours`."""
