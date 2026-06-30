@@ -63,9 +63,11 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
 
         # Build id-keyed lookup so per-match league resolution works for multi-league
         # endpoints like /all/scoreboard (which has many leagues in the top-level array)
-        top_leagues = data.get("leagues", [])
+        top_leagues = data.get("leagues", []) or []
         leagues_by_id = {}
         for _lg in top_leagues:
+            if not isinstance(_lg, dict):
+                continue
             _lid = str(_lg.get("id", "") or "")
             if _lid:
                 leagues_by_id[_lid] = {
@@ -73,7 +75,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                     "logo": _first_logo_href(_lg),
                 }
         # For single-league endpoints use the name directly as before
-        top_league_name = top_leagues[0].get("name", "N/A") if len(top_leagues) == 1 else "N/A"
+        top_league_name = top_leagues[0].get("name", "N/A") if len(top_leagues) == 1 and isinstance(top_leagues[0], dict) else "N/A"
 
         # Interpret user-supplied date strings in the HA timezone so that a match
         # at 00:30 local time is not filtered by the wrong UTC day boundary.
@@ -85,7 +87,10 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
 
         team_id_str = str(team_id) if team_id else None
 
-        for match in matches_data:
+        for match in (matches_data or []):
+            if not isinstance(match, dict):
+                _LOGGER.warning("Skipping malformed match entry (not a dict)")
+                continue
             # When team_id is available prefer ID matching (done after extracting competitors).
             # Fall back to name pre-filter only when we have no ID.
             if team_name and not team_id_str:

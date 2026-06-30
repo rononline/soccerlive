@@ -1375,9 +1375,21 @@ class SoccerLiveSensor(Entity):
                 )
 
             if self._sensor_type in ["team_matches", "team_matches_mixed", "all_matches_today"]:
+                from .parsers.scoreboard import is_within_recent_window
                 match_data = get_team_match_data()
                 matches = match_data.get("matches", []) or []
-                next_match = match_data.get("next_match")
+                _live = [m for m in matches if m.get("state") == "in"]
+                _recent_post = [m for m in matches
+                    if m.get("state") == "post" and is_within_recent_window(m.get("date"), self._recent_match_hours)]
+                _upcoming = [m for m in matches if m.get("state") == "pre"]
+                if _live:
+                    next_match = _live[0]
+                elif _recent_post:
+                    next_match = _recent_post[-1]
+                elif _upcoming:
+                    next_match = _upcoming[0]
+                else:
+                    next_match = matches[-1] if matches else None
 
                 live_matches = [m for m in matches if m.get("state") == "in"]
                 if live_matches:
@@ -1412,14 +1424,11 @@ class SoccerLiveSensor(Entity):
                     "events": events,
                 }
 
-            # team_match
+            # team_match — event detection is intentionally omitted here; the paired
+            # team_matches sensor (always created alongside this one) handles detection
+            # and fires HA events. Running detection in both would duplicate every event.
             all_data = get_team_match_data()
             all_matches = all_data.get("matches", []) or []
-
-            self._detect_and_dispatch_goals(all_matches, events)
-            self._detect_and_dispatch_cards(all_matches, events)
-            self._detect_and_dispatch_match_finished(all_matches, events)
-            self._detect_and_dispatch_match_started(all_matches, events)
 
             from .parsers.scoreboard import is_within_recent_window
             _live = [m for m in all_matches if m.get("state") == "in"]

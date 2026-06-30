@@ -87,6 +87,16 @@ class TestScoreboardParser:
         result = process_match_data({"leagues": [], "events": []}, _MockHass())
         assert result["matches"] == []
 
+    def test_graceful_on_malformed_match_entries(self):
+        result = process_match_data({"leagues": [None], "events": [None, "bad", 42]}, _MockHass())
+        assert isinstance(result, dict)
+        assert result.get("matches") == []
+
+    def test_malformed_league_entry_skipped_in_match_data(self):
+        result = process_match_data({"leagues": [None, {"name": "Test", "id": "1"}], "events": []}, _MockHass())
+        assert isinstance(result, dict)
+        assert result.get("matches") == []
+
     @pytest.mark.parametrize(
         ("parser_func", "data", "expected_key"),
         [
