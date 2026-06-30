@@ -583,12 +583,14 @@ def process_news_data(data):
 
 def _get_details(details):
     events = []
-    for detail in details:
-        event_type = (detail.get("type") or {}).get("text", "Unknown")
-        clock = (detail.get("clock") or {}).get("displayValue", "N/A")
-        athletes = [athlete.get("displayName", "Unknown") for athlete in detail.get("athletesInvolved", [])]
+    for detail in (details or []):
+        if not isinstance(detail, dict):
+            continue
+        event_type = _as_dict(detail.get("type")).get("text", "Unknown")
+        clock = _as_dict(detail.get("clock")).get("displayValue", "N/A")
+        athletes = [a.get("displayName", "Unknown") for a in (detail.get("athletesInvolved") or []) if isinstance(a, dict)]
         athletes_str = ", ".join(athletes) if athletes else "N/A"
-        team_abbr = (detail.get("team", {}) or {}).get("abbreviation", "")
+        team_abbr = _as_dict(detail.get("team")).get("abbreviation", "")
         team_str = f" [{team_abbr}]" if team_abbr else ""
         events.append(f"{event_type}{team_str} - {clock}: {athletes_str}")
     return events
