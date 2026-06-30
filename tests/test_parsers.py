@@ -248,3 +248,29 @@ class TestStandingsParser:
         result = standings_data({})
         assert isinstance(result, dict)
         assert result.get("standings_groups") == []
+
+    def test_graceful_on_none_child(self):
+        result = standings_data({"children": [None]})
+        assert isinstance(result, dict)
+        assert result["standings_groups"] == []
+
+    def test_graceful_on_none_entry(self):
+        result = standings_data({"children": [{"name": "Group A", "standings": {"entries": [None]}}]})
+        assert isinstance(result, dict)
+        groups = result["standings_groups"]
+        assert len(groups) == 1
+        assert groups[0]["standings"] == []
+
+    def test_graceful_on_none_logo_in_entry(self):
+        result = standings_data({"children": [{"name": "Group A", "standings": {"entries": [
+            {"team": {"id": "1", "displayName": "Ajax", "logos": [None]}, "stats": [], "note": {}}
+        ]}}]})
+        groups = result["standings_groups"]
+        assert groups[0]["standings"][0]["team_logo"] == "N/A"
+
+    def test_graceful_on_none_stat_entry(self):
+        result = standings_data({"children": [{"name": "Group A", "standings": {"entries": [
+            {"team": {"id": "1", "displayName": "Ajax"}, "stats": [None, {"name": "points", "displayValue": "42"}], "note": {}}
+        ]}}]})
+        groups = result["standings_groups"]
+        assert groups[0]["standings"][0]["points"] == "42"

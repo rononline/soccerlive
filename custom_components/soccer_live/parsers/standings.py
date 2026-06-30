@@ -4,28 +4,38 @@ from dateutil import parser
 from datetime import datetime
 
 def standings_data(data):
-    try:
-        standings_list = []
+    standings_list = []
 
-        for child in data.get("children", []):
-            standings_data = child.get("standings", {}).get("entries", [])
-            standings = []
+    for child in (data.get("children", []) or []):
+        if not isinstance(child, dict):
+            _LOGGER.warning("Skipping malformed standings child (not a dict)")
+            continue
+        standings_entries = (child.get("standings") or {}).get("entries", []) or []
+        standings = []
 
-            for index, entry in enumerate(standings_data, start=1):
-                team = entry.get("team", {})
-                stats = {stat['name']: stat['displayValue'] for stat in entry.get("stats", [])}
+        for index, entry in enumerate(standings_entries, start=1):
+            if not isinstance(entry, dict):
+                _LOGGER.warning("Skipping malformed standings entry (not a dict)")
+                continue
+            try:
+                team = entry.get("team") or {}
+                raw_stats = entry.get("stats") or []
+                stats = {s["name"]: s["displayValue"] for s in raw_stats if isinstance(s, dict) and "name" in s}
 
                 note = entry.get("note") or {}
                 rank = note.get("rank", index)
-                zone_color = note.get("color", "")        # ESPN hex color, e.g. "007AC0"
-                zone_label = note.get("description", "")  # e.g. "UEFA Champions League"
-                zone_abbrev = note.get("abbreviation", "") # e.g. "UCL"
+                zone_color = note.get("color", "")
+                zone_label = note.get("description", "")
+                zone_abbrev = note.get("abbreviation", "")
 
-                team_data = {
+                logos = [x for x in (team.get("logos") or []) if isinstance(x, dict)]
+                team_logo = logos[0].get("href", "N/A") if logos else "N/A"
+
+                standings.append({
                     "rank": rank,
                     "team_id": team.get("id"),
                     "team_name": team.get("displayName"),
-                    "team_logo": (team.get("logos") or [{}])[0].get("href", "N/A"),
+                    "team_logo": team_logo,
                     "points": stats.get("points", "N/A"),
                     "games_played": stats.get("gamesPlayed", "N/A"),
                     "wins": stats.get("wins", "N/A"),
@@ -37,17 +47,21 @@ def standings_data(data):
                     "zone_color": f"#{zone_color}" if zone_color else "",
                     "zone_label": zone_label,
                     "zone_abbrev": zone_abbrev,
-                }
-                standings.append(team_data)
+                })
+            except Exception as e:
+                _LOGGER.warning(f"Skipping standings entry due to parse error: {e}")
 
-            full_table_link = child.get("standings", {}).get("links", [])[0].get("href", "N/A") if child.get("standings", {}).get("links") else "N/A"
+        child_standings = child.get("standings") or {}
+        links = child_standings.get("links") or []
+        full_table_link = links[0].get("href", "N/A") if links and isinstance(links[0], dict) else "N/A"
 
-            standings_list.append({
-                "name": child.get("name", "Unknown"),
-                "standings": standings,
-                "full_table_link": full_table_link
-            })
+        standings_list.append({
+            "name": child.get("name", "Unknown"),
+            "standings": standings,
+            "full_table_link": full_table_link
+        })
 
+    try:
         # ESPN exposes season as either a "seasons" array or a singular "season" object
         seasons_data = data.get("seasons") or []
         if not seasons_data:
@@ -56,40 +70,47 @@ def standings_data(data):
                 seasons_data = [singular]
         current_year = datetime.now().year
         current_season = (
-            next((s for s in seasons_data if s.get("year") == current_year), None)
-            or next((s for s in seasons_data if s.get("year") == current_year - 1), None)
-            or (seasons_data[-1] if seasons_data else None)
+            next((s for s in seasons_data if isinstance(s, dict) and s.get("year") == current_year), None)
+            or next((s for s in seasons_data if isinstance(s, dict) and s.get("year") == current_year - 1), None)
+            or (seasons_data[-1] if seasons_data and isinstance(seasons_data[-1], dict) else None)
         )
 
         season_display_name = current_season.get("displayName", "N/A") if current_season else "N/A"
         season_start = _parse_date(current_season.get("startDate", "N/A")) if current_season else None
         season_end = _parse_date(current_season.get("endDate", "N/A")) if current_season else None
 
-        # ESPN puts name/abbreviation at the top level for some endpoints and under
-        # leagues[0] for others; try both.
-        _leagues = data.get("leagues") or []
+        # ESPN puts name/abbreviation at the top level for some endpoints and under leagues[0]
+        _leagues = [x for x in (data.get("leagues") or []) if isinstance(x, dict)]
         _first_league = _leagues[0] if _leagues else {}
         league_name = data.get("name") or _first_league.get("name", "N/A") or "N/A"
         league_abbreviation = data.get("abbreviation") or _first_league.get("abbreviation", "N/A") or "N/A"
-        # Try multiple locations ESPN may put the competition logo
-        logos = (data.get("logos") or
-                 (data.get("leagues") or [{}])[0].get("logos") or
-                 (data.get("sport") or {}).get("logos") or [])
-        league_logo = logos[0].get("href", "") if logos else ""
 
-        return {
-            "season": season_display_name,
-            "season_start": season_start,
-            "season_end": season_end,
-            "league_name": league_name,
-            "league_abbreviation": league_abbreviation,
-            "league_logo": league_logo,
-            "standings_groups": standings_list
-        }
+        logo_sources = (
+            data.get("logos")
+            or (_first_league.get("logos") if _first_league else None)
+            or (data.get("sport") or {}).get("logos")
+            or []
+        )
+        valid_logos = [x for x in logo_sources if isinstance(x, dict)]
+        league_logo = valid_logos[0].get("href", "") if valid_logos else ""
     except Exception as e:
-        _LOGGER.error(f"Error processing standings data: {e}")
-        raise
+        _LOGGER.error(f"Error extracting standings metadata: {e}")
+        season_display_name = "N/A"
+        season_start = None
+        season_end = None
+        league_name = "N/A"
+        league_abbreviation = "N/A"
+        league_logo = ""
 
+    return {
+        "season": season_display_name,
+        "season_start": season_start,
+        "season_end": season_end,
+        "league_name": league_name,
+        "league_abbreviation": league_abbreviation,
+        "league_logo": league_logo,
+        "standings_groups": standings_list
+    }
 
 
 def _parse_date(date_str):

@@ -483,12 +483,19 @@ class SoccerLiveSensor(Entity):
         return d.strftime("%Y-%m-%d") if d else None
 
     async def _flush_pending_events(self):
-        """Fire events collected during executor processing on the event loop (thread-safe)."""
+        """Fire events collected during executor processing on the event loop (thread-safe).
+
+        team_match always pairs with a team_matches sensor that fires the actual HA events
+        and notifications. To avoid duplicates, team_match only updates its own last_event
+        attributes without touching the bus.
+        """
+        fire_bus = self._sensor_type != "team_match"
         now_iso = datetime.now().isoformat()
         for event_type, event_data in self._pending_events:
             self._store_last_event_attributes(event_type, event_data, now_iso)
-            self.hass.bus.fire(event_type, event_data)
-            await self._send_notification(event_type, event_data)
+            if fire_bus:
+                self.hass.bus.fire(event_type, event_data)
+                await self._send_notification(event_type, event_data)
         self._pending_events = []
         if self._save_store_needed:
             self._save_store_needed = False
@@ -1424,11 +1431,15 @@ class SoccerLiveSensor(Entity):
                     "events": events,
                 }
 
-            # team_match — event detection is intentionally omitted here; the paired
-            # team_matches sensor (always created alongside this one) handles detection
-            # and fires HA events. Running detection in both would duplicate every event.
+            # team_match — detects events to keep its own last_event attributes current,
+            # but _flush_pending_events skips bus.fire/notifications for team_match so
+            # the paired team_matches sensor remains the sole source of HA events.
             all_data = get_team_match_data()
             all_matches = all_data.get("matches", []) or []
+            self._detect_and_dispatch_goals(all_matches, events)
+            self._detect_and_dispatch_cards(all_matches, events)
+            self._detect_and_dispatch_match_finished(all_matches, events)
+            self._detect_and_dispatch_match_started(all_matches, events)
 
             from .parsers.scoreboard import is_within_recent_window
             _live = [m for m in all_matches if m.get("state") == "in"]

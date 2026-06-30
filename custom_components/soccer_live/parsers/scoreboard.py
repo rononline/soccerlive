@@ -115,7 +115,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             season_info = get_season_slug_or_displayname(match)
             week_number = (match.get("week") or {}).get("number")
 
-            competitions = match.get("competitions", [])
+            competitions = [c for c in (match.get("competitions", []) or []) if isinstance(c, dict)]
             comp = competitions[0] if competitions else {}
             comp_league = comp.get("league", {}) or {}
             # team schedule endpoint (/all/teams/{id}/schedule) puts league at event level
@@ -158,7 +158,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 match.get("id"), comp.get("uid", match.get("uid", "")), league_id, comp_league, league_name
             )
 
-            competitors = comp.get("competitors", []) if comp else []
+            competitors = [c for c in (comp.get("competitors", []) if comp else []) if isinstance(c, dict)]
             if len(competitors) < 2:
                 _LOGGER.debug(f"Skipping match with fewer than 2 competitors: {match.get('name', 'unknown')}")
                 continue
@@ -176,8 +176,8 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             home_team = home_team_data.get("displayName", "N/A")
             home_logo = home_team_data.get("logo", None)
             if not home_logo:
-                home_logos = home_team_data.get("logos", [{}])
-                home_logo = home_logos[0].get("href", "N/A")
+                home_logos = [x for x in (home_team_data.get("logos") or []) if isinstance(x, dict)]
+                home_logo = home_logos[0].get("href", "N/A") if home_logos else "N/A"
             home_form = home_comp.get("form") or ""
             home_score = home_comp.get("score", "N/A")
             home_statistics = _get_statistics(home_comp)
@@ -186,8 +186,8 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             away_team = away_team_data.get("displayName", "N/A")
             away_logo = away_team_data.get("logo", None)
             if not away_logo:
-                away_logos = away_team_data.get("logos", [{}])
-                away_logo = away_logos[0].get("href", "N/A")
+                away_logos = [x for x in (away_team_data.get("logos") or []) if isinstance(x, dict)]
+                away_logo = away_logos[0].get("href", "N/A") if away_logos else "N/A"
             away_form = away_comp.get("form") or ""
             away_score = away_comp.get("score", "N/A")
             away_statistics = _get_statistics(away_comp)
