@@ -179,7 +179,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             if not home_logo:
                 home_logos = home_team_data.get("logos", [{}])
                 home_logo = home_logos[0].get("href", "N/A")
-            home_form = home_comp.get("form", "N/A")
+            home_form = home_comp.get("form") or ""
             home_score = home_comp.get("score", "N/A")
             home_statistics = _get_statistics(home_comp)
 
@@ -189,7 +189,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
             if not away_logo:
                 away_logos = away_team_data.get("logos", [{}])
                 away_logo = away_logos[0].get("href", "N/A")
-            away_form = away_comp.get("form", "N/A")
+            away_form = away_comp.get("form") or ""
             away_score = away_comp.get("score", "N/A")
             away_statistics = _get_statistics(away_comp)
 

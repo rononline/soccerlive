@@ -454,7 +454,7 @@ Up to 4 upcoming/live matches after the primary next match. Subset of the full m
 | `clock` | string | Match clock (live) |
 | `event_id` | string | ESPN event ID |
 | `head_to_head` | list | Last 3 H2H matches |
-| `home_form` / `away_form` | string | Recent form string, e.g. `WDWLW` |
+| `home_form` / `away_form` | string | Recent form string, e.g. `WDWLW` — empty string when ESPN does not supply form data |
 | `league_name` | string | Competition name |
 
 ### League name and logo resolution

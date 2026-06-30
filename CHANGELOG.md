@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.6.49 (2026-06-30)
+- parser: `home_form` and `away_form` now default to `""` instead of `"N/A"` when ESPN does not supply form data — prevents cards from rendering spurious dots for the literal characters N, / and A
+
 ## v3.6.48 (2026-06-30)
 - sensor: schedule `compact()` now includes `clock`, `league_logo`, and `season_info` — live match clock, competition logo, and round info are now available in `schedule_live_matches`, `schedule_upcoming_matches`, and `schedule_recent_matches` for use in HA templates and automations
 
