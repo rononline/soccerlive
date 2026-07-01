@@ -13,22 +13,18 @@ def process_league_data(data, hass=None):
     leagues_data = data.get("leagues", []) or []
     league_info = []
     for league in leagues_data:
-        try:
-            league_name = league.get("name", "")
-            league_abbreviation = league.get("abbreviation", "N/A")
-            league_start_date = league.get("season", {}).get("startDate", "N/A")
-            league_end_date = league.get("season", {}).get("endDate", "N/A")
-            logos = league.get("logos", [])
-            logo_href = logos[0].get("href", "N/A") if logos else "N/A"
-            league_info.append({
-                "name": league_name,
-                "abbreviation": league_abbreviation,
-                "startDate": _parse_date(hass, league_start_date, show_time=False),
-                "endDate": _parse_date(hass, league_end_date, show_time=False),
-                "logo_href": logo_href
-            })
-        except Exception as e:
-            _LOGGER.warning(f"Skipping malformed league entry: {e}")
+        if not isinstance(league, dict):
+            _LOGGER.warning("Skipping malformed league entry (not a dict)")
+            continue
+        season = _as_dict(league.get("season"))
+        logos = [x for x in (league.get("logos") or []) if isinstance(x, dict)]
+        league_info.append({
+            "name": league.get("name", ""),
+            "abbreviation": league.get("abbreviation", "N/A"),
+            "startDate": _parse_date(hass, season.get("startDate", "N/A"), show_time=False),
+            "endDate": _parse_date(hass, season.get("endDate", "N/A"), show_time=False),
+            "logo_href": logos[0].get("href", "N/A") if logos else "N/A",
+        })
     return league_info
 
 def get_season_slug_or_displayname(match):
