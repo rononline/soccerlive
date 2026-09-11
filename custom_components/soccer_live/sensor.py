@@ -1029,7 +1029,7 @@ class SoccerLiveSensor(Entity):
         if not has_match_details(match):
             enrichment = {}
             if self._provider == PROVIDER_ESPN:
-                summary = await self._fetch_match_summary(match_id)
+                summary = await self._fetch_match_summary(match_id, match.get("league_slug"))
                 if summary:
                     from .parsers.scoreboard import process_summary_data
 
@@ -1962,7 +1962,7 @@ class SoccerLiveSensor(Entity):
             first.update(self._summary_cache[event_id])
             return
 
-        summary = await self._fetch_match_summary(event_id)
+        summary = await self._fetch_match_summary(event_id, first.get("league_slug"))
         if not summary:
             return
         from .parsers.scoreboard import process_summary_data
@@ -2123,11 +2123,18 @@ class SoccerLiveSensor(Entity):
             return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
         return "", ""
 
-    async def _fetch_match_summary(self, event_id):
-        """Fetch full match summary (lineup, formation, key events) for the current match."""
-        if not event_id or not self._code:
+    async def _fetch_match_summary(self, event_id, league_code=None):
+        """Fetch full match summary (lineup, formation, key events) for a match.
+
+        ESPN keys the summary endpoint by competition slug. For a mixed-schedule
+        sensor a fixture can belong to a different competition than the entry's
+        configured one, so prefer the fixture's own ``league_slug`` and only fall
+        back to ``self._code`` for same-competition fixtures.
+        """
+        code = league_code or self._code
+        if not event_id or not code:
             return None
-        url = f"{self.base_url_2}/{self._code}/summary?event={event_id}"
+        url = f"{self.base_url_2}/{code}/summary?event={event_id}"
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(url, headers=espn_request_headers(), timeout=aiohttp.ClientTimeout(total=10)) as response:

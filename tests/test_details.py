@@ -24,6 +24,19 @@ def test_find_and_classify_match_details():
     assert len(attrs["matches"][1]["key_events"]) == 1
 
 
+def test_find_match_searches_the_archive():
+    attrs = {
+        "matches": [{"event_id": "1"}],
+        "match_archive": [
+            {"event_id": "401915451", "league_slug": "uefa.champions"},
+        ],
+    }
+    found = details.find_match(attrs, "401915451")
+    assert found is attrs["match_archive"][0]
+    # An archived fixture keeps its own competition slug for provider look-ups.
+    assert found["league_slug"] == "uefa.champions"
+
+
 def test_detail_marker_counts_even_without_provider_sections():
     assert details.has_match_details({"event_id": "1", "detail_loaded": True})
     assert not details.has_match_details({

@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.23.4 (2026-09-11)
+- fix: load match details for archived fixtures. `get_match_details` now also searches `match_archive`, so a completed fixture that has aged out of the normal published lists can still be opened (#16)
+- fix: on a mixed-competition sensor, ESPN match details are fetched with the fixture's own competition instead of the entry's configured one. Each ESPN fixture now carries its competition slug (e.g. `uefa.champions`), and the summary request uses it — so a Champions League match on a team configured from its domestic league loads lineups/timeline correctly; same-competition fixtures still fall back to the configured code (#16)
+- tests: archived fixture is found by id; ESPN summary uses the fixture slug and falls back to the entry code
+
 ## v3.23.3 (2026-08-30)
 - fix: don't notify a goal with a placeholder scorer. When a provider reports a goal but fills the scorer with a placeholder (ESPN sends "<TBD>") the goal is now held for the real name just like a missing scorer, instead of firing immediately with the token — so a slower provider that has the name can win. If no real name ever arrives the scorer is emitted as an empty string (not "<TBD>"/"N/A") so consumers can show their own "unknown" label
 

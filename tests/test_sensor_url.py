@@ -1254,6 +1254,43 @@ def test_api_football_endpoint_cache_reuses_response(monkeypatch):
     assert calls["count"] == 1
 
 
+def test_espn_summary_uses_fixture_league_slug_then_falls_back(monkeypatch):
+    sensor = _sensor("team_matches_mixed", code="esp.1")
+    urls = []
+
+    class _Response:
+        status = 200
+
+        async def read(self):
+            return b'{"header": {}}'
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+    class _Session:
+        def get(self, url, *args, **kwargs):
+            urls.append(url)
+            return _Response()
+
+    class _Hass:
+        async def async_add_executor_job(self, func, *args):
+            return func(*args)
+
+    sensor.hass = _Hass()
+    monkeypatch.setattr(_sensor_mod, "async_get_clientsession", lambda hass: _Session())
+
+    # A cross-competition fixture requests its own slug, not the entry's esp.1.
+    asyncio.run(sensor._fetch_match_summary("401915451", "uefa.champions"))
+    # A same-competition fixture (no slug) falls back to self._code.
+    asyncio.run(sensor._fetch_match_summary("777"))
+
+    assert "/uefa.champions/summary?event=401915451" in urls[0]
+    assert "/esp.1/summary?event=777" in urls[1]
+
+
 def test_failed_processing_does_not_cache_response(monkeypatch):
     sensor = _sensor("team_match", code="ned.1")
     sensor._last_error = None

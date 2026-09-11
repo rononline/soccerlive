@@ -145,6 +145,20 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                             league_id = _part[2:]
                             break
 
+                # ESPN's summary/detail endpoints are keyed by the league SLUG
+                # (e.g. "uefa.champions"), not a numeric id. Keep it per fixture so
+                # a mixed-competition sensor can request details for the right
+                # competition instead of the entry's configured one.
+                league_slug = comp_league.get("slug") or event_league.get("slug") or ""
+                if not league_slug:
+                    comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
+                    for _part in comp_uid.split("~"):
+                        if _part.startswith("l:"):
+                            league_slug = _part[2:]
+                            break
+                if not league_slug and league_id and not str(league_id).isdigit():
+                    league_slug = league_id
+
                 # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" -> league name
                 alt_note = (comp.get("altGameNote") or "").strip()
                 league_name_from_note = alt_note.split(",")[0].strip() if alt_note else ""
@@ -260,6 +274,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                     "season_info": season_info,
                     "week_number": week_number,
                     "league_name": league_name,
+                    "league_slug": league_slug,
                     "league_logo": league_logo,
                     # Stable friendly flag so cards don't have to guess from the
                     # (possibly localised) display name.

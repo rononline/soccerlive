@@ -29,7 +29,7 @@ def find_match(attributes: dict | None, match_id) -> dict | None:
         match = attrs.get(key)
         if isinstance(match, dict) and str(match.get("event_id")) == wanted:
             return match
-    for key in ("matches", "previous_matches", "upcoming_matches"):
+    for key in ("matches", "previous_matches", "upcoming_matches", "match_archive"):
         for match in attrs.get(key) or []:
             if isinstance(match, dict) and str(match.get("event_id")) == wanted:
                 return match
