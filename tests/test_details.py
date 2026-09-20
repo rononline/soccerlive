@@ -37,6 +37,24 @@ def test_find_match_searches_the_archive():
     assert found["league_slug"] == "uefa.champions"
 
 
+def test_find_match_prefers_finished_copy_over_stale_pre():
+    # A finished result in the archive must win over a stale scheduled duplicate
+    # still lingering in the schedule lists (issue #21).
+    attrs = {
+        "matches": [
+            {"event_id": "401882872", "state": "pre",
+             "home_score": "0", "away_score": "0"},
+        ],
+        "match_archive": [
+            {"event_id": "401882872", "state": "post",
+             "home_score": "2", "away_score": "3"},
+        ],
+    }
+    found = details.find_match(attrs, "401882872")
+    assert found["state"] == "post"
+    assert (found["home_score"], found["away_score"]) == ("2", "3")
+
+
 def test_detail_marker_counts_even_without_provider_sections():
     assert details.has_match_details({"event_id": "1", "detail_loaded": True})
     assert not details.has_match_details({

@@ -730,9 +730,20 @@ def test_team_match_uses_calendar_dates_when_available():
     url = asyncio.run(sensor._build_url())
 
     assert calls["count"] == 1
-    assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=20260801-20270601"
+    # ESPN no longer accepts dates=start-end ranges (400); request the season
+    # year, then filter the response to the calendar window in _process_data.
+    assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=2026"
     assert sensor._dyn_start_date == datetime(2026, 8, 1)
     assert sensor._dyn_end_date == datetime(2027, 6, 1)
+
+
+def test_bracket_url_uses_single_season_year_not_a_range():
+    # The KO bracket request must not use a dates=start-end range either (#23).
+    sensor = _sensor("bracket", code="uefa.champions")
+    url = asyncio.run(sensor._build_url())
+    assert "/uefa.champions/scoreboard?limit=300&dates=" in url
+    dates = url.split("dates=")[1]
+    assert dates.isdigit() and len(dates) == 4
 
 
 def test_team_match_falls_back_to_static_dates_when_calendar_missing():
@@ -745,7 +756,7 @@ def test_team_match_falls_back_to_static_dates_when_calendar_missing():
 
     url = asyncio.run(sensor._build_url())
 
-    assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=20260101-20261231"
+    assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=2026"
 
 
 def test_team_match_omits_dates_when_calendar_and_filters_are_missing():

@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.23.5 (2026-09-20)
+- fix: fixtures and scores stopped updating on the ESPN provider — ESPN began rejecting `dates=start-end` ranges with HTTP 400, so every scoreboard/fixtures request failed and sensors served stale data. Requests now use `dates={season year}` (which returns the whole season) for both the fixture list and the knockout bracket; the response is still filtered to the season window (#23)
+- fix: a persistent HTTP 4xx on the main data request is now logged once at warning level (previously only visible on debug), so a broken provider endpoint doesn't look healthy while serving days-old data (#23)
+- fix: `get_match_details` now returns the most advanced published copy of a fixture — a finished/live result wins over a stale scheduled (`pre`) duplicate that can linger in the schedule lists after a match ends (#21)
+- tests: season-year fixture/bracket URLs, and the finished-over-stale-pre match lookup
+
 ## v3.23.4 (2026-09-11)
 - fix: load match details for archived fixtures. `get_match_details` now also searches `match_archive`, so a completed fixture that has aged out of the normal published lists can still be opened (#16)
 - fix: on a mixed-competition sensor, ESPN match details are fetched with the fixture's own competition instead of the entry's configured one. Each ESPN fixture now carries its competition slug (e.g. `uefa.champions`), and the summary request uses it — so a Champions League match on a team configured from its domestic league loads lineups/timeline correctly; same-competition fixtures still fall back to the configured code (#16)

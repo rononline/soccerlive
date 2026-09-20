@@ -1209,6 +1209,7 @@ class SoccerLiveSensor(Entity):
                                 await self._refresh_api_football_status()
                                 self._last_successful_update = datetime.now().isoformat()
                                 self._last_error = None
+                                self._last_logged_http_error = None
                                 self._clear_auth_failure()
                             self._schedule_live_refresh()
                             self._request_count += 1
@@ -1227,6 +1228,17 @@ class SoccerLiveSensor(Entity):
                                 _LOGGER.info(f"Top scorers not available for {self._code} ({self._provider_label} endpoint returned 404 — not supported for all competitions)")
                             else:
                                 self._last_error = f"HTTP {response.status}"
+                                # A 400/4xx on the main data request otherwise
+                                # hides at debug while the sensor keeps serving
+                                # stale data. Surface the first occurrence (and
+                                # each change) at warning level; recovery re-arms
+                                # it via the success path below.
+                                if getattr(self, "_last_logged_http_error", None) != self._last_error:
+                                    self._last_logged_http_error = self._last_error
+                                    _LOGGER.warning(
+                                        "%s: %s returned HTTP %s for %s — no data updated, serving previous values",
+                                        self._name, self._provider_label, response.status, url,
+                                    )
                             break
                         else:
                             # 5xx: temporary server error — wait briefly and retry
@@ -2005,7 +2017,11 @@ class SoccerLiveSensor(Entity):
                 ko_year = now.year + 1
             else:
                 ko_year = now.year
-            return f"{self.base_url_3}/{self._code}/scoreboard?limit=300&dates={ko_year}0201-{ko_year}0731"
+            # ESPN stopped accepting dates=start-end ranges (returns HTTP 400).
+            # The KO phase (Feb-Jul of ko_year) belongs to the season that began
+            # the previous August, i.e. season year ko_year - 1; request that
+            # whole season and let the bracket parser pick out the KO ties.
+            return f"{self.base_url_3}/{self._code}/scoreboard?limit=300&dates={ko_year - 1}"
 
         if self._sensor_type == "standings":
             return f"{self.base_url}/{self._code}/standings?"
@@ -2045,8 +2061,11 @@ class SoccerLiveSensor(Entity):
 
         if self._sensor_type in _DATE_RANGE_SENSOR_TYPES:
             url = f"{self.base_url_3}/{self._code}/scoreboard?limit=1000"
-            if season_start and season_end:
-                url += f"&dates={season_start}-{season_end}"
+            # ESPN stopped accepting dates=start-end ranges (returns HTTP 400);
+            # dates={season year} returns the whole season. The response is still
+            # filtered to _dyn_start_date/_dyn_end_date in _process_data.
+            if season_start:
+                url += f"&dates={season_start[:4]}"
             return url
 
         return None
