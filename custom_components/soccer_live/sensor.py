@@ -1021,7 +1021,12 @@ class SoccerLiveSensor(Entity):
 
     async def async_get_match_details(self, match_id: str) -> dict | None:
         """Fetch one fixture's heavy sections without rebuilding its schedule."""
-        from .details import find_match, has_lineup, has_match_details, public_match_details
+        from .details import (
+            find_match,
+            has_lineup,
+            has_match_details,
+            public_match_details,
+        )
 
         match = find_match(self._attributes, match_id)
         if match is None:
