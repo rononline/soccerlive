@@ -49,7 +49,7 @@ Sensors are created automatically depending on your selection:
 | `team_matches_mixed` | `soccer_live_all_mixed_{team}` | All matches for a team (all competitions) |
 | `match_day` | `soccer_live_all_{competition}` | All matches in a competition |
 | `standings` | `soccer_live_standings_{competition}` | League standings |
-| `top_scorers` | `soccer_live_scorers_{competition}` | Top scorers for a competition (auto-created) |
+| `top_scorers` | `soccer_live_scorers_{competition}` | Top scorers for a competition (auto-created). Note: ESPN removed its public scorers endpoint, so this shows "Not available" on the ESPN provider — use the API-Football provider for scorer data |
 | `bracket` | `soccer_live_bracket_{competition}` | Knockout bracket (auto-created for cup competitions) |
 | `all_matches_today` | `soccer_live_all_today` | All matches worldwide today |
 | `news` | `soccer_live_news_{competition}` | News feed for a competition |
