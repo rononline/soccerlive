@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.6 (2026-09-22)
+- fix: ESPN match details could come back without a lineup even though ESPN's summary had the full rosters. Two causes (#24): a fixture's competition slug could resolve to ESPN's numeric league id (e.g. `740`) from the event uid, so the summary request hit `/740/summary` and 404'd — a numeric value is no longer stored as, or used as, a league slug (it falls back to the entry's configured competition); and `get_match_details` now still fetches the lineup for a live/finished fixture whose other sections (stats/timeline) were already present, instead of returning the partially-enriched copy. The final summary URL is now logged at debug for easier diagnosis
+- tests: numeric uid league id is not used as a slug, summary URL falls back on a numeric code, and the lineup-completeness helper
+
 ## v3.23.5 (2026-09-20)
 - fix: fixtures and scores stopped updating on the ESPN provider — ESPN began rejecting `dates=start-end` ranges with HTTP 400, so every scoreboard/fixtures request failed and sensors served stale data. Requests now use `dates={season year}` (which returns the whole season) for both the fixture list and the knockout bracket; the response is still filtered to the season window (#23)
 - fix: a persistent HTTP 4xx on the main data request is now logged once at warning level (previously only visible on debug), so a broken provider endpoint doesn't look healthy while serving days-old data (#23)

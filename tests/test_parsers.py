@@ -210,6 +210,20 @@ class TestScoreboardParser:
         assert match["league_name"] == "Dutch Eredivisie"
         assert match["league_logo"] == "https://example.com/eredivisie.png"
 
+    def test_league_slug_from_uid_when_non_numeric(self):
+        data = {"leagues": [], "events": [self._minimal_event()]}  # uid l:ned.1
+        match = self._parse(data)["matches"][0]
+        assert match["league_slug"] == "ned.1"
+
+    def test_numeric_uid_league_id_is_not_used_as_slug(self):
+        # The uid l:740 segment is an internal ESPN id, not a URL slug (#24);
+        # it must not become league_slug or the summary request would 404.
+        data = {"leagues": [], "events": [
+            self._minimal_event(uid="s:600~l:740~e:700001"),
+        ]}
+        match = self._parse(data)["matches"][0]
+        assert match["league_slug"] == ""
+
     def test_league_name_from_alt_game_note_and_curated_logo_override(self):
         data = {
             "leagues": [],

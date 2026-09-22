@@ -37,6 +37,17 @@ def test_find_match_searches_the_archive():
     assert found["league_slug"] == "uefa.champions"
 
 
+def test_has_lineup_detects_lineup_or_formation():
+    assert details.has_lineup({"lineup_home": [{"name": "A"}]}) is True
+    assert details.has_lineup({"formation_away": "4-3-3"}) is True
+    # Stats/timeline present but no lineup -> still needs a lineup fetch (#24).
+    assert details.has_lineup({
+        "home_statistics": {"totalShots": "5"}, "key_events": [{"type": "goal"}],
+    }) is False
+    assert details.has_lineup({}) is False
+    assert details.has_lineup(None) is False
+
+
 def test_find_match_prefers_finished_copy_over_stale_pre():
     # A finished result in the archive must win over a stale scheduled duplicate
     # still lingering in the schedule lists (issue #21).

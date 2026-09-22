@@ -1297,9 +1297,13 @@ def test_espn_summary_uses_fixture_league_slug_then_falls_back(monkeypatch):
     asyncio.run(sensor._fetch_match_summary("401915451", "uefa.champions"))
     # A same-competition fixture (no slug) falls back to self._code.
     asyncio.run(sensor._fetch_match_summary("777"))
+    # A numeric league code (internal ESPN id, e.g. "740") is not a URL slug and
+    # must fall back to self._code instead of building /740/summary (#24).
+    asyncio.run(sensor._fetch_match_summary("888", "740"))
 
     assert "/uefa.champions/summary?event=401915451" in urls[0]
     assert "/esp.1/summary?event=777" in urls[1]
+    assert "/esp.1/summary?event=888" in urls[2]
 
 
 def test_failed_processing_does_not_cache_response(monkeypatch):

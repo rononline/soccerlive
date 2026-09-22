@@ -151,10 +151,16 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 # competition instead of the entry's configured one.
                 league_slug = comp_league.get("slug") or event_league.get("slug") or ""
                 if not league_slug:
+                    # The uid l:<code> segment holds a slug for some endpoints
+                    # (l:ned.1) but a numeric league id for others (l:740). A
+                    # numeric id is NOT a URL slug, so only accept a non-numeric
+                    # code — otherwise the summary request would hit /740/ and 404.
                     comp_uid = comp.get("uid", "") or match.get("uid", "") or ""
                     for _part in comp_uid.split("~"):
                         if _part.startswith("l:"):
-                            league_slug = _part[2:]
+                            candidate = _part[2:]
+                            if candidate and not candidate.isdigit():
+                                league_slug = candidate
                             break
                 if not league_slug and league_id and not str(league_id).isdigit():
                     league_slug = league_id

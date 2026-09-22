@@ -1021,12 +1021,17 @@ class SoccerLiveSensor(Entity):
 
     async def async_get_match_details(self, match_id: str) -> dict | None:
         """Fetch one fixture's heavy sections without rebuilding its schedule."""
-        from .details import find_match, has_match_details, public_match_details
+        from .details import find_match, has_lineup, has_match_details, public_match_details
 
         match = find_match(self._attributes, match_id)
         if match is None:
             return None
-        if not has_match_details(match):
+        # Enrich when nothing is loaded yet, or when a live/finished fixture is
+        # still missing its lineup even though other sections exist — a partially
+        # enriched archived copy (stats/timeline but no lineup) must not block the
+        # lineup fetch when ESPN's summary actually carries the rosters.
+        lineup_expected = str(match.get("state") or "").lower() in ("in", "live", "post")
+        if not has_match_details(match) or (lineup_expected and not has_lineup(match)):
             enrichment = {}
             if self._provider == PROVIDER_ESPN:
                 summary = await self._fetch_match_summary(match_id, match.get("league_slug"))
@@ -2150,10 +2155,15 @@ class SoccerLiveSensor(Entity):
         configured one, so prefer the fixture's own ``league_slug`` and only fall
         back to ``self._code`` for same-competition fixtures.
         """
-        code = league_code or self._code
+        # A numeric league_code is an internal ESPN id (e.g. "740"), not a URL
+        # slug — using it would 404. Fall back to the entry's configured slug,
+        # which is correct for same-competition fixtures (and archived rows that
+        # were stored with a numeric slug before this was fixed).
+        code = league_code if (league_code and not str(league_code).isdigit()) else self._code
         if not event_id or not code:
             return None
         url = f"{self.base_url_2}/{code}/summary?event={event_id}"
+        _LOGGER.debug("Fetching match summary for %s: %s", event_id, url)
         try:
             session = async_get_clientsession(self.hass)
             async with session.get(url, headers=espn_request_headers(), timeout=aiohttp.ClientTimeout(total=10)) as response:

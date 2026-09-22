@@ -25,6 +25,16 @@ def has_match_details(match: dict | None) -> bool:
 _STATE_RANK = {"post": 3, "in": 2, "live": 2, "pre": 1}
 
 
+def has_lineup(match: dict | None) -> bool:
+    """Whether a fixture already carries lineup or formation data."""
+    if not isinstance(match, dict):
+        return False
+    return bool(
+        match.get("lineup_home") or match.get("lineup_away")
+        or match.get("formation_home") or match.get("formation_away")
+    )
+
+
 def find_match(attributes: dict | None, match_id) -> dict | None:
     """Find one fixture in any normal Soccer Live published location.
 
