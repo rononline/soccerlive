@@ -502,14 +502,25 @@ class SoccerLiveEntryCoordinator:
 
     async def async_get_match_details(self, match_id: str) -> dict | None:
         """Load one fixture on demand without duplicating provider requests."""
-        from .details import find_match, has_match_details, public_match_details
+        from .details import (
+            find_match,
+            has_lineup,
+            has_match_details,
+            public_match_details,
+        )
 
         candidates = []
         for entity in tuple(self._entities):
             match = find_match(getattr(entity, "_attributes", {}), match_id)
             if match is None:
                 continue
-            if has_match_details(match):
+            # A fully-detailed copy can be served straight from the published
+            # data. But a live/finished fixture that has other sections while its
+            # lineup is still missing must go through the entity loader so the
+            # summary fetch can fill it — otherwise this early return would hand
+            # back the partial copy and the lineup-aware loader never runs (#24).
+            lineup_expected = str(match.get("state") or "").lower() in ("in", "live", "post")
+            if has_match_details(match) and not (lineup_expected and not has_lineup(match)):
                 return public_match_details(match)
             candidates.append(entity)
         if not candidates:

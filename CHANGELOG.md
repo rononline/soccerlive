@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.7 (2026-09-24)
+- fix: complete the v3.23.6 lineup fix — the coordinator's on-demand `get_match_details` had its own early return that handed back a partially-enriched copy (stats/timeline but no lineup) before the lineup-aware entity loader could run. It now applies the same rule: a live/finished fixture missing its lineup is deferred to the loader so ESPN's rosters/formations get fetched, while a fully-detailed copy is still served directly (#24)
+- tests: coordinator defers a finished fixture missing its lineup to the loader, and still serves a complete copy without one
+
 ## v3.23.6 (2026-09-22)
 - fix: ESPN match details could come back without a lineup even though ESPN's summary had the full rosters. Two causes (#24): a fixture's competition slug could resolve to ESPN's numeric league id (e.g. `740`) from the event uid, so the summary request hit `/740/summary` and 404'd — a numeric value is no longer stored as, or used as, a league slug (it falls back to the entry's configured competition); and `get_match_details` now still fetches the lineup for a live/finished fixture whose other sections (stats/timeline) were already present, instead of returning the partially-enriched copy. The final summary URL is now logged at debug for easier diagnosis
 - tests: numeric uid league id is not used as a slug, summary URL falls back on a numeric code, and the lineup-completeness helper

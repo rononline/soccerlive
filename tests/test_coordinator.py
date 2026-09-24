@@ -149,3 +149,58 @@ def test_on_demand_details_use_one_focused_entity():
     assert result["detail_loaded"] is True
     assert focused.calls == 1
     assert schedule.calls == 0
+
+
+def test_on_demand_details_reenrich_finished_fixture_missing_lineup():
+    # A finished fixture with stats/timeline but no lineup must go through the
+    # loader (which fetches the lineup), not be served as the partial copy (#24).
+    class DetailEntity:
+        def __init__(self):
+            self._sensor_type = "team_matches_mixed"
+            self._attributes = {"matches": [{
+                "event_id": "fixture-2", "state": "post",
+                "home_statistics": {"totalShots": "5"},
+                "key_events": [{"type": "goal"}],
+            }]}
+            self.calls = 0
+
+        async def async_get_match_details(self, match_id):
+            self.calls += 1
+            return {"event_id": match_id, "detail_loaded": True,
+                    "lineup_home": [{"name": "A"}]}
+
+    coordinator = coordinator_module.SoccerLiveEntryCoordinator(_Hass(), "entry")
+    entity = DetailEntity()
+    coordinator.register_entity(entity)
+    import asyncio
+
+    result = asyncio.run(coordinator.async_get_match_details("fixture-2"))
+    assert entity.calls == 1
+    assert result["lineup_home"]
+
+
+def test_on_demand_details_serve_complete_copy_without_loader():
+    # A copy that already has a lineup is served straight from the published
+    # data without invoking the loader.
+    class DetailEntity:
+        def __init__(self):
+            self._sensor_type = "team_matches_mixed"
+            self._attributes = {"matches": [{
+                "event_id": "fixture-3", "state": "post",
+                "home_statistics": {"totalShots": "5"},
+                "lineup_home": [{"name": "A"}],
+            }]}
+            self.calls = 0
+
+        async def async_get_match_details(self, match_id):
+            self.calls += 1
+            return {"event_id": match_id}
+
+    coordinator = coordinator_module.SoccerLiveEntryCoordinator(_Hass(), "entry")
+    entity = DetailEntity()
+    coordinator.register_entity(entity)
+    import asyncio
+
+    result = asyncio.run(coordinator.async_get_match_details("fixture-3"))
+    assert entity.calls == 0
+    assert result["event_id"] == "fixture-3"
