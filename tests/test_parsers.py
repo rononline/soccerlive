@@ -238,6 +238,21 @@ class TestScoreboardParser:
         assert match["league_name"] == "FIFA World Cup"
         assert match["league_logo"] == "https://a.espncdn.com/i/leaguelogos/soccer/500/4.png"
 
+    def test_group_extracted_from_alt_game_note(self):
+        data = {"leagues": [], "events": [self._minimal_event(
+            uid="s:600~l:606~e:700003",
+            altGameNote="FIFA World Cup, Group F",
+        )]}
+        match = self._parse(data)["matches"][0]
+        assert match["group"] == "Group F"
+        assert match["league_name"] == "FIFA World Cup"
+
+    def test_group_is_empty_without_a_comma_note(self):
+        data = {"leagues": [{"id": "ned.1", "name": "Dutch Eredivisie"}],
+                "events": [self._minimal_event()]}
+        match = self._parse(data)["matches"][0]
+        assert match["group"] == ""
+
     def test_league_name_from_event_level_league(self):
         event = self._minimal_event(uid="")
         event["league"] = {

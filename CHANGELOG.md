@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.8 (2026-09-27)
+- feat: expose each ESPN fixture's tournament group/stage as a `group` field (parsed from the competition note, e.g. "Group F", "Relegation Playoffs"). The Matches card uses it to filter to a team's group so the other match in the same group is visible during the match; competitions without a group stage leave it empty
+- tests: group is extracted from the alt-game note and empty without one
+
 ## v3.23.7 (2026-09-24)
 - fix: complete the v3.23.6 lineup fix — the coordinator's on-demand `get_match_details` had its own early return that handed back a partially-enriched copy (stats/timeline but no lineup) before the lineup-aware entity loader could run. It now applies the same rule: a live/finished fixture missing its lineup is deferred to the loader so ESPN's rosters/formations get fetched, while a fully-detailed copy is still served directly (#24)
 - tests: coordinator defers a finished fixture missing its lineup to the loader, and still serves a complete copy without one

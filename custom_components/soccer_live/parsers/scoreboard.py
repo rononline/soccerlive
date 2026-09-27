@@ -165,9 +165,13 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                 if not league_slug and league_id and not str(league_id).isdigit():
                     league_slug = league_id
 
-                # /all/scoreboard: comp.altGameNote = "FIFA World Cup, Group F" -> league name
+                # altGameNote = "FIFA World Cup, Group F" -> league name + stage.
+                # The part after the first comma is the group/stage label ("Group
+                # F", "Relegation Playoffs", …); expose it so cards can show or
+                # filter the matches in a team's group.
                 alt_note = (comp.get("altGameNote") or "").strip()
                 league_name_from_note = alt_note.split(",")[0].strip() if alt_note else ""
+                group_name = alt_note.split(",", 1)[1].strip() if "," in alt_note else ""
 
                 league_name = (
                     comp_league.get("displayName")
@@ -281,6 +285,7 @@ def process_match_data(data, hass, team_name=None, team_id=None, next_match_only
                     "week_number": week_number,
                     "league_name": league_name,
                     "league_slug": league_slug,
+                    "group": group_name,
                     "league_logo": league_logo,
                     # Stable friendly flag so cards don't have to guess from the
                     # (possibly localised) display name.
