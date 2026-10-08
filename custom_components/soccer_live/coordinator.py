@@ -21,6 +21,10 @@ except ImportError:  # pragma: no cover - standalone import path
     def callback(func):  # type: ignore[misc]
         return func
 
+# Debounce delay for the restart-recovery stores (snapshot/replay). A longer
+# window means far fewer disk writes; the data is only used to restore the last
+# state after a restart and is flushed on shutdown/unload regardless (#29).
+_STORE_SAVE_DELAY = 600
 _SNAPSHOT_MAX_AGE = 7 * 86400
 _SNAPSHOT_EXCLUDED = {
     "club_changes",
@@ -174,20 +178,16 @@ class SoccerLiveEntryCoordinator:
             )[:30]
             self._snapshots = dict(newest)
         self._snapshot_dirty = True
-        if self._snapshot_store is None:
-            return
-        if self._save_snapshot_task and not self._save_snapshot_task.done():
-            return
-        self._save_snapshot_task = self.hass.async_create_task(
-            self._async_save_snapshots()
-        )
+        if self._snapshot_store is not None:
+            # The snapshot is only restart-recovery data, so debounce the frequent
+            # per-update saves into at most one write per window instead of
+            # rewriting the multi-MB file on every sensor refresh (#29).
+            # async_delay_save still flushes on Home Assistant stop, and
+            # async_shutdown flushes it on an entry unload.
+            self._snapshot_store.async_delay_save(self._snapshot_data, _STORE_SAVE_DELAY)
 
-    async def _async_save_snapshots(self):
-        while self._snapshot_dirty:
-            self._snapshot_dirty = False
-            await self._snapshot_store.async_save(
-                {"version": 1, "entities": dict(self._snapshots)}
-            )
+    def _snapshot_data(self) -> dict:
+        return {"version": 1, "entities": dict(self._snapshots)}
 
     def snapshot(self, key: str) -> dict | None:
         snapshot = self._snapshots.get(str(key))
@@ -204,12 +204,18 @@ class SoccerLiveEntryCoordinator:
             self._refresh_handle = None
         for task in (
             self._save_ledger_task,
-            self._save_replay_task,
-            self._save_snapshot_task,
             self._save_standings_task,
         ):
             if task and not task.done():
                 await task
+        # The snapshot/replay stores use async_delay_save; write any pending
+        # debounced data now so an entry unload doesn't lose the latest state.
+        if self._snapshot_dirty and self._snapshot_store is not None:
+            self._snapshot_dirty = False
+            await self._snapshot_store.async_save(self._snapshot_data())
+        if self._replay_dirty and self._replay_store is not None:
+            self._replay_dirty = False
+            await self._replay_store.async_save(self._replay_data())
 
     def update_standings(self, key: str, attributes: dict) -> list[dict]:
         """Persist a bounded table trajectory for one standings entity."""
@@ -418,19 +424,12 @@ class SoccerLiveEntryCoordinator:
         if self._replay_store is None:
             return
         self._replay_dirty = True
-        if self._save_replay_task and not self._save_replay_task.done():
-            return
-        self._save_replay_task = self.hass.async_create_task(
-            self._async_save_replay()
-        )
+        # Debounce like the snapshot store (#29): coalesce the per-event live
+        # snapshots into one delayed write instead of saving on every update.
+        self._replay_store.async_delay_save(self._replay_data, _STORE_SAVE_DELAY)
 
-    async def _async_save_replay(self):
-        """Coalesce live snapshots while preserving the newest one."""
-        while self._replay_dirty:
-            self._replay_dirty = False
-            await self._replay_store.async_save(
-                {"version": 1, "snapshots": list(self._replay_snapshots)}
-            )
+    def _replay_data(self) -> dict:
+        return {"version": 1, "snapshots": list(self._replay_snapshots)}
 
     async def async_clear_replay(self):
         if self._save_replay_task and not self._save_replay_task.done():

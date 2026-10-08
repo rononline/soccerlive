@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.9 (2026-10-08)
+- fix: drastically reduce disk writes from the restart-recovery stores. The per-entity snapshot (and the live-replay) store was rewritten to disk on every sensor refresh — with several config entries that reached tens of writes per minute of multi-MB files (reported ~19 GB/day), causing needless SSD/SD-card wear. Both now use Home Assistant's debounced `async_delay_save`, coalescing writes into at most one per ~10-minute window, still flushed on shutdown and on entry unload so restart recovery is unchanged (#29)
+- tests: snapshot publishing goes through the debounced save, never an immediate per-update write
+
 ## v3.23.8 (2026-09-27)
 - feat: expose each ESPN fixture's tournament group/stage as a `group` field (parsed from the competition note, e.g. "Group F", "Relegation Playoffs"). The Matches card uses it to filter to a team's group so the other match in the same group is visible during the match; competitions without a group stage leave it empty
 - tests: group is extracted from the alt-game note and empty without one

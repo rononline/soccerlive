@@ -106,6 +106,29 @@ def test_coordinator_keeps_entry_scoped_snapshot_and_request_state():
     assert coordinator.api_endpoint_cache == {}
 
 
+def test_publish_snapshot_debounces_disk_writes():
+    # The snapshot store must be written through async_delay_save (debounced),
+    # never an immediate async_save on every update (#29).
+    coordinator = coordinator_module.SoccerLiveEntryCoordinator(_Hass(), "entry")
+    calls = {"delay": 0, "save": 0}
+
+    class _Store:
+        def async_delay_save(self, data_func, delay):
+            calls["delay"] += 1
+            assert callable(data_func)
+            assert delay >= 60
+            assert "entities" in data_func()
+
+        async def async_save(self, data):
+            calls["save"] += 1
+
+    coordinator._snapshot_store = _Store()
+    for index in range(5):
+        coordinator.publish_snapshot(f"k{index}", "s", {"matches": []})
+    assert calls["delay"] == 5
+    assert calls["save"] == 0
+
+
 def test_coordinator_keeps_bounded_changed_standings_history():
     coordinator = coordinator_module.SoccerLiveEntryCoordinator(_Hass(), "entry")
     attrs = {
