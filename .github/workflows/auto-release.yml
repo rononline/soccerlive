@@ -62,8 +62,8 @@ jobs:
           [ -z "$NOTE" ] && NOTE=$(git log -1 --pretty=%B)
           NOTE="$NOTE
 
----
-☕ Enjoying Soccer Live? You can support development: [Ko-fi](https://ko-fi.com/rononline) · [GitHub Sponsors](https://github.com/sponsors/rononline)"
+          ---
+          ☕ Enjoying Soccer Live? You can support development: [Ko-fi](https://ko-fi.com/rononline) · [GitHub Sponsors](https://github.com/sponsors/rononline)"
           {
             echo 'notes<<EOF_NOTES'
             echo "$NOTE"
