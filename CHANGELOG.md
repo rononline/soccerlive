@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.23.11 (2026-10-09)
+- fix: cross-year seasons now fetch both calendar years from ESPN. `dates=YYYY` is a calendar-year query, so an Aug–May season (and every European knockout cup) only returned one half of its fixtures — the upcoming spring matches would have silently disappeared once the current year ran out (around January). Team match sensors (`team_match`, `team_matches`, `match_day`) and the knockout bracket now request each calendar year the season spans and merge the responses, so upcoming fixtures and KO ties across the year boundary stay visible. Single-calendar-year leagues (e.g. MLS) are unaffected and still make a single request
+- fix: when ESPN returns no competition calendar and no static dates are configured, the scoreboard now defaults to the current calendar year instead of a bare request. ESPN's dateless `/scoreboard` recently started returning only the current day's match, which would have hidden upcoming fixtures in that fallback
+- tests: cover the two-year season span, the current-year fallback, and the secondary-scoreboard merge
+
 ## v3.23.10 (2026-10-09)
 - refactor: split the 4374-line `sensor.py` into focused modules to make it easier to maintain. The match-attribute computation (`_compute_*`), the live-event detection/dispatch (goals, cards, substitutions, phase changes, full time) and the complete API-Football provider support (URL building, cached fetching, auth/rate-limit handling, enrichment) now live in dedicated mixin modules that `SoccerLiveSensor` inherits. No functional change — identical behaviour, same process-wide shared state, 295 tests pass unchanged
 - tests: API-Football tests now patch the provider module where those helpers resolve their module-level names

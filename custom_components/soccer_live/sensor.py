@@ -1209,6 +1209,7 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
                                 self._last_error = f"API-Football: {af_error}"
                                 _LOGGER.warning("API-Football returned an error for %s: %s", self._name, af_error)
                                 break
+                            data = await self._merge_secondary_scoreboards(data)
                             try:
                                 await self._process_and_apply(data)
                             except Exception as proc_err:
@@ -2008,6 +2009,11 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         if self._provider == PROVIDER_API_FOOTBALL:
             return self._build_api_football_url()
 
+        # ESPN's /scoreboard?dates=YYYY is a *calendar-year* query, so a season
+        # that runs Aug–May spans two of them. Extra years to fetch and merge
+        # into the primary response are collected here (reset every build).
+        self._secondary_scoreboard_urls = []
+
         season_start = ""
         season_end = ""
 
@@ -2030,10 +2036,14 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
                 ko_year = now.year + 1
             else:
                 ko_year = now.year
-            # ESPN stopped accepting dates=start-end ranges (returns HTTP 400).
-            # The KO phase (Feb-Jul of ko_year) belongs to the season that began
-            # the previous August, i.e. season year ko_year - 1; request that
-            # whole season and let the bracket parser pick out the KO ties.
+            # ESPN stopped accepting dates=start-end ranges (returns HTTP 400),
+            # and dates=YYYY is a calendar-year query. A European KO season runs
+            # Aug (ko_year-1) through May/Jun (ko_year), so the group stage lives
+            # in calendar year ko_year-1 and the knockout ties in ko_year. Fetch
+            # both and merge, then let the bracket parser pick out the KO ties.
+            self._secondary_scoreboard_urls = [
+                f"{self.base_url_3}/{self._code}/scoreboard?limit=300&dates={ko_year}"
+            ]
             return f"{self.base_url_3}/{self._code}/scoreboard?limit=300&dates={ko_year - 1}"
 
         if self._sensor_type == "standings":
@@ -2075,13 +2085,76 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         if self._sensor_type in _DATE_RANGE_SENSOR_TYPES:
             url = f"{self.base_url_3}/{self._code}/scoreboard?limit=1000"
             # ESPN stopped accepting dates=start-end ranges (returns HTTP 400);
-            # dates={season year} returns the whole season. The response is still
-            # filtered to _dyn_start_date/_dyn_end_date in _process_data.
-            if season_start:
-                url += f"&dates={season_start[:4]}"
+            # dates=YYYY returns that *calendar year*. A season running Aug–May
+            # spans two calendar years, so fetch each year it covers and merge
+            # them (the response is still filtered to _dyn_start_date/
+            # _dyn_end_date in _process_data).
+            years = self._scoreboard_years(season_start, season_end)
+            if years:
+                url += f"&dates={years[0]}"
+                self._secondary_scoreboard_urls = [
+                    f"{self.base_url_3}/{self._code}/scoreboard?limit=1000&dates={y}"
+                    for y in years[1:]
+                ]
             return url
 
         return None
+
+    @staticmethod
+    def _scoreboard_years(season_start, season_end):
+        """Calendar years a season spans, as strings, for ESPN dates=YYYY.
+
+        ``season_start``/``season_end`` are ``YYYYMMDD`` strings (or empty).
+        A soccer season runs Aug–May, so it usually covers two calendar years;
+        single-calendar-year leagues (e.g. MLS) return just one. With no season
+        info, falls back to the current calendar year so the scoreboard still
+        returns the whole year (incl. upcoming fixtures) instead of only today.
+        """
+        if not season_start:
+            return [str(datetime.now().year)]
+        start_year = int(season_start[:4])
+        end_year = int(season_end[:4]) if season_end else start_year
+        if end_year < start_year:
+            end_year = start_year
+        # A season never spans more than two calendar years; cap defensively.
+        end_year = min(end_year, start_year + 1)
+        return [str(year) for year in range(start_year, end_year + 1)]
+
+    async def _merge_secondary_scoreboards(self, data):
+        """Merge extra calendar-year scoreboards into the primary response.
+
+        ESPN's dates=YYYY only returns one calendar year, so a cross-year
+        season needs its remaining year(s) fetched and their ``events`` folded
+        in (deduplicated by event id). Best-effort: any secondary fetch that
+        fails is skipped, leaving the primary response intact.
+        """
+        urls = getattr(self, "_secondary_scoreboard_urls", None)
+        if not urls or not isinstance(data, dict):
+            return data
+        events = data.get("events")
+        if not isinstance(events, list):
+            return data
+        seen = {e.get("id") for e in events if isinstance(e, dict)}
+        session = async_get_clientsession(self.hass)
+        headers = self._request_headers()
+        for extra_url in urls:
+            try:
+                async with session.get(
+                    extra_url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status != 200:
+                        continue
+                    raw = await response.read()
+                    extra = await self.hass.async_add_executor_job(json.loads, raw)
+            except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, UnicodeDecodeError):
+                continue
+            if not isinstance(extra, dict):
+                continue
+            for event in extra.get("events") or []:
+                if isinstance(event, dict) and event.get("id") not in seen:
+                    events.append(event)
+                    seen.add(event.get("id"))
+        return data
 
 
     def _local_today_str(self):

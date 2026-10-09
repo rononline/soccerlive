@@ -740,9 +740,13 @@ def test_team_match_uses_calendar_dates_when_available():
     url = asyncio.run(sensor._build_url())
 
     assert calls["count"] == 1
-    # ESPN no longer accepts dates=start-end ranges (400); request the season
-    # year, then filter the response to the calendar window in _process_data.
+    # ESPN no longer accepts dates=start-end ranges (400) and dates=YYYY is a
+    # calendar-year query, so an Aug–May season is fetched as two years: the
+    # start year as the primary URL and the end year as a secondary to merge.
     assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=2026"
+    assert sensor._secondary_scoreboard_urls == [
+        "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=2027"
+    ]
     assert sensor._dyn_start_date == datetime(2026, 8, 1)
     assert sensor._dyn_end_date == datetime(2027, 6, 1)
 
@@ -754,6 +758,60 @@ def test_bracket_url_uses_single_season_year_not_a_range():
     assert "/uefa.champions/scoreboard?limit=300&dates=" in url
     dates = url.split("dates=")[1]
     assert dates.isdigit() and len(dates) == 4
+    # The group stage lives in the season-start calendar year (the primary URL)
+    # and the knockout ties in the following year, fetched as a secondary and
+    # merged — so the bracket sees the KO ties that span the year boundary.
+    assert len(sensor._secondary_scoreboard_urls) == 1
+    sec_dates = sensor._secondary_scoreboard_urls[0].split("dates=")[1]
+    assert sec_dates.isdigit() and int(sec_dates) == int(dates) + 1
+
+
+def test_scoreboard_years_spans_two_calendar_years():
+    # Aug–May season -> both calendar years; single-year season -> one; no
+    # season info -> current year (never an empty, today-only scoreboard call).
+    assert SoccerLiveSensor._scoreboard_years("20260801", "20270601") == ["2026", "2027"]
+    assert SoccerLiveSensor._scoreboard_years("20260201", "20261130") == ["2026"]
+    assert SoccerLiveSensor._scoreboard_years("", "") == [str(datetime.now().year)]
+
+
+def test_merge_secondary_scoreboards_folds_in_extra_year_events():
+    sensor = _sensor("team_match", code="ned.1")
+    sensor._secondary_scoreboard_urls = [
+        "https://example.test/ned.1/scoreboard?limit=1000&dates=2027"
+    ]
+
+    class _Resp:
+        status = 200
+
+        async def read(self):
+            return b'{"events": [{"id": "B"}, {"id": "A"}]}'
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+    class _Session:
+        def get(self, *args, **kwargs):
+            return _Resp()
+
+    class _Hass:
+        async def async_add_executor_job(self, func, *args):
+            return func(*args)
+
+    sensor.hass = _Hass()
+    _orig = _sensor_mod.async_get_clientsession
+    _sensor_mod.async_get_clientsession = lambda hass: _Session()
+    try:
+        data = {"events": [{"id": "A"}]}
+        merged = asyncio.run(sensor._merge_secondary_scoreboards(data))
+    finally:
+        _sensor_mod.async_get_clientsession = _orig
+
+    # "A" already present is not duplicated; the new "B" from 2027 is added.
+    ids = [e["id"] for e in merged["events"]]
+    assert ids == ["A", "B"]
 
 
 def test_team_match_falls_back_to_static_dates_when_calendar_missing():
@@ -769,7 +827,10 @@ def test_team_match_falls_back_to_static_dates_when_calendar_missing():
     assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates=2026"
 
 
-def test_team_match_omits_dates_when_calendar_and_filters_are_missing():
+def test_team_match_defaults_to_current_year_when_calendar_and_filters_are_missing():
+    # With no calendar and no static filters we still pin dates to the current
+    # calendar year: the bare /scoreboard call now returns only today's match,
+    # whereas dates=YYYY returns the whole year including upcoming fixtures.
     sensor = _sensor("team_match", code="ned.1")
     sensor._start_date = None
     sensor._end_date = None
@@ -781,7 +842,9 @@ def test_team_match_omits_dates_when_calendar_and_filters_are_missing():
 
     url = asyncio.run(sensor._build_url())
 
-    assert url == "https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000"
+    year = datetime.now().year
+    assert url == f"https://site.web.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?limit=1000&dates={year}"
+    assert sensor._secondary_scoreboard_urls == []
 
 
 def test_api_football_team_match_url_uses_team_season_and_dates():
