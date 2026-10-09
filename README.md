@@ -2,7 +2,9 @@
 
 Real-time football data in Home Assistant via ESPN, with optional API-Football support for users who provide their own API key.
 
-[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/rononline) [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/rononline)
+[![Buy Me a Coffee at ko-fi.com](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rononline)
+
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor%20on-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/rononline)
 
 > Built on ideas from [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @Bobsilvio
 
