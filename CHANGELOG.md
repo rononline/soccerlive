@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.10 (2026-10-09)
+- refactor: split the 4374-line `sensor.py` into focused modules to make it easier to maintain. The match-attribute computation (`_compute_*`), the live-event detection/dispatch (goals, cards, substitutions, phase changes, full time) and the complete API-Football provider support (URL building, cached fetching, auth/rate-limit handling, enrichment) now live in dedicated mixin modules that `SoccerLiveSensor` inherits. No functional change — identical behaviour, same process-wide shared state, 295 tests pass unchanged
+- tests: API-Football tests now patch the provider module where those helpers resolve their module-level names
+
 ## v3.23.9 (2026-10-08)
 - fix: drastically reduce disk writes from the restart-recovery stores. The per-entity snapshot (and the live-replay) store was rewritten to disk on every sensor refresh — with several config entries that reached tens of writes per minute of multi-MB files (reported ~19 GB/day), causing needless SSD/SD-card wear. Both now use Home Assistant's debounced `async_delay_save`, coalescing writes into at most one per ~10-minute window, still flushed on shutdown and on entry unload so restart recovery is unchanged (#29)
 - tests: snapshot publishing goes through the debounced save, never an immediate per-update write

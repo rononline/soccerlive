@@ -67,6 +67,16 @@ def _load_sensor_module():
 
 _sensor_mod = _load_sensor_module()
 SoccerLiveSensor = _sensor_mod.SoccerLiveSensor
+# API-Football helpers live in their own module (imported by sensor.py). Names
+# those methods look up (monotonic, datetime, the aiohttp session factory) are
+# bound in that module, so tests must patch it too — patch both to be safe.
+_af_mod = sys.modules["custom_components.soccer_live.sensor_api_football"]
+
+
+def _patch_both(monkeypatch, name, value):
+    """Patch a module-level name on both the sensor and API-Football modules."""
+    monkeypatch.setattr(_sensor_mod, name, value)
+    monkeypatch.setattr(_af_mod, name, value)
 
 
 def test_entity_object_id_removes_home_assistant_invalid_characters():
@@ -543,7 +553,7 @@ def test_rate_limit_backoff_pauses_and_resets():
 
 def test_rate_limit_pause_uses_monotonic_clock(monkeypatch):
     clock = {"now": 1000.0}
-    monkeypatch.setattr(_sensor_mod, "monotonic", lambda: clock["now"])
+    _patch_both(monkeypatch, "monotonic", lambda: clock["now"])
     SoccerLiveSensor._af_backoff = 0
     SoccerLiveSensor._af_enrich_pause_until = None
 
@@ -617,7 +627,7 @@ def test_api_football_cache_ttl_uses_monotonic_clock(monkeypatch):
     import asyncio
 
     clock = {"now": 1000.0}
-    monkeypatch.setattr(_sensor_mod, "monotonic", lambda: clock["now"])
+    _patch_both(monkeypatch, "monotonic", lambda: clock["now"])
     SoccerLiveSensor._api_football_endpoint_cache = {}
     SoccerLiveSensor._api_football_endpoint_locks = {}
     SoccerLiveSensor._api_football_stats = {}
@@ -811,7 +821,7 @@ def test_api_football_all_matches_today_uses_ha_timezone(monkeypatch):
 
     sensor = _sensor("all_matches_today", code="39", provider="api_football")
     sensor.hass = _Hass()
-    monkeypatch.setattr(_sensor_mod, "datetime", _FakeDateTime)
+    _patch_both(monkeypatch, "datetime", _FakeDateTime)
 
     url = asyncio.run(sensor._build_url())
 
@@ -826,7 +836,7 @@ def test_api_football_standings_auto_season_uses_previous_before_august(monkeypa
 
     sensor = _sensor("standings", code="39", provider="api_football")
     sensor._api_football_season = None
-    monkeypatch.setattr(_sensor_mod, "datetime", _FakeDateTime)
+    _patch_both(monkeypatch, "datetime", _FakeDateTime)
 
     url = asyncio.run(sensor._build_url())
 
@@ -1256,7 +1266,7 @@ def test_api_football_endpoint_cache_reuses_response(monkeypatch):
     sensor.hass = _Hass()
     SoccerLiveSensor._api_football_endpoint_cache = {}
     SoccerLiveSensor._api_football_endpoint_locks = {}
-    monkeypatch.setattr(_sensor_mod, "async_get_clientsession", lambda hass: _Session())
+    _patch_both(monkeypatch, "async_get_clientsession", lambda hass: _Session())
 
     first = asyncio.run(sensor._fetch_api_football_json("fixtures/events", {"fixture": "100"}))
     second = asyncio.run(sensor._fetch_api_football_json("fixtures/events", {"fixture": "100"}))
@@ -1291,7 +1301,7 @@ def test_espn_summary_uses_fixture_league_slug_then_falls_back(monkeypatch):
             return func(*args)
 
     sensor.hass = _Hass()
-    monkeypatch.setattr(_sensor_mod, "async_get_clientsession", lambda hass: _Session())
+    _patch_both(monkeypatch, "async_get_clientsession", lambda hass: _Session())
 
     # A cross-competition fixture requests its own slug, not the entry's esp.1.
     asyncio.run(sensor._fetch_match_summary("401915451", "uefa.champions"))
@@ -1346,7 +1356,7 @@ def test_failed_processing_does_not_cache_response(monkeypatch):
     sensor._process_and_apply = _process_and_apply
     SoccerLiveSensor._cache = {}
     SoccerLiveSensor._fetch_locks = {}
-    monkeypatch.setattr(_sensor_mod, "async_get_clientsession", lambda hass: _Session())
+    _patch_both(monkeypatch, "async_get_clientsession", lambda hass: _Session())
 
     asyncio.run(sensor.async_update())
 
@@ -1529,7 +1539,7 @@ def test_af_rate_limit_body_triggers_backoff(monkeypatch):
             return func(*args)
 
     sensor.hass = _Hass()
-    monkeypatch.setattr(_sensor_mod, "async_get_clientsession", lambda hass: _Session())
+    _patch_both(monkeypatch, "async_get_clientsession", lambda hass: _Session())
 
     # A 200-body "too many requests" must trigger the shared enrichment backoff.
     result = asyncio.run(sensor._fetch_api_football_json_uncached("predictions", {"fixture": 1}))
@@ -1580,8 +1590,8 @@ def test_af_daily_limit_ends_at_utc_midnight(monkeypatch):
         def now(cls, tz=None):
             return cls._now.astimezone(tz) if tz else cls._now.replace(tzinfo=None)
 
-    monkeypatch.setattr(_sensor_mod, "datetime", _Fake)
-    monkeypatch.setattr(_sensor_mod, "monotonic", lambda: 1000.0)
+    _patch_both(monkeypatch, "datetime", _Fake)
+    _patch_both(monkeypatch, "monotonic", lambda: 1000.0)
     SoccerLiveSensor._af_backoff = 120                 # a stale minute backoff
     SoccerLiveSensor._af_enrich_pause_until = None
     sensor = _sensor("team_match", provider="api_football")
@@ -1601,8 +1611,8 @@ def test_af_daily_limit_clamped_to_min_30_min(monkeypatch):
         def now(cls, tz=None):
             return cls._now.astimezone(tz) if tz else cls._now.replace(tzinfo=None)
 
-    monkeypatch.setattr(_sensor_mod, "datetime", _Fake)
-    monkeypatch.setattr(_sensor_mod, "monotonic", lambda: 1000.0)
+    _patch_both(monkeypatch, "datetime", _Fake)
+    _patch_both(monkeypatch, "monotonic", lambda: 1000.0)
     SoccerLiveSensor._af_enrich_pause_until = None
     sensor = _sensor("team_match", provider="api_football")
     sensor._af_note_daily_limit()
