@@ -2,6 +2,8 @@
 
 Real-time football data in Home Assistant via ESPN, with optional API-Football support for users who provide their own API key.
 
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/rononline) [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/rononline)
+
 > Built on ideas from [Calcio Live](https://github.com/Bobsilvio/calcio-live) by @Bobsilvio
 
 ---
@@ -797,6 +799,15 @@ adds per-team `remaining`, `maximum_points`, `gap_to_leader` and
 ### Automation attributes
 
 `last_event` always contains the latest fired Soccer Live event payload plus `event_type` and `timestamp`. Typed convenience attributes are populated for the latest matching event category: `last_goal_event`, `last_card_event`, `last_match_started_event`, `last_match_finished_event`.
+
+---
+
+## ❤️ Support
+
+Soccer Live is free and open source, maintained in my spare time. If it's useful to you, a small tip helps cover the time spent fixing bugs, answering issues and adding requested features — thank you!
+
+- [GitHub Sponsors](https://github.com/sponsors/rononline)
+- [Ko-fi](https://ko-fi.com/rononline)
 
 ---
 
