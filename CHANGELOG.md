@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.13 (2026-10-11)
+- refactor: move the ESPN URL building and the cross-year scoreboard-merge strategy (`_build_url`, `_scoreboard_years`, `_merge_secondary_scoreboards`) out of `sensor.py` into a dedicated `sensor_urls.py` mixin that `SoccerLiveSensor` inherits. No functional change — identical behaviour; it isolates the trickiest calendar-year logic so it is easier to follow and unit-test. Also dropped a dead `urlencode` import left over from the earlier provider split
+- tests: the secondary-scoreboard merge test now patches the session factory in the new module where the method resolves it
+
 ## v3.23.12 (2026-10-11)
 - feat: diagnose the "valid API-Football key but no data and no error" case (#17). When API-Football answers HTTP 200 with zero results and an empty `errors` field — typically a free plan that doesn't cover the requested season, or a wrong team/competition/season — the sensor now sets an advisory `data_hint` attribute explaining the likely cause and logs it once, instead of silently serving an empty match list. It stays a soft hint (`api_status` remains `ok`), since a legitimately empty window can also return zero results
 - tests: the zero-results hint fires for an empty API-Football body, and not when the response has data, an `errors` entry is present, or the provider is ESPN

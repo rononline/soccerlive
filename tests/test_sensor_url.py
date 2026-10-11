@@ -71,6 +71,9 @@ SoccerLiveSensor = _sensor_mod.SoccerLiveSensor
 # those methods look up (monotonic, datetime, the aiohttp session factory) are
 # bound in that module, so tests must patch it too — patch both to be safe.
 _af_mod = sys.modules["custom_components.soccer_live.sensor_api_football"]
+# URL building + the cross-year scoreboard merge live in their own module too,
+# so names those methods look up (the aiohttp session factory) bind there.
+_urls_mod = sys.modules["custom_components.soccer_live.sensor_urls"]
 
 
 def _patch_both(monkeypatch, name, value):
@@ -801,13 +804,15 @@ def test_merge_secondary_scoreboards_folds_in_extra_year_events():
             return func(*args)
 
     sensor.hass = _Hass()
-    _orig = _sensor_mod.async_get_clientsession
-    _sensor_mod.async_get_clientsession = lambda hass: _Session()
+    # _merge_secondary_scoreboards resolves async_get_clientsession in the
+    # sensor_urls module, so patch it there.
+    _orig = _urls_mod.async_get_clientsession
+    _urls_mod.async_get_clientsession = lambda hass: _Session()
     try:
         data = {"events": [{"id": "A"}]}
         merged = asyncio.run(sensor._merge_secondary_scoreboards(data))
     finally:
-        _sensor_mod.async_get_clientsession = _orig
+        _urls_mod.async_get_clientsession = _orig
 
     # "A" already present is not duplicated; the new "B" from 2027 is added.
     ids = [e["id"] for e in merged["events"]]
