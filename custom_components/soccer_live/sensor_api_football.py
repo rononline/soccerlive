@@ -516,6 +516,33 @@ class ApiFootballMixin:
         from .parsers.api_football import extract_error
         return extract_error(data)
 
+    def _api_football_empty_note(self, data):
+        """A human note for the "valid key, 200 OK, but no data and no error"
+        case (#17): an API-Football body with zero results and an empty
+        ``errors`` field. Usually the free plan not covering the requested
+        season, or a wrong team/competition/season.
+
+        Returns None for the ESPN provider, for a populated response, or when an
+        ``errors`` entry already explains the emptiness (surfaced elsewhere as a
+        real error). It is advisory only — a legitimately empty window (e.g. a
+        team with no fixtures in range) can also trigger it, so callers expose it
+        as a hint, not an error."""
+        if self._provider != PROVIDER_API_FOOTBALL or not isinstance(data, dict):
+            return None
+        if self._api_football_error(data):
+            return None
+        results = data.get("results")
+        response = data.get("response")
+        if results in (0, None) and isinstance(response, list) and not response:
+            season = self._api_football_season
+            return (
+                f"API-Football returned 0 results"
+                + (f" for season {season}" if season else "")
+                + ". If you expected matches, your plan may not cover this "
+                "season, or the team/competition/season is not set correctly."
+            )
+        return None
+
     def _api_football_body_is_auth_error(self, data):
         if self._provider != PROVIDER_API_FOOTBALL:
             return False

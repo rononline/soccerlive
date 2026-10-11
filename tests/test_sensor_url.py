@@ -1254,6 +1254,31 @@ def test_api_football_empty_post_match_enrichment_is_not_cached():
     assert sensor._attributes["matches"][0]["match_details"] == []
 
 
+def test_api_football_empty_note_flags_zero_results_no_error():
+    sensor = _sensor("team_matches_mixed", code="39", team_name="Arsenal", team_id="42", provider="api_football")
+    note = sensor._api_football_empty_note({"results": 0, "errors": [], "response": []})
+    assert note is not None
+    assert "0 results" in note
+    assert "season 2026" in note
+
+
+def test_api_football_empty_note_none_when_response_has_data():
+    sensor = _sensor("team_matches_mixed", code="39", team_name="Arsenal", team_id="42", provider="api_football")
+    assert sensor._api_football_empty_note({"results": 1, "errors": [], "response": [{"fixture": {}}]}) is None
+
+
+def test_api_football_empty_note_none_when_error_present():
+    # A real errors body is surfaced as an error elsewhere, not as a soft hint.
+    sensor = _sensor("team_matches_mixed", code="39", team_name="Arsenal", team_id="42", provider="api_football")
+    data = {"results": 0, "errors": {"plan": "Free plans do not have access to this season"}, "response": []}
+    assert sensor._api_football_empty_note(data) is None
+
+
+def test_api_football_empty_note_none_for_espn_provider():
+    sensor = _sensor("team_matches", code="ned.1", team_name="Feyenoord", provider="espn")
+    assert sensor._api_football_empty_note({"results": 0, "errors": [], "response": []}) is None
+
+
 def test_api_football_team_matches_mixed_enriches_latest_finished_outside_recent_window():
     sensor = _sensor("team_matches_mixed", code="39", team_name="Arsenal", team_id="42", provider="api_football")
     sensor._recent_match_hours = 1

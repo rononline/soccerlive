@@ -737,7 +737,11 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         self._last_request_time = None
         self._last_successful_update = None
         self._last_error = None
-        
+        # Advisory note (not an error) for the "200 OK but zero results" case,
+        # e.g. an API-Football plan that doesn't cover the requested season (#17).
+        self._data_hint = None
+        self._last_logged_data_hint = None
+
         self._previous_scores = {}
         self._previous_match_details = {}
         self._previous_match_states = {}
@@ -954,6 +958,7 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
             "last_request_time": self._last_request_time,
             "last_successful_update": self._last_successful_update,
             "last_error": self._last_error,
+            "data_hint": self._data_hint,
             "api_status": "authentication_failed" if self._auth_failed else ("error" if self._last_error else "ok"),
             "sync_status": self._sync_status(),
             "provider": self._provider,
@@ -1209,6 +1214,15 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
                                 self._last_error = f"API-Football: {af_error}"
                                 _LOGGER.warning("API-Football returned an error for %s: %s", self._name, af_error)
                                 break
+                            # Advisory hint for a 200 OK that carried no data and
+                            # no error (#17) — surfaced as a soft note, not an
+                            # error, so the status stays "ok".
+                            self._data_hint = self._api_football_empty_note(data)
+                            if self._data_hint and self._data_hint != self._last_logged_data_hint:
+                                self._last_logged_data_hint = self._data_hint
+                                _LOGGER.info("%s: %s", self._name, self._data_hint)
+                            elif not self._data_hint:
+                                self._last_logged_data_hint = None
                             data = await self._merge_secondary_scoreboards(data)
                             try:
                                 await self._process_and_apply(data)

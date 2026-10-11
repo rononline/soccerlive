@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.12 (2026-10-11)
+- feat: diagnose the "valid API-Football key but no data and no error" case (#17). When API-Football answers HTTP 200 with zero results and an empty `errors` field — typically a free plan that doesn't cover the requested season, or a wrong team/competition/season — the sensor now sets an advisory `data_hint` attribute explaining the likely cause and logs it once, instead of silently serving an empty match list. It stays a soft hint (`api_status` remains `ok`), since a legitimately empty window can also return zero results
+- tests: the zero-results hint fires for an empty API-Football body, and not when the response has data, an `errors` entry is present, or the provider is ESPN
+
 ## v3.23.11 (2026-10-09)
 - fix: cross-year seasons now fetch both calendar years from ESPN. `dates=YYYY` is a calendar-year query, so an Aug–May season (and every European knockout cup) only returned one half of its fixtures — the upcoming spring matches would have silently disappeared once the current year ran out (around January). Team match sensors (`team_match`, `team_matches`, `match_day`) and the knockout bracket now request each calendar year the season spans and merge the responses, so upcoming fixtures and KO ties across the year boundary stay visible. Single-calendar-year leagues (e.g. MLS) are unaffected and still make a single request
 - fix: when ESPN returns no competition calendar and no static dates are configured, the scoreboard now defaults to the current calendar year instead of a bare request. ESPN's dateless `/scoreboard` recently started returning only the current day's match, which would have hidden upcoming fixtures in that fallback
