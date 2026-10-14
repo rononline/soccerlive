@@ -175,39 +175,35 @@ def test_calendar_caches_events_until_source_changes():
     assert len(second) == 2
 
 
-def test_calendar_scopes_mixed_source_to_entry_competition():
-    # A Club/League combo (e.g. Monaco / Ligue 1) also creates a cross-competition
-    # "mixed" source holding all the team's matches. The calendar must only show
-    # this entry's own competition, matched on each match's league_slug (#31).
-    ligue1 = {"date_iso": "2027-07-17T18:00:00+00:00", "home_team": "Monaco",
-              "away_team": "Lyon", "state": "pre", "league_slug": "fra.1"}
-    conf = {"date_iso": "2027-07-20T18:00:00+00:00", "home_team": "Monaco",
-            "away_team": "Rangers", "state": "pre", "league_slug": "uefa.europa.conf"}
-    cal = _calendar({"mixed": [ligue1, conf]},
-                    {"team_name": "Monaco", "competition_code": "fra.1"})
-    assert cal._source_matches() == [ligue1]
+def test_calendar_prefers_scoped_source_over_mixed():
+    # A Club/League entry (e.g. Monaco / Ligue 1) also creates a cross-competition
+    # team_matches_mixed source holding all the team's matches. The calendar must
+    # use the competition-scoped source instead, even when the mixed list is
+    # longer, so a league calendar doesn't show the team's cup matches too (#31).
+    ligue1 = [
+        {"date_iso": "2027-07-17T18:00:00+00:00", "home_team": "Monaco", "away_team": "Lyon", "state": "pre"},
+    ]
+    mixed = ligue1 + [
+        {"date_iso": "2027-07-20T18:00:00+00:00", "home_team": "Monaco", "away_team": "Rangers", "state": "pre"},
+        {"date_iso": "2027-07-24T18:00:00+00:00", "home_team": "Monaco", "away_team": "Inter", "state": "pre"},
+    ]
+    cal = _calendar({
+        "e1_soccerlive_all_fra_1_monaco_team_matches": ligue1,     # scoped, shorter
+        "e1_soccerlive_all_mixed_monaco_team_matches_mixed": mixed,  # cross-competition, longer
+    })
+    assert cal._source_matches() == ligue1
     assert [e.summary for e in cal._events()] == ["Monaco - Lyon"]
 
 
-def test_calendar_competition_scope_falls_back_when_no_slug_matches():
-    # If no match carries a matching slug (e.g. a numeric ESPN code), don't blank
-    # the calendar — fall back to the unfiltered longest list.
-    a = {"date_iso": "2027-07-17T18:00:00+00:00", "home_team": "A", "away_team": "B",
-         "state": "pre", "league_slug": "fra.1"}
-    b = {"date_iso": "2027-07-20T18:00:00+00:00", "home_team": "C", "away_team": "D",
-         "state": "pre", "league_slug": "fra.1"}
-    cal = _calendar({"s1": [a, b]}, {"team_name": "X", "competition_code": "740"})
-    assert cal._source_matches() == [a, b]
-
-
-def test_calendar_no_competition_code_keeps_all_matches():
-    # A team-only entry (no competition scope) is unchanged: every match stays.
-    a = {"date_iso": "2027-07-17T18:00:00+00:00", "home_team": "A", "away_team": "B",
-         "state": "pre", "league_slug": "fra.1"}
-    b = {"date_iso": "2027-07-20T18:00:00+00:00", "home_team": "C", "away_team": "D",
-         "state": "pre", "league_slug": "uefa.europa.conf"}
-    cal = _calendar({"s1": [a, b]}, {"team_name": "X"})
-    assert cal._source_matches() == [a, b]
+def test_calendar_falls_back_to_mixed_when_no_scoped_source():
+    # A team-only entry has only the mixed source -> use it (show all the team's
+    # matches), rather than blanking the calendar.
+    mixed = [
+        {"date_iso": "2027-07-17T18:00:00+00:00", "home_team": "A", "away_team": "B", "state": "pre"},
+        {"date_iso": "2027-07-20T18:00:00+00:00", "home_team": "C", "away_team": "D", "state": "pre"},
+    ]
+    cal = _calendar({"e1_soccerlive_all_mixed_feyenoord_team_matches_mixed": mixed})
+    assert cal._source_matches() == mixed
 
 
 def test_calendar_cache_invalidates_on_score_or_state_change():

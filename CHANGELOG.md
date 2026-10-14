@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.15 (2026-10-14)
+- fix: correct the Club/League calendar scoping from v3.23.14, which relied on each match's `league_slug` equalling the entry's `competition_code` — that doesn't hold on every setup, so the calendars could fall back to the unfiltered (cross-competition) list and still show both competitions (#31). The calendar now simply ignores the cross-competition `team_matches_mixed` source and uses the competition-scoped sources (`team_matches`/`team_match`), falling back to the mixed source only for a team-only entry that has no scoped source. This is independent of slug/code formats, so e.g. an "AS Monaco / Ligue 1" calendar shows only Ligue 1 and "AS Monaco / Conference League" only the Conference League
+- tests: the scoped source is preferred over a longer mixed source, and a team-only entry (mixed source only) still shows its matches
+
 ## v3.23.14 (2026-10-14)
 - fix: the match calendar of a Club/League combo now shows only that competition's matches (#31). Such an entry also creates a cross-competition `team_matches_mixed` sensor (all of the team's matches across every competition), and the calendar was picking that longest list — so e.g. an "AS Monaco / Ligue 1" calendar and an "AS Monaco / Conference League" calendar both showed every Monaco match. The calendar now scopes the source matches to the entry's `competition_code`, matched on each match's own `league_slug`. If no match carries a matching slug (e.g. a numeric ESPN code) it falls back to the unfiltered list, so the calendar is never blanked; team-only and single-competition entries are unaffected
 - tests: a mixed two-competition source is scoped to the entry's competition, the no-slug-match fallback keeps all matches, and a team-only entry (no competition code) is unchanged

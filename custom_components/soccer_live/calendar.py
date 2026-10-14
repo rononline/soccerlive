@@ -13,7 +13,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_COMPETITION_CODE, DOMAIN
+from .const import DOMAIN
 
 # Assume a match lasts about this long for the event end time.
 MATCH_DURATION = timedelta(hours=2)
@@ -95,73 +95,56 @@ class SoccerLiveCalendar(CalendarEntity):
         self._events_cache = None
         self._events_sig = None
 
-    def _competition_code(self):
-        """The ESPN competition slug this entry is scoped to, or None.
-
-        For a Club/League combo (e.g. AS Monaco / Ligue 1) this is the league
-        the entry was created for. The ``team_matches_mixed`` sensor that such an
-        entry also creates contains the team's matches across *all* competitions,
-        so without scoping the calendar would show the other leagues' matches too
-        (#31). Dummy/placeholder codes are treated as "no scope"."""
-        code = self._entry.data.get(CONF_COMPETITION_CODE)
-        if not code or str(code) == "99999" or str(code).upper() == "N/A":
-            return None
-        return str(code)
+    # The cross-competition source: a Club/League entry (e.g. AS Monaco / Ligue 1)
+    # also creates a ``team_matches_mixed`` sensor holding the team's matches
+    # across *all* competitions, for the mixed Last Match card. The calendar must
+    # not use it, or both the league and the cup calendar of the same team would
+    # show every match (#31). Its store key ends with the sensor_type (unique_id
+    # is ``{entry_id}_{name}_{sensor_type}``).
+    _MIXED_SUFFIX = "_team_matches_mixed"
 
     @staticmethod
-    def _in_competition(match, code):
-        """True when a match belongs to competition ``code`` (matched on its own
-        ``league_slug``). Matches without a slug never match, so a mismatch falls
-        back to the unfiltered list rather than emptying the calendar."""
-        if not isinstance(match, dict):
-            return False
-        slug = match.get("league_slug")
-        return slug is not None and str(slug).lower() == code.lower()
-
-    def _pick_longest(self, lists, code):
-        """Pick the longest match list, scoped to this entry's competition when
-        it has one. Returns the longest competition-scoped list if filtering
-        finds any matches, otherwise the longest unfiltered list — so a slug
-        mismatch (e.g. a numeric code) can never blank the calendar."""
-        raw_best, filt_best = [], []
+    def _longest(lists):
+        """The longest of the given match lists (ignores non-lists)."""
+        best = []
         for matches in lists:
-            if not isinstance(matches, list):
-                continue
-            if len(matches) > len(raw_best):
-                raw_best = matches
-            if code:
-                filtered = [m for m in matches if self._in_competition(m, code)]
-                if len(filtered) > len(filt_best):
-                    filt_best = filtered
-        if code and filt_best:
-            return filt_best
-        return raw_best
+            if isinstance(matches, list) and len(matches) > len(best):
+                best = matches
+        return best
 
     def _source_matches(self):
         """Return the richest match list published by this entry's sensors,
-        scoped to the entry's competition when it has one (see _competition_code).
+        preferring the competition-scoped sources over the cross-competition
+        ``team_matches_mixed`` source (#31).
 
         Sensors publish their matches to a shared per-entry store, so the
         calendar reads that directly rather than depending on entity states.
         Falls back to scanning the entry's sensor entities (e.g. before the
         first sensor update has populated the store)."""
-        code = self._competition_code()
         store = (
             self.hass.data.get(DOMAIN, {})
             .get(self._entry.entry_id, {})
             .get("match_sources", {})
         )
-        best = self._pick_longest(store.values(), code)
+        # Prefer competition-scoped sources; only fall back to the mixed one when
+        # there is no scoped source yet (a team-only entry, or before the scoped
+        # sensors have populated the store), so the calendar is never blanked.
+        scoped = [m for key, m in store.items() if not str(key).endswith(self._MIXED_SUFFIX)]
+        best = self._longest(scoped) or self._longest(store.values())
         if best:
             return best
 
         registry = er.async_get(self.hass)
-        states = []
+        scoped_states, all_states = [], []
         for entity in er.async_entries_for_config_entry(registry, self._entry.entry_id):
             state = self.hass.states.get(entity.entity_id)
-            if state:
-                states.append(state.attributes.get("matches"))
-        return self._pick_longest(states, code)
+            if not state:
+                continue
+            matches = state.attributes.get("matches")
+            all_states.append(matches)
+            if "all_mixed" not in entity.entity_id:
+                scoped_states.append(matches)
+        return self._longest(scoped_states) or self._longest(all_states)
 
     @staticmethod
     def _signature(matches):
