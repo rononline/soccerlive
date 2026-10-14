@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.14 (2026-10-14)
+- fix: the match calendar of a Club/League combo now shows only that competition's matches (#31). Such an entry also creates a cross-competition `team_matches_mixed` sensor (all of the team's matches across every competition), and the calendar was picking that longest list — so e.g. an "AS Monaco / Ligue 1" calendar and an "AS Monaco / Conference League" calendar both showed every Monaco match. The calendar now scopes the source matches to the entry's `competition_code`, matched on each match's own `league_slug`. If no match carries a matching slug (e.g. a numeric ESPN code) it falls back to the unfiltered list, so the calendar is never blanked; team-only and single-competition entries are unaffected
+- tests: a mixed two-competition source is scoped to the entry's competition, the no-slug-match fallback keeps all matches, and a team-only entry (no competition code) is unchanged
+
 ## v3.23.13 (2026-10-11)
 - refactor: move the ESPN URL building and the cross-year scoreboard-merge strategy (`_build_url`, `_scoreboard_years`, `_merge_secondary_scoreboards`) out of `sensor.py` into a dedicated `sensor_urls.py` mixin that `SoccerLiveSensor` inherits. No functional change — identical behaviour; it isolates the trickiest calendar-year logic so it is easier to follow and unit-test. Also dropped a dead `urlencode` import left over from the earlier provider split
 - tests: the secondary-scoreboard merge test now patches the session factory in the new module where the method resolves it

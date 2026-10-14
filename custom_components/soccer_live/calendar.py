@@ -13,7 +13,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import CONF_COMPETITION_CODE, DOMAIN
 
 # Assume a match lasts about this long for the event end time.
 MATCH_DURATION = timedelta(hours=2)
@@ -95,34 +95,73 @@ class SoccerLiveCalendar(CalendarEntity):
         self._events_cache = None
         self._events_sig = None
 
+    def _competition_code(self):
+        """The ESPN competition slug this entry is scoped to, or None.
+
+        For a Club/League combo (e.g. AS Monaco / Ligue 1) this is the league
+        the entry was created for. The ``team_matches_mixed`` sensor that such an
+        entry also creates contains the team's matches across *all* competitions,
+        so without scoping the calendar would show the other leagues' matches too
+        (#31). Dummy/placeholder codes are treated as "no scope"."""
+        code = self._entry.data.get(CONF_COMPETITION_CODE)
+        if not code or str(code) == "99999" or str(code).upper() == "N/A":
+            return None
+        return str(code)
+
+    @staticmethod
+    def _in_competition(match, code):
+        """True when a match belongs to competition ``code`` (matched on its own
+        ``league_slug``). Matches without a slug never match, so a mismatch falls
+        back to the unfiltered list rather than emptying the calendar."""
+        if not isinstance(match, dict):
+            return False
+        slug = match.get("league_slug")
+        return slug is not None and str(slug).lower() == code.lower()
+
+    def _pick_longest(self, lists, code):
+        """Pick the longest match list, scoped to this entry's competition when
+        it has one. Returns the longest competition-scoped list if filtering
+        finds any matches, otherwise the longest unfiltered list — so a slug
+        mismatch (e.g. a numeric code) can never blank the calendar."""
+        raw_best, filt_best = [], []
+        for matches in lists:
+            if not isinstance(matches, list):
+                continue
+            if len(matches) > len(raw_best):
+                raw_best = matches
+            if code:
+                filtered = [m for m in matches if self._in_competition(m, code)]
+                if len(filtered) > len(filt_best):
+                    filt_best = filtered
+        if code and filt_best:
+            return filt_best
+        return raw_best
+
     def _source_matches(self):
-        """Return the richest match list published by this entry's sensors.
+        """Return the richest match list published by this entry's sensors,
+        scoped to the entry's competition when it has one (see _competition_code).
 
         Sensors publish their matches to a shared per-entry store, so the
         calendar reads that directly rather than depending on entity states.
         Falls back to scanning the entry's sensor entities (e.g. before the
         first sensor update has populated the store)."""
-        best = []
+        code = self._competition_code()
         store = (
             self.hass.data.get(DOMAIN, {})
             .get(self._entry.entry_id, {})
             .get("match_sources", {})
         )
-        for matches in store.values():
-            if isinstance(matches, list) and len(matches) > len(best):
-                best = matches
+        best = self._pick_longest(store.values(), code)
         if best:
             return best
 
         registry = er.async_get(self.hass)
+        states = []
         for entity in er.async_entries_for_config_entry(registry, self._entry.entry_id):
             state = self.hass.states.get(entity.entity_id)
-            if not state:
-                continue
-            matches = state.attributes.get("matches")
-            if isinstance(matches, list) and len(matches) > len(best):
-                best = matches
-        return best
+            if state:
+                states.append(state.attributes.get("matches"))
+        return self._pick_longest(states, code)
 
     @staticmethod
     def _signature(matches):
