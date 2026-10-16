@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.23.16 (2026-10-16)
+- brand: ship a tightly-cropped 256×256 `brand/icon.png` and add a 512×512 `brand/icon@2x.png`. Home Assistant 2026.3+ serves an integration's bundled `brand/` images through the local brands proxy (and they take priority over the brands CDN), so the Soccer Live icon now shows for the installed integration instead of the grey placeholder — without a submission to the `home-assistant/brands` repository (closed to custom integrations since 2026.3)
+
 ## v3.23.15 (2026-10-14)
 - fix: correct the Club/League calendar scoping from v3.23.14, which relied on each match's `league_slug` equalling the entry's `competition_code` — that doesn't hold on every setup, so the calendars could fall back to the unfiltered (cross-competition) list and still show both competitions (#31). The calendar now simply ignores the cross-competition `team_matches_mixed` source and uses the competition-scoped sources (`team_matches`/`team_match`), falling back to the mixed source only for a team-only entry that has no scoped source. This is independent of slug/code formats, so e.g. an "AS Monaco / Ligue 1" calendar shows only Ligue 1 and "AS Monaco / Conference League" only the Conference League
 - tests: the scoped source is preferred over a longer mixed source, and a team-only entry (mixed source only) still shows its matches
