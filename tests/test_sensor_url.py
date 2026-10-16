@@ -706,6 +706,48 @@ def test_api_quota_pressure_extends_main_and_detail_cache_ttls():
     assert sensor._api_football_cache_ttl("fixtures/events") == 300
 
 
+def test_idle_entity_skips_refresh_within_configured_interval(monkeypatch):
+    # While idle (no live match, no fixture near kick-off) the entity honours
+    # the configured scan interval instead of refreshing on every HA poll (#32).
+    clock = {"now": 1000.0}
+    _patch_both(monkeypatch, "monotonic", lambda: clock["now"])
+    sensor = _sensor("team_match")
+    sensor._scan_interval = timedelta(minutes=10)  # 600 s
+    sensor._attributes = {"matches": []}
+    sensor._last_idle_apply = clock["now"]
+
+    clock["now"] += 599  # still within the interval -> skip
+    assert sensor._should_skip_idle_refresh() is True
+
+    clock["now"] += 2  # interval elapsed -> refresh again
+    assert sensor._should_skip_idle_refresh() is False
+
+
+def test_idle_skip_requires_a_prior_apply(monkeypatch):
+    # The very first update must always run, even when idle.
+    _patch_both(monkeypatch, "monotonic", lambda: 1000.0)
+    sensor = _sensor("team_match")
+    sensor._scan_interval = timedelta(minutes=10)
+    sensor._attributes = {"matches": []}
+    sensor._last_idle_apply = None
+
+    assert sensor._should_skip_idle_refresh() is False
+
+
+def test_idle_skip_yields_near_kick_off(monkeypatch):
+    # A fixture inside the match-day window is not the "normal" phase, so the
+    # entity keeps refreshing regardless of a long configured interval.
+    clock = {"now": 1000.0}
+    _patch_both(monkeypatch, "monotonic", lambda: clock["now"])
+    sensor = _sensor("team_match")
+    sensor._scan_interval = timedelta(minutes=60)
+    kickoff = datetime.now(timezone.utc) + timedelta(minutes=20)
+    sensor._attributes = {"matches": [{"state": "pre", "date_iso": kickoff.isoformat()}]}
+    sensor._last_idle_apply = clock["now"]
+
+    assert sensor._should_skip_idle_refresh() is False
+
+
 def test_standings_url_does_not_fetch_calendar():
     sensor = _sensor("standings", code="ned.1")
 

@@ -668,7 +668,9 @@ class SoccerLiveOptionsFlow(config_entries.OptionsFlow):
         )
 
         schema = {
-            vol.Optional("scan_interval", default=scan_interval): vol.In([1, 2, 3, 5, 10]),
+            vol.Optional("scan_interval", default=scan_interval): vol.In(
+                [1, 2, 3, 5, 10, 15, 30, 60, 120, 240, 480, 720, 1440]
+            ),
             vol.Optional(CONF_LIVE_SCAN_INTERVAL, default=live_scan_interval): vol.In([15, 30, 45, 60, 90, 120]),
             vol.Optional("recent_match_hours", default=recent_match_hours): vol.In([6, 12, 24, 48]),
             vol.Optional("start_date", default=start_date): str,

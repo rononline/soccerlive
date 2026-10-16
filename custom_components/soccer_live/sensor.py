@@ -768,6 +768,11 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         self._live_unsub = None
         self._adaptive_poll_interval = int(self._scan_interval.total_seconds())
         self._adaptive_poll_reason = "normal"
+        # Monotonic time of the last applied refresh, used to honour the
+        # configured scan interval while idle (no live match, no near kick-off),
+        # so a long interval actually throttles polling instead of refreshing on
+        # every Home Assistant poll (#32). None until the first refresh.
+        self._last_idle_apply = None
 
         self.base_url = "https://site.web.api.espn.com/apis/v2/sports/soccer"
         self.base_url_2 = "https://site.api.espn.com/apis/site/v2/sports/soccer"
@@ -822,6 +827,27 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
             live_seconds=self._live_scan_interval,
             quota=getattr(self, "_api_football_quota", {}),
         )
+
+    def _should_skip_idle_refresh(self):
+        """Return True when an idle entity is still within its configured scan
+        interval and should neither re-fetch nor re-apply (#32).
+
+        Home Assistant polls this entity on its own short cadence. When there is
+        no live match and no fixture is near kick-off (the "normal" adaptive
+        phase), we honour the user's configured ``scan_interval`` instead of
+        refreshing on every poll — otherwise a long interval (e.g. once a day)
+        would still spend requests and rewrite time-relative attributes on every
+        cycle, churning the recorder/logbook. The adaptive match-day logic takes
+        over again as a known kick-off approaches (the phase stops being
+        "normal"), so live scores are unaffected."""
+        last_apply = getattr(self, "_last_idle_apply", None)
+        if last_apply is None:
+            return False
+        _, reason = self._next_adaptive_poll()
+        if reason != "normal" or self._is_live():
+            return False
+        base = int(getattr(self, "_scan_interval", timedelta(minutes=5)).total_seconds())
+        return monotonic() - last_apply < base
 
     def _schedule_live_refresh(self):
         """Schedule an adaptive matchday refresh, replacing any pending timer.
@@ -1119,6 +1145,15 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         self._pending_events = []
         self._save_store_needed = False
 
+        # Idle-phase throttle (#32): skip the whole refresh while nothing is
+        # live, no fixture is near kick-off, and the configured scan interval
+        # has not yet elapsed since the last refresh — so neither a provider
+        # request nor a state re-apply happens. The adaptive timer is still
+        # (re)scheduled so the next matchday window is picked up.
+        if self._should_skip_idle_refresh():
+            self._schedule_live_refresh()
+            return
+
         # Prune cache entries once they can no longer be reused. Under quota
         # pressure one stale-but-valid response may intentionally live longer
         # than five minutes so ordinary HA polling does not spend more quota.
@@ -1289,6 +1324,9 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
     async def _process_and_apply(self, data):
         """Process raw ESPN data and apply state/attributes to this sensor.
         Carries forward last-event attributes so they survive between update cycles."""
+        # Mark the moment of this refresh so the idle-phase throttle (#32) can
+        # honour the configured scan interval before the next re-apply.
+        self._last_idle_apply = monotonic()
         previous_attrs = self._attributes
         result = await self.hass.async_add_executor_job(self._process_data, data)
         self._state = result["state"]

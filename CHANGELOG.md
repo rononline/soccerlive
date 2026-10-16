@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.23.17 (2026-10-16)
+- feat: allow a much longer scan interval — the options dropdown now goes up to 1440 minutes (once a day), for users who only track upcoming fixtures and don't want frequent polling (#32)
+- fix: the scan interval is now actually honoured while idle. Home Assistant polls the entity on its own short cadence, so previously — even with the interval set to its maximum — an idle entity (no live match, no fixture near kick-off) still re-applied its state on every poll, spending requests and churning the recorder/logbook. It now skips both the provider request and the state re-apply until the configured interval has elapsed. The adaptive match-day logic is unchanged: polling still speeds up automatically as a known kick-off approaches and during live play, so scores stay fresh
+- tests: an idle entity skips refreshing within its configured interval, always runs the first update, and still refreshes when a fixture is near kick-off
+
 ## v3.23.16 (2026-10-16)
 - brand: ship a tightly-cropped 256×256 `brand/icon.png` and add a 512×512 `brand/icon@2x.png`. Home Assistant 2026.3+ serves an integration's bundled `brand/` images through the local brands proxy (and they take priority over the brands CDN), so the Soccer Live icon now shows for the installed integration instead of the grey placeholder — without a submission to the `home-assistant/brands` repository (closed to custom integrations since 2026.3)
 
