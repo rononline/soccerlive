@@ -143,9 +143,15 @@ def adaptive_poll_interval(
                 elif until > timedelta(0):
                     upcoming.append(kickoff)
             elif state in {"post", "finished"}:
-                # Kick-off + three hours safely covers ordinary and extra-time
-                # matches while keeping post-match correction polling bounded.
-                recent_finished |= current <= kickoff + timedelta(hours=3)
+                # Only a fixture that has actually kicked off within the last
+                # three hours earns post-match correction polling: the window is
+                # kick-off .. kick-off + 3h (covers extra time). Without the lower
+                # bound a "finished" fixture carrying a future date (a provider
+                # quirk seen on national-team feeds) would satisfy the upper
+                # bound forever, pinning the entity in the "post_match" phase and
+                # churning the recorder on every poll despite a long interval.
+                since_kickoff = current - kickoff
+                recent_finished |= timedelta(0) <= since_kickoff <= timedelta(hours=3)
         if around_kickoff:
             interval, reason = live, "kickoff_soon"
         elif upcoming:

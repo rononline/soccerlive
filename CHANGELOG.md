@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.18 (2026-10-22)
+- fix: a "finished" fixture carrying a future date (a provider quirk seen on national-team feeds) no longer keeps the entity stuck in the post-match polling phase. The post-match correction window is now bounded to the three hours *after* kick-off, so such a fixture can't pin the adaptive interval at 60 seconds and re-apply the entity's state on every Home Assistant poll — which caused activity/log spam on some national-team entries even with the scan interval set to once a day (#32)
+- tests: a future-dated or long-past finished fixture resolves to the idle "normal" phase, while a genuinely recent finish still gets short correction polling
+
 ## v3.23.17 (2026-10-16)
 - feat: allow a much longer scan interval — the options dropdown now goes up to 1440 minutes (once a day), for users who only track upcoming fixtures and don't want frequent polling (#32)
 - fix: the scan interval is now actually honoured while idle. Home Assistant polls the entity on its own short cadence, so previously — even with the interval set to its maximum — an idle entity (no live match, no fixture near kick-off) still re-applied its state on every poll, spending requests and churning the recorder/logbook. It now skips both the provider request and the state re-apply until the configured interval has elapsed. The adaptive match-day logic is unchanged: polling still speeds up automatically as a known kick-off approaches and during live play, so scores stay fresh

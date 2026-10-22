@@ -35,6 +35,20 @@ def test_adaptive_polling_follows_match_phase():
     assert adaptive_poll_interval([match("pre", -90)], base_seconds=180, live_seconds=30, now=NOW) == (180, "normal")
 
 
+def test_future_dated_finished_fixture_does_not_pin_post_match():
+    # A "finished" fixture carrying a future date (a provider quirk seen on
+    # national-team feeds) must NOT keep the entity in the post_match phase:
+    # otherwise the adaptive interval stays at 60s forever and the idle-skip
+    # never kicks in, churning the recorder on every poll despite a long
+    # interval (#32).
+    assert adaptive_poll_interval([match("post", 120)], base_seconds=86400, live_seconds=60, now=NOW) == (86400, "normal")
+    assert adaptive_poll_interval([match("post", 60 * 24 * 2)], base_seconds=86400, live_seconds=60, now=NOW) == (86400, "normal")
+    # A fixture finished well over three hours ago is idle too.
+    assert adaptive_poll_interval([match("post", -60 * 5)], base_seconds=86400, live_seconds=60, now=NOW) == (86400, "normal")
+    # But a genuinely recent finish still earns short correction polling.
+    assert adaptive_poll_interval([match("post", -120)], base_seconds=86400, live_seconds=60, now=NOW) == (60, "post_match")
+
+
 def test_quota_pressure_overrides_aggressive_live_polling():
     quota = {"requests_limit_day": 100, "requests_current": 96}
     assert adaptive_poll_interval([match("in")], base_seconds=180, live_seconds=15, quota=quota, now=NOW) == (300, "quota_critical")
