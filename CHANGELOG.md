@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.23.20 (2026-10-28)
+- fix: an idle entity no longer churns the `runtime_status` ("Sync status") entity. `begin_fetch`/`end_fetch` wrapped the whole poll — including the idle-skip — so on every ~30s Home Assistant poll the shared fetching flag flipped `fetching`→`ready` even when no provider request was made, filling the recorder and logbook with "Sync status" transitions despite a long scan interval. The fetching flip is now gated on the same idle-skip check, so an idle entity stays `ready` and only a real refresh publishes a `fetching` transition (#32)
+- tests: `async_update` skips the fetching flip when the idle-skip is active and still publishes it on a real refresh
+
 ## v3.23.19 (2026-10-28)
 - debug logging: the per-poll debug line now reports the adaptive phase and live flag, and the idle-skip path logs explicitly ("Skipping idle refresh … (phase=…, live=…)") instead of leaving the bare "Starting update" line. Home Assistant polls the entity on its own ~30s cadence, so that line was printed on every poll even when the idle-skip did fire — making a debug log look like the entity was scanning every ~30s when it was not. The log now shows whether the idle-skip engages and, when it doesn't, which phase kept it awake (#32). No behaviour change
 

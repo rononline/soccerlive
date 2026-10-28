@@ -1754,3 +1754,49 @@ def test_af_daily_limit_clamped_to_min_30_min(monkeypatch):
     # Only 10 min to midnight -> clamped to a 30 min pause (00:20).
     assert SoccerLiveSensor._af_enrich_pause_until == 1000.0 + 30 * 60
     SoccerLiveSensor._af_enrich_pause_until = None
+
+
+class _FetchCoordinator:
+    """Records begin/end_fetch calls so the fetching-flip can be asserted."""
+
+    def __init__(self):
+        self.begins = 0
+        self.ends = 0
+
+    def begin_fetch(self):
+        self.begins += 1
+
+    def end_fetch(self):
+        self.ends += 1
+
+
+def _update_sensor(skip):
+    sensor = SoccerLiveSensor.__new__(SoccerLiveSensor)
+    sensor._coordinator = _FetchCoordinator()
+    sensor._should_skip_idle_refresh = lambda: skip
+    impl_calls = []
+
+    async def _impl():
+        impl_calls.append(True)
+
+    sensor._async_update_impl = _impl
+    asyncio.run(sensor.async_update())
+    return sensor, impl_calls
+
+
+def test_async_update_skips_fetch_flip_when_idle():
+    # An idle entity whose update will be skipped must NOT flip the shared
+    # fetching state, otherwise the runtime_status ("Sync status") entity churns
+    # fetching->ready on every poll even though no request is made (#32).
+    sensor, impl_calls = _update_sensor(skip=True)
+    assert sensor._coordinator.begins == 0
+    assert sensor._coordinator.ends == 0
+    # The impl still runs (and short-circuits on its own idle check).
+    assert impl_calls == [True]
+
+
+def test_async_update_publishes_fetch_flip_on_real_refresh():
+    sensor, impl_calls = _update_sensor(skip=False)
+    assert sensor._coordinator.begins == 1
+    assert sensor._coordinator.ends == 1
+    assert impl_calls == [True]

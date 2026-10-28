@@ -1042,14 +1042,24 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         return self._config_entry_id
 
     async def async_update(self):
-        """Run one sensor update while publishing shared fetching state."""
+        """Run one sensor update while publishing shared fetching state.
+
+        Only a real refresh flips the shared "fetching" flag. When the idle skip
+        is going to short-circuit this update (#32) we must not touch the
+        coordinator's fetching state: otherwise the runtime_status ("Sync
+        status") entity would churn fetching->ready on every poll of an idle
+        entity even though no provider request is made, filling the recorder and
+        logbook. ``_should_skip_idle_refresh`` is side-effect-free, so evaluating
+        it here (and again inside the impl) is safe.
+        """
         coordinator = getattr(self, "_coordinator", None)
-        if coordinator:
+        track = coordinator is not None and not self._should_skip_idle_refresh()
+        if track:
             coordinator.begin_fetch()
         try:
             await self._async_update_impl()
         finally:
-            if coordinator:
+            if track:
                 coordinator.end_fetch()
 
     async def async_get_match_details(self, match_id: str) -> dict | None:
