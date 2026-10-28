@@ -1140,10 +1140,18 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         return public_match_details(match)
 
     async def _async_update_impl(self):
-        _LOGGER.debug("Starting update for %s", self._name)
-
         self._pending_events = []
         self._save_store_needed = False
+
+        # Diagnostic context (#32): the adaptive phase and the live flag are what
+        # decide whether an idle poll is skipped. Home Assistant polls this
+        # entity on its own ~30s cadence, so a bare "Starting update" line was
+        # emitted on every poll even when the idle-skip did fire — which is
+        # misleading in a debug log. Log the phase and live flag on every cycle
+        # and only say "Starting update" when the refresh actually proceeds, so a
+        # debug log shows whether (and why) the idle-skip engages.
+        _, _phase = self._next_adaptive_poll()
+        _live = self._is_live()
 
         # Idle-phase throttle (#32): skip the whole refresh while nothing is
         # live, no fixture is near kick-off, and the configured scan interval
@@ -1151,8 +1159,17 @@ class SoccerLiveSensor(ApiFootballMixin, MatchAttributesMixin, EventDispatchMixi
         # request nor a state re-apply happens. The adaptive timer is still
         # (re)scheduled so the next matchday window is picked up.
         if self._should_skip_idle_refresh():
+            _LOGGER.debug(
+                "Skipping idle refresh for %s (phase=%s, live=%s): within the "
+                "configured scan interval — no provider request or state re-apply",
+                self._name, _phase, _live,
+            )
             self._schedule_live_refresh()
             return
+
+        _LOGGER.debug(
+            "Starting update for %s (phase=%s, live=%s)", self._name, _phase, _live
+        )
 
         # Prune cache entries once they can no longer be reused. Under quota
         # pressure one stale-but-valid response may intentionally live longer

@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.23.19 (2026-10-28)
+- debug logging: the per-poll debug line now reports the adaptive phase and live flag, and the idle-skip path logs explicitly ("Skipping idle refresh … (phase=…, live=…)") instead of leaving the bare "Starting update" line. Home Assistant polls the entity on its own ~30s cadence, so that line was printed on every poll even when the idle-skip did fire — making a debug log look like the entity was scanning every ~30s when it was not. The log now shows whether the idle-skip engages and, when it doesn't, which phase kept it awake (#32). No behaviour change
+
 ## v3.23.18 (2026-10-22)
 - fix: a "finished" fixture carrying a future date (a provider quirk seen on national-team feeds) no longer keeps the entity stuck in the post-match polling phase. The post-match correction window is now bounded to the three hours *after* kick-off, so such a fixture can't pin the adaptive interval at 60 seconds and re-apply the entity's state on every Home Assistant poll — which caused activity/log spam on some national-team entries even with the scan interval set to once a day (#32)
 - tests: a future-dated or long-past finished fixture resolves to the idle "normal" phase, while a genuinely recent finish still gets short correction polling
