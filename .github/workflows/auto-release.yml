@@ -81,7 +81,7 @@ jobs:
 
       - name: Create tag and release
         if: steps.check.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v3.0.3
+        uses: softprops/action-gh-release@v3.0.4
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
