@@ -19,3 +19,12 @@ updates:
       test-dependencies:
         patterns:
           - "*"
+    # pytest and pytest-asyncio are exact-pinned to the versions that
+    # pytest-homeassistant-custom-component requires (==). Dependabot kept
+    # grouping an independent pytest/pytest-asyncio bump that phacc doesn't
+    # support yet, so the real HA test job failed to resolve (ResolutionImpossible)
+    # every week. Ignore them here: they move only together with phacc, so when
+    # phacc is bumped we align these pins by hand to match its new requirement.
+    ignore:
+      - dependency-name: "pytest"
+      - dependency-name: "pytest-asyncio"
