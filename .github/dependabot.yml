@@ -28,3 +28,9 @@ updates:
     ignore:
       - dependency-name: "pytest"
       - dependency-name: "pytest-asyncio"
+      # python-dateutil 4.0.0 is a major bump that sent the real HA test job's
+      # dependency resolution "too deep" (a 40+ min backtrack against the HA
+      # tree) and would need API vetting anyway. Keep taking minor/patch updates
+      # within the current major; the next major is bumped by hand after review.
+      - dependency-name: "python-dateutil"
+        update-types: ["version-update:semver-major"]
